@@ -1,0 +1,145 @@
+/* EvalsHero — ported from the current global article-banner rules.
+   Token substitutions (mandatory):
+     var(--cat-from) -> var(--cat-from, var(--accent-9))
+     var(--cat-to)   -> var(--cat-to, var(--accent-11))
+   All other vars kept verbatim (globally available Radix-scale tokens). */
+
+.hero {
+  position: relative;
+  padding: 24px 24px 32px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--cat-from, var(--accent-9)) 15%, var(--color-background)),
+    var(--color-background)
+  );
+  /* Tasteful polish: subtle bottom hairline to separate from page content. */
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.inner {
+  max-width: 1060px;
+  margin: 0 auto;
+}
+
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--gray-9);
+  margin-bottom: 16px;
+}
+
+.crumbLink {
+  color: var(--gray-9);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.crumbLink:hover {
+  color: var(--accent-11);
+}
+
+.crumbLink:focus-visible {
+  outline: 2px solid var(--ds-accent-border);
+  outline-offset: 2px;
+}
+
+.sep {
+  color: var(--gray-6);
+}
+
+.title {
+  font-size: var(--hero-title-size, 2rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 16px;
+  color: var(--gray-12);
+  letter-spacing: -0.02em;
+}
+
+.excerpt {
+  font-size: 14px;
+  color: var(--gray-9);
+  line-height: 1.6;
+  margin: 0 0 16px;
+  max-width: 640px;
+}
+
+.outcomes {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.outcome {
+  font-size: 11px;
+  color: var(--ds-text-muted);
+  line-height: 1.4;
+  padding-left: 14px;
+  position: relative;
+}
+
+.outcome::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ds-accent);
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pillCategory {
+  background: linear-gradient(
+    135deg,
+    var(--cat-from, var(--accent-9)),
+    var(--cat-to, var(--accent-11))
+  );
+  color: var(--gray-1);
+}
+
+.pillGlass {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--gray-10);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 16px 16px 24px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crumbLink {
+    transition: none;
+  }
+}

@@ -1,0 +1,133 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--ds-radius-lg, 12px);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cat-from, var(--accent-9)) 6%, transparent),
+    color-mix(in srgb, var(--cat-to, var(--accent-11)) 3%, transparent)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.card:hover {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cat-from, var(--accent-9)) 12%, transparent),
+    color-mix(in srgb, var(--cat-to, var(--accent-11)) 8%, transparent)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--cat-from, var(--accent-9)) 25%,
+    transparent
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--ds-accent-border);
+  outline-offset: 2px;
+}
+
+.num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-8);
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-11);
+  line-height: 1.4;
+}
+
+.card:hover .title {
+  color: var(--gray-12);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badgeDifficulty {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.beginner {
+  background: var(--jade-a3);
+  border: 1px solid var(--jade-a4);
+  color: var(--jade-11);
+}
+
+.intermediate {
+  background: var(--amber-a3);
+  border: 1px solid var(--amber-a4);
+  color: var(--amber-11);
+}
+
+.advanced {
+  background: var(--crimson-a3);
+  border: 1px solid var(--crimson-a4);
+  color: var(--crimson-11);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--gray-10);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--ds-surface-sub);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--cat-from, var(--accent-9)),
+    var(--cat-to, var(--accent-11))
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+  .card:hover {
+    transform: none;
+  }
+}
