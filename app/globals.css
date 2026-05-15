@@ -1,9 +1,7 @@
 :root {
-  --yc-topbar-height: 48px;
-  --cat-from: var(--teal-9);
-  --cat-to: var(--teal-11);
+  --yc-topbar-height: 56px;
 
-  /* Type scale */
+  /* Type scale (unchanged) */
   --text-2xs: 9px;
   --text-xs: 11px;
   --text-sm: 13px;
@@ -13,7 +11,7 @@
   --text-2xl: 32px;
   --text-3xl: 44px;
 
-  /* Spacing scale (8px base) */
+  /* Spacing scale — 8px base (unchanged) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -22,6 +20,70 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
+
+  /* ============================================================
+     DS SEMANTIC TOKEN LAYER (YC light + indigo)
+     Mapped onto Radix vars which auto-flip with <Theme appearance>.
+     Consumers reference --ds-* (intent), never raw scale numbers.
+     ============================================================ */
+
+  /* Ink / text */
+  --ds-ink: var(--gray-12);
+  --ds-text: var(--gray-11);
+  --ds-text-muted: var(--gray-10);
+  --ds-text-faint: var(--gray-9);
+
+  /* Surfaces */
+  --ds-bg: var(--color-background);
+  --ds-surface: var(--color-panel-solid);
+  --ds-surface-sub: var(--gray-3);
+  --ds-surface-hover: var(--gray-2);
+  --ds-overlay: color-mix(in srgb, var(--color-background) 85%, transparent);
+
+  /* Borders (hairline-first) */
+  --ds-border-subtle: var(--gray-4);
+  --ds-border: var(--gray-5);
+  --ds-border-strong: var(--gray-7);
+
+  /* Indigo accent ramp */
+  --ds-accent: var(--accent-9);
+  --ds-accent-hover: var(--accent-10);
+  --ds-accent-active: var(--accent-8);
+  --ds-accent-text: var(--accent-11);
+  --ds-accent-subtle: var(--accent-3);
+  --ds-accent-bg: var(--accent-2);
+  --ds-accent-border: var(--accent-7);
+  --ds-on-accent: #fff;
+
+  /* Semantic (levels, not brand) */
+  --ds-success: var(--jade-9);
+  --ds-success-text: var(--jade-11);
+  --ds-warn: var(--amber-9);
+  --ds-warn-text: var(--amber-11);
+  --ds-danger: var(--red-9);
+  --ds-danger-text: var(--red-11);
+
+  /* Radii */
+  --ds-radius-sm: 4px;
+  --ds-radius: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 12px;
+  --ds-radius-pill: 999px;
+
+  /* Elevation — soft neutral shadows tuned for light bg */
+  --ds-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --ds-shadow-2: 0 2px 4px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.08);
+  --ds-shadow-3: 0 12px 32px rgba(16, 24, 40, 0.12);
+
+  /* Motion */
+  --ds-dur-fast: 120ms;
+  --ds-dur: 180ms;
+  --ds-dur-slow: 280ms;
+  --ds-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Legacy category-gradient hooks → rerouted to indigo (no teal) */
+  --cat-from: var(--accent-9);
+  --cat-to: var(--accent-11);
 }
 
 html {

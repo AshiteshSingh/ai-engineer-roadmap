@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`}>
         <PostHogProvider clientOptions={{ api_host: '/ingest' }} bootstrapFlags>
           <PostHogPageView />
-          <Theme appearance="dark" accentColor="teal" radius="small">
+          <Theme appearance="light" accentColor="indigo" grayColor="slate" radius="small" panelBackground="solid">
             {children}
           </Theme>
         </PostHogProvider>
