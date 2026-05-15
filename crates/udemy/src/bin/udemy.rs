@@ -21,7 +21,9 @@ use udemy::keywords::{
     classify_topic_group, is_relevant, match_slugs, should_follow_topic, SEED_TOPICS,
 };
 use udemy::scraper::{load_courses_json, parse_course_html};
-use udemy::types::{CrawlStats, ExternalCourseJson, SlugMapping};
+use udemy::types::{
+    Chapter, CrawlStats, ExternalCourseJson, SlugMapping, UdemyCourseJson,
+};
 use udemy::{Course, CourseStore};
 
 #[derive(Parser)]
@@ -126,6 +128,45 @@ enum Command {
         #[arg(long, default_value = "http://localhost:9999")]
         embed_url: String,
     },
+
+    /// Store / extract course chapter structure in LanceDB
+    Chapters {
+        #[command(subcommand)]
+        action: ChapterAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum ChapterAction {
+    /// Extract curriculum_sections from a udemy_courses*.json into the `chapters` table
+    Ingest {
+        /// Path to a udemy_courses*.json file
+        json: PathBuf,
+        #[arg(long, default_value = "./lance-db")]
+        db: String,
+        #[arg(long, default_value = "http://localhost:9999")]
+        embed_url: String,
+        #[arg(long, default_value_t = 64)]
+        batch: usize,
+    },
+    /// Print one course's ordered chapter structure
+    Of {
+        /// course_id (slug)
+        course_id: String,
+        #[arg(long, default_value = "./lance-db")]
+        db: String,
+    },
+    /// Semantic search over chapters across all courses
+    Search {
+        /// The search query
+        query: String,
+        #[arg(long, default_value = "./lance-db")]
+        db: String,
+        #[arg(long, short, default_value_t = 10)]
+        top: usize,
+        #[arg(long, default_value = "http://localhost:9999")]
+        embed_url: String,
+    },
 }
 
 #[derive(Deserialize)]
@@ -212,6 +253,21 @@ async fn main() -> Result<()> {
             top,
             embed_url,
         } => cmd_search(query, db, top, embed_url).await,
+        Command::Chapters { action } => match action {
+            ChapterAction::Ingest {
+                json,
+                db,
+                embed_url,
+                batch,
+            } => cmd_chapters_ingest(json, db, embed_url, batch).await,
+            ChapterAction::Of { course_id, db } => cmd_chapters_of(course_id, db).await,
+            ChapterAction::Search {
+                query,
+                db,
+                top,
+                embed_url,
+            } => cmd_chapters_search(query, db, top, embed_url).await,
+        },
     }
 }
 
@@ -962,4 +1018,117 @@ fn truncate(s: &str, max: usize) -> String {
     } else {
         format!("{}…", &s[..max.saturating_sub(1)])
     }
+}
+
+
+// ── chapters ───────────────────────────────────────────────────────────────────
+
+async fn cmd_chapters_ingest(
+    json: PathBuf,
+    db: String,
+    embed_url: String,
+    batch: usize,
+) -> Result<()> {
+    let content = std::fs::read_to_string(&json)
+        .with_context(|| format!("reading {}", json.display()))?;
+    let courses: Vec<UdemyCourseJson> =
+        serde_json::from_str(&content).context("parsing udemy_courses JSON")?;
+    let chapters: Vec<Chapter> = courses.iter().flat_map(|c| c.chapters()).collect();
+    if chapters.is_empty() {
+        eprintln!("No curriculum_sections found in {}", json.display());
+        return Ok(());
+    }
+    eprintln!(
+        "Extracted {} chapters from {} courses in {}",
+        chapters.len(),
+        courses.len(),
+        json.display()
+    );
+
+    let client = reqwest::Client::new();
+    client
+        .get(format!("{embed_url}/health"))
+        .send()
+        .await
+        .context("embed server not reachable — start it with: cargo run -p candle --bin embed-server --features server")?;
+
+    let store = CourseStore::connect(&db).await?;
+    let already = store.count_chapters().await?;
+    info!("{already} chapters already in store");
+
+    let total = chapters.len();
+    let mut done = 0usize;
+    for chunk in chapters.chunks(batch) {
+        let texts: Vec<String> = chunk.iter().map(|c| c.embed_text()).collect();
+        let vecs = embed_batch(&client, &embed_url, &texts).await?;
+        store.add_chapters(chunk, &vecs).await?;
+        done += chunk.len();
+        eprintln!("  {done}/{total} chapters embedded");
+    }
+    eprintln!(
+        "\nDone — {done} chapters indexed into {db} ({} total rows)",
+        already + done
+    );
+    Ok(())
+}
+
+async fn cmd_chapters_of(course_id: String, db: String) -> Result<()> {
+    let store = CourseStore::connect(&db).await?;
+    let chapters = store.chapters_for_course(&course_id).await?;
+    if chapters.is_empty() {
+        eprintln!("No chapters for course '{course_id}' — run `udemy chapters ingest` first.");
+        return Ok(());
+    }
+    println!("\n{} — {} chapters\n", course_id, chapters.len());
+    for ch in &chapters {
+        println!("{:>3}. {}", ch.chapter_index + 1, ch.title);
+    }
+    Ok(())
+}
+
+async fn cmd_chapters_search(
+    query: String,
+    db: String,
+    top: usize,
+    embed_url: String,
+) -> Result<()> {
+    let client = reqwest::Client::new();
+    let resp: EmbedResponse = client
+        .post(format!("{embed_url}/embed"))
+        .json(&serde_json::json!({ "input": query }))
+        .send()
+        .await
+        .context("embed server not reachable — start it with: cargo run -p candle --bin embed-server --features server")?
+        .json()
+        .await
+        .context("parsing embed response")?;
+    let vec = resp
+        .data
+        .into_iter()
+        .next()
+        .context("empty embed response")?
+        .embedding;
+
+    let store = CourseStore::connect(&db).await?;
+    let results = store.search_chapters(vec, top).await?;
+    if results.is_empty() {
+        eprintln!("No results — is the chapters table populated? Run `udemy chapters ingest` first.");
+        return Ok(());
+    }
+    println!("\nQuery: \"{query}\"\n");
+    println!("{:<6} {:<46} {:<4} {}", "Score", "Chapter", "#", "Course");
+    println!("{}", "-".repeat(92));
+    for r in &results {
+        let ch = &r.chapter;
+        let title: String = ch.title.chars().take(45).collect();
+        let course: String = ch.course_title.chars().take(34).collect();
+        println!(
+            "{:<6.3} {:<46} {:<4} {}",
+            r.score,
+            title,
+            ch.chapter_index + 1,
+            course
+        );
+    }
+    Ok(())
 }

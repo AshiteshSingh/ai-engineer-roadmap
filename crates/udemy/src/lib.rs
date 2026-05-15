@@ -7,4 +7,7 @@ pub mod types;
 
 pub use crawler::UdemyClient;
 pub use store::CourseStore;
-pub use types::{Course, CourseSearchResult, CrawlStats, ExternalCourseJson};
+pub use types::{
+    Chapter, ChapterSearchResult, Course, CourseSearchResult, CrawlStats, ExternalCourseJson,
+    UdemyCourseJson,
+};

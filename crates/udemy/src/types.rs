@@ -110,9 +110,96 @@ impl std::fmt::Display for CrawlStats {
     }
 }
 
+/// One chapter/section row of a course's curriculum, stored in the
+/// `chapters` LanceDB table (one row per chapter).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Chapter {
+    pub course_id: String,
+    pub course_title: String,
+    /// 0-based position within the course curriculum.
+    pub chapter_index: u32,
+    pub title: String,
+}
+
+impl Chapter {
+    /// Text used for embedding — chapter title with course context.
+    pub fn embed_text(&self) -> String {
+        format!("{} - {}", self.course_title, self.title)
+    }
+}
+
+/// A chapter returned from a vector search, with similarity score.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChapterSearchResult {
+    pub chapter: Chapter,
+    pub score: f32,
+}
+
+/// Subset of a `data/udemy_courses*.json` record needed to extract
+/// course structure. Unknown fields are ignored.
+#[derive(Debug, Clone, Deserialize)]
+pub struct UdemyCourseJson {
+    pub course_id: String,
+    pub title: String,
+    #[serde(default)]
+    pub url: String,
+    /// Ordered list of section/chapter strings.
+    #[serde(default)]
+    pub curriculum_sections: Vec<String>,
+}
+
+impl UdemyCourseJson {
+    /// Explode the course into ordered [`Chapter`] rows.
+    pub fn chapters(&self) -> Vec<Chapter> {
+        self.curriculum_sections
+            .iter()
+            .enumerate()
+            .map(|(i, title)| Chapter {
+                course_id: self.course_id.clone(),
+                course_title: self.title.clone(),
+                chapter_index: i as u32,
+                title: title.clone(),
+            })
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn chapter_embed_text_has_course_context() {
+        let ch = Chapter {
+            course_id: "c1".into(),
+            course_title: "Cool Course".into(),
+            chapter_index: 2,
+            title: "Evaluation".into(),
+        };
+        assert_eq!(ch.embed_text(), "Cool Course - Evaluation");
+    }
+
+    #[test]
+    fn udemy_course_json_explodes_to_indexed_chapters() {
+        let j: UdemyCourseJson = serde_json::from_str(
+            r#"{"course_id":"x","title":"X","url":"u","curriculum_sections":["Intro","Deep Dive"],"extra":"ignored"}"#,
+        )
+        .unwrap();
+        let chs = j.chapters();
+        assert_eq!(chs.len(), 2);
+        assert_eq!(chs[0].chapter_index, 0);
+        assert_eq!(chs[0].title, "Intro");
+        assert_eq!(chs[1].chapter_index, 1);
+        assert_eq!(chs[1].course_id, "x");
+        assert_eq!(chs[1].course_title, "X");
+    }
+
+    #[test]
+    fn udemy_course_json_missing_sections_defaults_empty() {
+        let j: UdemyCourseJson =
+            serde_json::from_str(r#"{"course_id":"x","title":"X"}"#).unwrap();
+        assert!(j.chapters().is_empty());
+    }
 
     fn sample_course() -> Course {
         Course {

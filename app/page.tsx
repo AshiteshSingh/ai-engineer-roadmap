@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { RoadmapGraph } from "@/components/roadmap-graph";
 import { buildRoadmapModel } from "@/lib/roadmap-flow";
+import { Section, Eyebrow, Heading } from "@/components/ui";
 
 export default async function HomePage() {
   const groups = await getGroupedLessons();
@@ -30,10 +31,10 @@ export default async function HomePage() {
 
       <ScrollReveal delay={60}>
         <section className="roadmap-flow" aria-label="AI Engineer roadmap flow">
-          <div className="yc-section" style={{ paddingBottom: 0 }}>
-            <span className="yc-eyebrow">The Path</span>
-            <h2 className="yc-heading">AI Engineer Roadmap</h2>
-          </div>
+          <Section style={{ paddingBottom: 0 }}>
+            <Eyebrow>The Path</Eyebrow>
+            <Heading as="h2">AI Engineer Roadmap</Heading>
+          </Section>
           <RoadmapGraph model={roadmapModel} />
         </section>
       </ScrollReveal>
