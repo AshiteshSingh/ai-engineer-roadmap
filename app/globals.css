@@ -1,4 +1,9 @@
-:root {
+/* Declared on BOTH :root and .radix-themes: the --ds-* accent/gray tokens
+   reference Radix scales (--accent-*, --gray-*) which Radix scopes to
+   .radix-themes. Declaring here too lets var(--accent-9) resolve correctly
+   for all in-theme content (closest ancestor wins on inheritance). */
+:root,
+.radix-themes {
   --yc-topbar-height: 56px;
 
   /* Type scale (unchanged) */
@@ -3373,6 +3378,13 @@ body {
 .scroll-reveal--visible {
   opacity: 1;
   transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* ================================================================
