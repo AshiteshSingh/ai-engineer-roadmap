@@ -144,6 +144,25 @@ mod tests {
     }
 
     #[test]
+    fn byte_parity_edge_cases() {
+        // bare ``` fence (no language) is NOT counted; tagged fences ARE
+        let q = check_quality("```\nno lang\n```\n```python\nx\n```");
+        assert_eq!(q.code_blocks, 1);
+
+        // `### ` and `##x` must NOT count as `## ` sections (only "## real")
+        let q2 = check_quality("# T\n### a\n### b\n##c\n## real\n");
+        assert!(q2.issues.iter().any(|i| i == "Fewer than 3 ## sections"));
+
+        // cross-refs: only `](/kebab_slug)` counts — not nested paths or URLs
+        let q3 = check_quality("[a](/good-1) [b](/a/b) [c](https://x.com) [d](/also_ok2)");
+        assert_eq!(q3.cross_refs, 2);
+
+        // xyflow vs mermaid counted independently and by the \b boundary
+        let q4 = check_quality("```xyflow\n{}\n```\n```xyflowish\n```\n```mermaid\n```");
+        assert_eq!(q4.xyflow_blocks, 1, "```xyflowish must not match ```xyflow\\b");
+    }
+
+    #[test]
     fn leading_whitespace_title_ok() {
         let q = check_quality("\n\n# Title\n");
         assert!(!q.issues.iter().any(|i| i == "Missing # title on first line"));
