@@ -6,17 +6,21 @@
 .radix-themes {
   --yc-topbar-height: 56px;
 
-  /* Type scale (unchanged) */
+  /* Type scale — fluid (clamp max == prior fixed desktop px, so desktop
+     renders byte-identical; the preferred term only engages below the
+     desktop container width). Token names unchanged. */
   --text-2xs: 9px;
   --text-xs: 11px;
-  --text-sm: 13px;
-  --text-base: 15px;
-  --text-lg: 18px;
-  --text-xl: 24px;
-  --text-2xl: 32px;
-  --text-3xl: 44px;
+  --text-sm: clamp(12px, 0.5vw + 10px, 13px);
+  --text-base: clamp(13px, 0.6vw + 10.5px, 15px);
+  --text-lg: clamp(15px, 0.9vw + 11px, 18px);
+  --text-xl: clamp(18px, 1.6vw + 12px, 24px);
+  --text-2xl: clamp(22px, 2.6vw + 13px, 32px);
+  --text-3xl: clamp(26px, 4.2vw + 14px, 44px);
+  /* Fluid hero title (max == prior fixed .hero-title 3rem) */
+  --hero-title-size: clamp(1.75rem, 5.5vw + 0.5rem, 3rem);
 
-  /* Spacing scale — 8px base (unchanged) */
+  /* Spacing scale — 8px base (fixed; used for internal component spacing) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -25,6 +29,12 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
+
+  /* Responsive shell tokens — section gutters/rhythm scale on small
+     screens; clamp max == prior fixed value so desktop is unchanged. */
+  --space-section-x: clamp(16px, 5vw, 24px);   /* max == --space-5 */
+  --space-section-y: clamp(40px, 8vw, 64px);   /* max == --space-8 */
+  --space-gutter: clamp(12px, 4vw, 16px);      /* max == --space-4 */
 
   /* ============================================================
      DS SEMANTIC TOKEN LAYER (YC light + indigo)
@@ -113,7 +123,7 @@ body {
 .yc-section {
   max-width: 1120px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-5);
+  padding: var(--space-section-y) var(--space-section-x);
 }
 .yc-section--tight { padding-top: var(--space-6); padding-bottom: var(--space-6); }
 
@@ -430,12 +440,12 @@ body {
    ================================================================ */
 .hero {
   position: relative;
-  padding: var(--space-8) var(--space-5) var(--space-7);
+  padding: var(--space-section-y) var(--space-section-x) var(--space-7);
   text-align: center;
   border-bottom: 1px solid var(--ds-border-subtle);
 }
 .hero-title {
-  font-size: 3rem;
+  font-size: var(--hero-title-size);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.08;
@@ -4629,3 +4639,46 @@ body {
 }
 
 /* === END T-XYFLOW === */
+
+/* ==================================================================
+   ===== RESPONSIVE — MANAGED REGIONS (mobile optimization pass) =====
+   ==================================================================
+   These fenced blocks are placed at end-of-file so they win the CSS
+   cascade over scattered legacy media queries (equal specificity,
+   later source order). Each UX team edits ONLY its own fence.
+
+   SHARED CONVENTIONS — all teams MUST follow:
+   - Breakpoints (max-width, desktop-first): 768px tablet, 480px phone.
+     Do NOT add new breakpoints. 640px/520px are legacy article-only.
+   - Fluid type: use var(--text-*) / var(--hero-title-size). No
+     hardcoded font-size px and no per-breakpoint font overrides in
+     app components — the clamp() handles scaling.
+   - Spacing: section padding via var(--space-section-x/y); grid gaps
+     via var(--space-gutter). --space-1..8 = fixed internal spacing.
+   - Tap targets: every interactive element >= 44x44px.
+   - No horizontal overflow at 360px on any route. Intentional
+     scrollers hide scrollbar + momentum + scroll-snap.
+   - Safe area: sticky/fixed top/bottom use env(safe-area-inset-*).
+   - Reduced motion: reuse @media (prefers-reduced-motion: reduce).
+   - Ownership: edit only your >>> TEAM-X >>> fence + your component
+     sections. NEVER edit the :root token block (foundation-only) or
+     another team's fence.
+   - Test viewports: 360x640, 390x844, 414x896, 768x1024, + 1280.
+   ================================================================== */
+
+/* >>> TEAM-A NAV/TOPBAR — DO NOT EDIT outside this fence >>> */
+/* <<< TEAM-A <<< */
+
+/* >>> TEAM-B HOME: HERO / LEARNING-PATH / ROADMAP — DO NOT EDIT outside this fence >>> */
+/* <<< TEAM-B <<< */
+
+/* >>> TEAM-C HOME: SEARCH / BENTO GRID / FOOTER / RESEARCH — DO NOT EDIT outside this fence >>> */
+/* <<< TEAM-C <<< */
+
+/* >>> TEAM-D READING: /[slug] ARTICLE / MARKDOWN / TOC — DO NOT EDIT outside this fence >>> */
+/* <<< TEAM-D <<< */
+
+/* >>> TEAM-E APP SECTIONS: auth / applications / coursework / memorize / courses / problems / aws / kv-quant — DO NOT EDIT outside this fence >>> */
+/* <<< TEAM-E <<< */
+
+/* ===== END MANAGED REGIONS ===== */

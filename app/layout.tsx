@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Theme } from "@radix-ui/themes";
 import { Analytics } from "@vercel/analytics/next";
@@ -11,6 +11,13 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mon
 export const metadata: Metadata = {
   title: "AI Engineering — From Zero to AI Engineer",
   description: "A structured learning path for junior engineers to master AI engineering: evals, RAG, agents, fine-tuning, prompting & production AI systems",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
