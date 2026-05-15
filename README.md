@@ -1,19 +1,39 @@
 <div align="center">
 
-# 🧠 AI Engineering — From Zero to AI Engineer
+<br />
 
-**A structured, hands-on learning path that takes junior engineers all the way to production AI systems.**
+# 🧠 &nbsp; AI Engineering
 
-108 deeply-researched lessons across 15 categories — RAG, agents, evals, fine-tuning, prompting & context engineering — wired together with semantic search, generated audio narration, an interactive knowledge graph, and per-learner mastery analytics.
+### From Zero to Production AI Engineer
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-5_graphs-1C3C3C?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
-[![Postgres](https://img.shields.io/badge/Neon_Postgres-pgvector-336791?logo=postgresql&logoColor=white)](https://neon.tech/)
-[![Cloudflare](https://img.shields.io/badge/Cloudflare-Containers_·_R2_·_D1-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/containers/)
-[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com/)
+**A structured, hands-on learning platform that takes engineers from transformer internals all the way to shipping production AI systems.**
 
-[Quick Start](#-quick-start) · [Features](#-features) · [Architecture](#architecture) · [Database Schema](#database-schema) · [LangGraph Pipelines](#langgraph-pipelines) · [Dev](#dev)
+108 deeply-researched lessons across 15 categories — RAG, agents, evals, fine-tuning, prompting & context engineering — wired together with semantic search, AI-generated audio narration, an interactive knowledge graph, a RAG tutor, and per-learner mastery analytics.
+
+<br />
+
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-5_graphs-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Postgres](https://img.shields.io/badge/Neon-pgvector-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Containers_·_R2_·_D1-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/containers/)
+[![Vercel](https://img.shields.io/badge/Vercel-deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
+
+<br />
+
+**[🚀 Quick Start](#-quick-start)** &nbsp;·&nbsp; **[✨ Features](#-features)** &nbsp;·&nbsp; **[🧱 Stack](#-stack)** &nbsp;·&nbsp; **[🏗 Architecture](#architecture)** &nbsp;·&nbsp; **[🗄 Schema](#database-schema)** &nbsp;·&nbsp; **[🔀 Pipelines](#langgraph-pipelines)** &nbsp;·&nbsp; **[🛠 Dev](#dev)**
+
+<br />
+
+<table align="center">
+<tr>
+<td align="center"><strong>108</strong><br/><sub>lessons</sub></td>
+<td align="center"><strong>15</strong><br/><sub>categories</sub></td>
+<td align="center"><strong>5</strong><br/><sub>LangGraph graphs</sub></td>
+<td align="center"><strong>22</strong><br/><sub>DB tables</sub></td>
+<td align="center"><strong>10</strong><br/><sub>course evaluators</sub></td>
+</tr>
+</table>
 
 </div>
 
@@ -21,30 +41,39 @@
 
 ## ✨ Features
 
-| | |
-|---|---|
-| 📚 **108 lessons, 15 categories** | A curriculum from transformer internals → RAG → agents → evals → production, with prerequisite-aware ordering. |
-| 🔎 **Semantic + full-text search** | `Cmd+K` instant search over Postgres FTS *and* pgvector cosine similarity. |
-| 🎧 **Audio narration** | Every lesson has TTS audio (Rust pipeline → Cloudflare R2) with per-user resume positions stored in D1. |
-| 🕸️ **Interactive knowledge graph** | Concepts linked by `prerequisite` / `builds_on` / `related` edges, rendered as an explorable graph. |
-| 🤖 **AI tutor chat** | RAG chat grounded in lesson content, with intent routing (keyword vs. conceptual) and checkpointed threads. |
-| 📈 **Mastery analytics** | Bayesian Knowledge Tracing (`mastery / transit / slip / guess`) per learner per lesson. |
-| ✍️ **Self-authoring pipeline** | A 5-pass LangGraph writer (research → outline → draft → review → revise) generates new articles with a quality gate. |
-| 🎓 **Course reviewer** | 10 expert evaluators run concurrently to score & rank external AI courses. |
+> A complete learning platform — not just content. Search, listen, chat, track mastery, and auto-author new lessons.
+
+|  | Feature | What it does |
+|:--:|---|---|
+| 📚 | **108 lessons, 15 categories** | A curriculum from transformer internals → RAG → agents → evals → production, with prerequisite-aware ordering. |
+| 🔎 | **Semantic + full-text search** | `Cmd+K` instant search over Postgres FTS *and* pgvector cosine similarity. |
+| 🎧 | **Audio narration** | Every lesson has TTS audio (Rust pipeline → Cloudflare R2) with per-user resume positions stored in D1. |
+| 🕸️ | **Interactive knowledge graph** | Concepts linked by `prerequisite` / `builds_on` / `related` edges, rendered as an explorable graph. |
+| 🤖 | **AI tutor chat** | RAG chat grounded in lesson content, with intent routing (keyword vs. conceptual) and checkpointed threads. |
+| 📈 | **Mastery analytics** | Bayesian Knowledge Tracing (`mastery / transit / slip / guess`) per learner per lesson. |
+| ✍️ | **Self-authoring pipeline** | A 5-pass LangGraph writer (research → outline → draft → review → revise) generates new articles with a quality gate. |
+| 🎓 | **Course reviewer** | 10 expert evaluators run concurrently to score & rank external AI courses. |
 
 ## 🚀 Quick Start
 
+> **Prerequisites:** Node 22.x · pnpm · a Neon Postgres database
+
+**1 — Frontend + content** (everything except AI generation)
+
 ```bash
-# Node 22.x · pnpm
 pnpm install
-# create .env.local — see the "Environment" section below for the full list of keys
+cp .env.example .env.local   # then fill in the keys (see Environment below)
 
 pnpm db:push      # sync schema to Neon
-pnpm seed         # seed lessons from content/*.md
-pnpm dev          # → http://localhost:3006
+pnpm seed         # seed 108 lessons from content/*.md
+pnpm dev          # → http://localhost:3006  🎉
 ```
 
-Want the AI features (chat, article/flashcard/course-review generation)? Spin up the LangGraph backend too — see [LangGraph backend](#langgraph-backend-backend).
+**2 — AI features** (chat, article / flashcard / course-review generation)
+
+Spin up the LangGraph backend too — see **[LangGraph backend](#langgraph-backend-backend)**.
+
+> 💡 No backend? The app runs fine read-only — search, audio, knowledge graph and analytics all work without it.
 
 ## 🧱 Stack
 
@@ -563,3 +592,19 @@ CLOUDFLARE_ACCOUNT_ID=   # for D1 REST API (audio_progress)
 CLOUDFLARE_AUDIO_D1_ID=  # database_id of knowledge-audio-progress
 CLOUDFLARE_D1_API_TOKEN= # CF API token, D1:Edit scoped to the audio DB
 ```
+
+---
+
+<div align="center">
+
+### Built with Next.js 15 · LangGraph · Neon pgvector · Cloudflare
+
+**108 lessons** &nbsp;·&nbsp; **5 LangGraph pipelines** &nbsp;·&nbsp; **RAG tutor** &nbsp;·&nbsp; **self-authoring**
+
+<sub>From zero to production AI engineer — one lesson at a time.</sub>
+
+<br />
+
+[⬆ Back to top](#-ai-engineering)
+
+</div>
