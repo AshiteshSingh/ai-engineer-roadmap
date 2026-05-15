@@ -1116,7 +1116,7 @@ async fn cmd_chapters_search(
         return Ok(());
     }
     println!("\nQuery: \"{query}\"\n");
-    println!("{:<6} {:<46} {:<4} {}", "Score", "Chapter", "#", "Course");
+    println!("Score  Chapter                                        #    Course");
     println!("{}", "-".repeat(92));
     for r in &results {
         let ch = &r.chapter;
