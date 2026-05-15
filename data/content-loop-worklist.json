@@ -1,5 +1,5 @@
 {
-  "generated_at_unix": 1778884192,
+  "generated_at_unix": 1778884445,
   "thresholds": {
     "minWords": 1500,
     "minCode": 2,
@@ -12,8 +12,8 @@
   "summary": {
     "total": 113,
     "skipped": 5,
-    "pass": 1,
-    "fail": 107
+    "pass": 2,
+    "fail": 106
   },
   "skipped": [
     "ai-on-cloudflare-workers",
@@ -296,9 +296,6 @@
         "Missing `## Runtime Internals` deep-dive section."
       ],
       "relation_issues": [
-        "Relations: missing reciprocal link — links to /guardrails-filtering in a Related/Prerequisite section but /guardrails-filtering does not link back",
-        "Relations: missing reciprocal link — links to /observability in a Related/Prerequisite section but /observability does not link back",
-        "Relations: missing reciprocal link — links to /red-teaming in a Related/Prerequisite section but /red-teaming does not link back",
         "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /scaling-laws, /constitutional-ai, /benchmark-design, /eval-fundamentals"
       ],
       "metrics": {
@@ -440,20 +437,14 @@
       "slug": "aws-cloudfront-route53",
       "file": "content/aws-cloudfront-route53.md",
       "structure_ok": false,
-      "relation_ok": false,
+      "relation_ok": true,
       "ok": false,
       "structure_issues": [
         "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
         "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
         "Missing `## Runtime Internals` deep-dive section."
       ],
-      "relation_issues": [
-        "Relations: missing reciprocal link — links to /aws-architecture in a Related/Prerequisite section but /aws-architecture does not link back",
-        "Relations: missing reciprocal link — links to /aws-cost-optimization in a Related/Prerequisite section but /aws-cost-optimization does not link back",
-        "Relations: missing reciprocal link — links to /aws-iam-security in a Related/Prerequisite section but /aws-iam-security does not link back",
-        "Relations: missing reciprocal link — links to /aws-lambda-serverless in a Related/Prerequisite section but /aws-lambda-serverless does not link back",
-        "Relations: missing reciprocal link — links to /aws-security-services in a Related/Prerequisite section but /aws-security-services does not link back"
-      ],
+      "relation_issues": [],
       "metrics": {
         "wordCount": 5963,
         "codeBlocks": 8,
@@ -510,21 +501,14 @@
       "slug": "aws-data-analytics",
       "file": "content/aws-data-analytics.md",
       "structure_ok": false,
-      "relation_ok": false,
+      "relation_ok": true,
       "ok": false,
       "structure_issues": [
         "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
         "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
         "Missing `## Runtime Internals` deep-dive section."
       ],
-      "relation_issues": [
-        "Relations: missing reciprocal link — links to /aws-cost-optimization in a Related/Prerequisite section but /aws-cost-optimization does not link back",
-        "Relations: missing reciprocal link — links to /aws-iam-security in a Related/Prerequisite section but /aws-iam-security does not link back",
-        "Relations: missing reciprocal link — links to /aws-lambda-serverless in a Related/Prerequisite section but /aws-lambda-serverless does not link back",
-        "Relations: missing reciprocal link — links to /aws-messaging-events in a Related/Prerequisite section but /aws-messaging-events does not link back",
-        "Relations: missing reciprocal link — links to /aws-observability in a Related/Prerequisite section but /aws-observability does not link back",
-        "Relations: missing reciprocal link — links to /aws-vpc-networking in a Related/Prerequisite section but /aws-vpc-networking does not link back"
-      ],
+      "relation_issues": [],
       "metrics": {
         "wordCount": 7448,
         "codeBlocks": 15,
@@ -557,21 +541,14 @@
       "slug": "aws-developer-tools",
       "file": "content/aws-developer-tools.md",
       "structure_ok": false,
-      "relation_ok": false,
+      "relation_ok": true,
       "ok": false,
       "structure_issues": [
         "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
         "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
         "Missing `## Runtime Internals` deep-dive section."
       ],
-      "relation_issues": [
-        "Relations: missing reciprocal link — links to /aws-architecture in a Related/Prerequisite section but /aws-architecture does not link back",
-        "Relations: missing reciprocal link — links to /aws-compute-containers in a Related/Prerequisite section but /aws-compute-containers does not link back",
-        "Relations: missing reciprocal link — links to /aws-cost-optimization in a Related/Prerequisite section but /aws-cost-optimization does not link back",
-        "Relations: missing reciprocal link — links to /aws-iam-security in a Related/Prerequisite section but /aws-iam-security does not link back",
-        "Relations: missing reciprocal link — links to /aws-lambda-serverless in a Related/Prerequisite section but /aws-lambda-serverless does not link back",
-        "Relations: missing reciprocal link — links to /aws-messaging-events in a Related/Prerequisite section but /aws-messaging-events does not link back"
-      ],
+      "relation_issues": [],
       "metrics": {
         "wordCount": 5413,
         "codeBlocks": 24,
@@ -662,9 +639,6 @@
         "Missing `## Runtime Internals` deep-dive section."
       ],
       "relation_issues": [
-        "Relations: missing reciprocal link — links to /aws-compute-containers in a Related/Prerequisite section but /aws-compute-containers does not link back",
-        "Relations: missing reciprocal link — links to /aws-lambda-serverless in a Related/Prerequisite section but /aws-lambda-serverless does not link back",
-        "Relations: missing reciprocal link — links to /aws-vpc-networking in a Related/Prerequisite section but /aws-vpc-networking does not link back",
         "Relations: add reciprocal link back to /aws-data-analytics (referenced from /aws-data-analytics's Related/Prerequisite section)"
       ],
       "metrics": {
@@ -881,8 +855,6 @@
         "Missing `## Runtime Internals` deep-dive section."
       ],
       "relation_issues": [
-        "Relations: missing reciprocal link — links to /cost-optimization in a Related/Prerequisite section but /cost-optimization does not link back",
-        "Relations: missing reciprocal link — links to /observability in a Related/Prerequisite section but /observability does not link back",
         "Relations: add reciprocal link back to /production-patterns (referenced from /production-patterns's Related/Prerequisite section)",
         "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /ci-cd, /production-patterns, /ai-for-code, /context-engineering, /agent-sdks"
       ],
@@ -1846,13 +1818,10 @@
       "slug": "postgresql-joins",
       "file": "content/postgresql-joins.md",
       "structure_ok": true,
-      "relation_ok": false,
-      "ok": false,
+      "relation_ok": true,
+      "ok": true,
       "structure_issues": [],
-      "relation_issues": [
-        "Relations: missing reciprocal link — links to /acid-properties in a Related/Prerequisite section but /acid-properties does not link back",
-        "Relations: missing reciprocal link — links to /aws-databases-rds in a Related/Prerequisite section but /aws-databases-rds does not link back"
-      ],
+      "relation_issues": [],
       "metrics": {
         "wordCount": 2571,
         "codeBlocks": 33,
@@ -1895,10 +1864,6 @@
         "Missing `## Runtime Internals` deep-dive section."
       ],
       "relation_issues": [
-        "Relations: missing reciprocal link — links to /ai-gateway in a Related/Prerequisite section but /ai-gateway does not link back",
-        "Relations: missing reciprocal link — links to /ci-cd-ai in a Related/Prerequisite section but /ci-cd-ai does not link back",
-        "Relations: missing reciprocal link — links to /eval-fundamentals in a Related/Prerequisite section but /eval-fundamentals does not link back",
-        "Relations: missing reciprocal link — links to /observability in a Related/Prerequisite section but /observability does not link back",
         "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /ai-engineer-roadmap, /multi-agent-systems, /context-engineering"
       ],
       "metrics": {
@@ -2149,9 +2114,6 @@
         "Missing `## Runtime Internals` deep-dive section."
       ],
       "relation_issues": [
-        "Relations: missing reciprocal link — links to /advanced-rag in a Related/Prerequisite section but /advanced-rag does not link back",
-        "Relations: missing reciprocal link — links to /embedding-models in a Related/Prerequisite section but /embedding-models does not link back",
-        "Relations: missing reciprocal link — links to /vector-databases in a Related/Prerequisite section but /vector-databases does not link back",
         "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /eval-fundamentals, /llamaindex, /model-architectures, /llm-serving"
       ],
       "metrics": {
@@ -2207,16 +2169,14 @@
       "slug": "system-prompts",
       "file": "content/system-prompts.md",
       "structure_ok": false,
-      "relation_ok": false,
+      "relation_ok": true,
       "ok": false,
       "structure_issues": [
         "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
         "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
         "Missing `## Runtime Internals` deep-dive section."
       ],
-      "relation_issues": [
-        "Relations: missing reciprocal link — links to /function-calling in a Related/Prerequisite section but /function-calling does not link back"
-      ],
+      "relation_issues": [],
       "metrics": {
         "wordCount": 5023,
         "codeBlocks": 5,
@@ -2333,20 +2293,12 @@
     }
   ],
   "worklist": [
-    "aws-data-analytics",
-    "aws-developer-tools",
     "observability",
-    "aws-cloudfront-route53",
     "aws-lambda-serverless",
     "langgraph-lead-gen",
-    "production-patterns",
-    "ai-governance",
     "aws-iam-security",
-    "aws-observability",
-    "ci-cd-ai",
     "eval-frameworks-comparison",
     "public-speaking",
-    "search-recommendations",
     "audio-speech-ai",
     "aws-architecture",
     "aws-cost-optimization",
@@ -2371,6 +2323,7 @@
     "aws-messaging-events",
     "aws-step-functions",
     "aws-vpc-networking",
+    "ci-cd-ai",
     "cost-optimization",
     "embedding-models",
     "function-calling",
@@ -2383,10 +2336,12 @@
     "agent-evaluation",
     "agent-memory",
     "ai-for-code",
+    "ai-governance",
     "aws-ai-ml-services",
     "aws-api-gateway-networking",
     "aws-cicd-devops",
     "aws-databases-rds",
+    "aws-observability",
     "aws-security-services",
     "aws-storage-s3",
     "benchmark-design",
@@ -2406,12 +2361,13 @@
     "interpretability",
     "memory-architectures",
     "model-architectures",
+    "production-patterns",
     "prompt-optimization",
     "scaling-laws",
     "scaling-load-balancing",
+    "search-recommendations",
     "solid-principles",
     "structured-output",
-    "system-prompts",
     "tokenization",
     "transformer-architecture",
     "vector-databases",
@@ -2423,6 +2379,9 @@
     "agent-sdks",
     "ai-engineer-roadmap",
     "aws",
+    "aws-cloudfront-route53",
+    "aws-data-analytics",
+    "aws-developer-tools",
     "code-agents",
     "constitutional-ai",
     "context-compression",
@@ -2438,7 +2397,7 @@
     "prompt-engineering-fundamentals",
     "rag-evaluation",
     "retrieval-strategies",
-    "postgresql-joins",
+    "system-prompts",
     "foreign-keys"
   ]
 }

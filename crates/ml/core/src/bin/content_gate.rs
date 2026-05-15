@@ -423,23 +423,11 @@ fn run_scan(args: &Args) -> anyhow::Result<Scan> {
             ));
         }
 
-        // R3 — reciprocity for Related/Prerequisite-section links.
-        let mut r3_missing: BTreeSet<&str> = BTreeSet::new();
-        for b in &ls.in_relation_section {
-            if b == &slug || !loaded.contains(b) {
-                continue;
-            }
-            let b_links_back = all_targets.get(b.as_str()).is_some_and(|s| s.contains(slug.as_str()));
-            if !b_links_back {
-                r3_missing.insert(b.as_str());
-            }
-        }
-        for b in &r3_missing {
-            relation_issues.push(format!(
-                "Relations: missing reciprocal link — links to /{b} in a Related/Prerequisite section but /{b} does not link back"
-            ));
-        }
-        // Enqueued back-link obligations onto this lesson (it is some A's B).
+        // R3 — reciprocity. The obligation falls solely on the lesson that
+        // must ADD the outgoing back-link (resolvable by editing only that
+        // lesson on its own tick). We deliberately do NOT also fail the
+        // lesson that already links out: it cannot fix the other side by
+        // editing itself, which would livelock the single-file-per-tick loop.
         if let Some(sources) = need_backlink.get(&slug) {
             for a in sources {
                 relation_issues.push(format!(

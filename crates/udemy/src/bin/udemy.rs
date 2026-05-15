@@ -24,6 +24,8 @@ use udemy::scraper::{load_courses_json, parse_course_html};
 use udemy::types::{
     Chapter, CrawlStats, ExternalCourseJson, SlugMapping, UdemyCourseJson,
 };
+use udemy::embed::{embed_batch, embed_one};
+use udemy::generate::{generate_article, GenerateConfig};
 use udemy::{Course, CourseStore};
 
 #[derive(Parser)]
@@ -134,6 +136,38 @@ enum Command {
         #[command(subcommand)]
         action: ChapterAction,
     },
+
+    /// Generate a knowledge-base article grounded on the Udemy corpus
+    Generate {
+        #[arg(long)]
+        slug: String,
+        #[arg(long)]
+        topic: Option<String>,
+        #[arg(long, default_value = "")]
+        category: String,
+        #[arg(long, default_value = "")]
+        related: String,
+        #[arg(long, default_value = "./lance-db")]
+        db: String,
+        #[arg(long, default_value = "http://localhost:9999")]
+        embed_url: String,
+        #[arg(long, default_value = "../../content")]
+        content_dir: PathBuf,
+        #[arg(long)]
+        model: Option<String>,
+        #[arg(long, default_value_t = 5)]
+        top_courses: usize,
+        #[arg(long, default_value_t = 8)]
+        top_chapters: usize,
+        #[arg(long, default_value_t = 2)]
+        max_revisions: usize,
+        #[arg(long, default_value_t = 16384)]
+        max_tokens: u32,
+        #[arg(long)]
+        env_file: Option<PathBuf>,
+        #[arg(long)]
+        no_write: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -169,39 +203,6 @@ enum ChapterAction {
     },
 }
 
-#[derive(Deserialize)]
-struct EmbedResponse {
-    data: Vec<EmbedData>,
-}
-
-#[derive(Deserialize)]
-struct EmbedData {
-    embedding: Vec<f32>,
-}
-
-async fn embed_batch(
-    client: &reqwest::Client,
-    url: &str,
-    texts: &[String],
-) -> Result<Vec<Vec<f32>>> {
-    let resp: EmbedResponse = client
-        .post(format!("{url}/embed"))
-        .json(&serde_json::json!({ "input": texts }))
-        .send()
-        .await
-        .context("calling embed server")?
-        .json()
-        .await
-        .context("parsing embed response")?;
-
-    let vecs: Vec<Vec<f32>> = resp.data.into_iter().map(|d| d.embedding).collect();
-    assert_eq!(
-        vecs.len(),
-        texts.len(),
-        "embed server returned wrong number of vectors"
-    );
-    Ok(vecs)
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -268,6 +269,40 @@ async fn main() -> Result<()> {
                 embed_url,
             } => cmd_chapters_search(query, db, top, embed_url).await,
         },
+        Command::Generate {
+            slug,
+            topic,
+            category,
+            related,
+            db,
+            embed_url,
+            content_dir,
+            model,
+            top_courses,
+            top_chapters,
+            max_revisions,
+            max_tokens,
+            env_file,
+            no_write,
+        } => {
+            cmd_generate(
+                slug,
+                topic,
+                category,
+                related,
+                db,
+                embed_url,
+                content_dir,
+                model,
+                top_courses,
+                top_chapters,
+                max_revisions,
+                max_tokens,
+                env_file,
+                no_write,
+            )
+            .await
+        }
     }
 }
 
@@ -962,22 +997,7 @@ async fn cmd_scrape(json: PathBuf, db: String, embed_url: String, batch: usize) 
 
 async fn cmd_search(query: String, db: String, top: usize, embed_url: String) -> Result<()> {
     let client = reqwest::Client::new();
-    let resp: EmbedResponse = client
-        .post(format!("{}/embed", embed_url))
-        .json(&serde_json::json!({ "input": query }))
-        .send()
-        .await
-        .context("embed server not reachable — start it with: cargo run -p candle --bin embed-server --features server")?
-        .json()
-        .await
-        .context("parsing embed response")?;
-
-    let vec = resp
-        .data
-        .into_iter()
-        .next()
-        .context("empty embed response")?
-        .embedding;
+    let vec = embed_one(&client, &embed_url, &query).await?;
 
     let store = CourseStore::connect(&db).await?;
     let results = store.search(vec, top).await?;
@@ -1093,21 +1113,7 @@ async fn cmd_chapters_search(
     embed_url: String,
 ) -> Result<()> {
     let client = reqwest::Client::new();
-    let resp: EmbedResponse = client
-        .post(format!("{embed_url}/embed"))
-        .json(&serde_json::json!({ "input": query }))
-        .send()
-        .await
-        .context("embed server not reachable — start it with: cargo run -p candle --bin embed-server --features server")?
-        .json()
-        .await
-        .context("parsing embed response")?;
-    let vec = resp
-        .data
-        .into_iter()
-        .next()
-        .context("empty embed response")?
-        .embedding;
+    let vec = embed_one(&client, &embed_url, &query).await?;
 
     let store = CourseStore::connect(&db).await?;
     let results = store.search_chapters(vec, top).await?;
@@ -1131,4 +1137,80 @@ async fn cmd_chapters_search(
         );
     }
     Ok(())
+}
+
+
+// ── generate ───────────────────────────────────────────────────────────────────
+
+#[allow(clippy::too_many_arguments)]
+async fn cmd_generate(
+    slug: String,
+    topic: Option<String>,
+    category: String,
+    related: String,
+    db: String,
+    embed_url: String,
+    content_dir: PathBuf,
+    model: Option<String>,
+    top_courses: usize,
+    top_chapters: usize,
+    max_revisions: usize,
+    max_tokens: u32,
+    env_file: Option<PathBuf>,
+    no_write: bool,
+) -> Result<()> {
+    if let Some(ef) = env_file.as_ref() {
+        let text = std::fs::read_to_string(ef)
+            .with_context(|| format!("reading env file {}", ef.display()))?;
+        for line in text.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            if let Some((k, v)) = line.split_once('=') {
+                let k = k.trim();
+                let v = v.trim().trim_matches('"').trim_matches('\'');
+                if std::env::var(k).is_err() {
+                    std::env::set_var(k, v);
+                }
+            }
+        }
+    }
+
+    let topic = topic.unwrap_or_else(|| udemy::generate::pipeline::humanize_slug(&slug));
+    eprintln!("Generating: {topic} (slug={slug})");
+    eprintln!("Pipeline: research -> outline -> draft -> review -> [revise loop] -> finalize");
+
+    let cfg = GenerateConfig {
+        slug,
+        topic,
+        category,
+        related_topics: related,
+        db_path: db,
+        embed_url,
+        content_dir,
+        model_alias: model,
+        top_courses,
+        top_chapters,
+        max_revisions,
+        max_tokens,
+        no_write,
+    };
+
+    let outcome = generate_article(cfg).await?;
+
+    eprintln!(
+        "\nDone! {} words, {} revisions, ok={}",
+        outcome.word_count, outcome.revisions, outcome.quality.ok
+    );
+    if let Some(p) = &outcome.out_path {
+        eprintln!("Wrote {}", p.display());
+    }
+    if !outcome.quality.ok {
+        eprintln!("Quality issues:");
+        for i in &outcome.quality.issues {
+            eprintln!("  - {i}");
+        }
+    }
+    std::process::exit(if outcome.quality.ok { 0 } else { 1 });
 }
