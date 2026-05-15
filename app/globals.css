@@ -3969,3 +3969,63 @@
 /* <<< TEAM-E <<< */
 
 /* ===== END MANAGED REGIONS ===== */
+
+
+/* ==================================================================
+   ===== HOMEPAGE REDESIGN — MANAGED REGIONS (HP-TEAM pass) =========
+   ==================================================================
+   Sourced AFTER the mobile-optimization fences and all legacy rules,
+   so equal-specificity selectors here WIN the cascade. This is the
+   override surface for the 10-team homepage redesign.
+
+   SHARED TOKEN CONTRACT — binding on every HP team:
+   - Color: only var(--ds-*) semantic tokens (+ .cat-* identity
+     classes). No raw hex, no raw Radix scale numbers.
+   - Type: only var(--text-*) / var(--hero-title-size). No hardcoded
+     font-size px, no per-breakpoint font-size overrides.
+   - Spacing: section rhythm via var(--space-section-x/y); grid gaps
+     via var(--space-gutter); internal via var(--space-1..8).
+   - Radius/shadow/motion: only var(--ds-radius-*),
+     var(--ds-shadow-1..3), var(--ds-dur*), var(--ds-ease).
+   - Breakpoints: only max-width 768px and 480px. No new breakpoints.
+   - Tap targets >= 44x44; honor @media (prefers-reduced-motion:
+     reduce); no horizontal overflow at 360px.
+   - Need a new token? Do NOT add it here or in tokens.css — request
+     it from T10 via the Integration Request.
+
+   OWNERSHIP — edit ONLY your own >>> HP-TEAM-N >>> fence. Never edit
+   another fence, the :root/tokens block, TEAM-A..E, or page.tsx.
+   Test viewports: 360x640, 390x844, 414x896, 768x1024, 1280.
+   ================================================================== */
+
+/* >>> HP-TEAM-1 HERO — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-1 <<< */
+
+/* >>> HP-TEAM-2 TOPBAR/NAV (preserve TEAM-A mobile drawer <=768px) — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-2 <<< */
+
+/* >>> HP-TEAM-3 LEARNING PATH — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-3 <<< */
+
+/* >>> HP-TEAM-4 ROADMAP GRAPH (.rg-* lives in third-party.css, T4-only) — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-4 <<< */
+
+/* >>> HP-TEAM-5 RESEARCH COLLECTIONS (.hp-research scope only; NOT bare .cat-card) — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-5 <<< */
+
+/* >>> HP-TEAM-6 SEARCH + BENTO (owns base .cat-card) — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-6 <<< */
+
+/* >>> HP-TEAM-7 FOOTER — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-7 <<< */
+
+/* >>> HP-TEAM-8 MOTION / MICRO-INTERACTIONS (keyframes, transitions, reduced-motion) — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-8 <<< */
+
+/* >>> HP-TEAM-9 A11Y / SEMANTICS (skip-link, focus-visible, sr-only) — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-9 <<< */
+
+/* >>> HP-TEAM-10 COHESION / CROSS-SECTION RECONCILIATION (last-sourced; wins) — DO NOT EDIT outside this fence >>> */
+/* <<< HP-TEAM-10 <<< */
+
+/* ===== END HOMEPAGE REDESIGN REGIONS ===== */
