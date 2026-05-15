@@ -83,6 +83,9 @@ fn gather_existing_articles(content_dir: &Path, current_slug: &str) -> String {
     let mut stems: Vec<String> = Vec::new();
     if let Ok(rd) = std::fs::read_dir(content_dir) {
         for e in rd.flatten() {
+            if !e.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                continue;
+            }
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) == Some("md") {
                 if let Some(stem) = p.file_stem().and_then(|x| x.to_str()) {
@@ -105,6 +108,9 @@ fn pick_style_sample(content_dir: &Path, current_slug: &str) -> String {
     let mut best: Option<(u64, PathBuf)> = None;
     if let Ok(rd) = std::fs::read_dir(content_dir) {
         for e in rd.flatten() {
+            if !e.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                continue;
+            }
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) != Some("md") {
                 continue;
@@ -408,6 +414,18 @@ mod tests {
         assert!(ensure_writable_dir(&missing, false).is_err());
         // skipped entirely when no_write
         assert!(ensure_writable_dir(&missing, true).is_ok());
+    }
+
+    #[test]
+    fn inputs_skip_non_file_md_entries() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(d.path().join("real-one.md"), "hello".repeat(50)).unwrap();
+        std::fs::create_dir(d.path().join("weird.md")).unwrap();
+        let ga = gather_existing_articles(d.path(), "cur");
+        assert!(ga.contains("- [Real One](/real-one)"));
+        assert!(!ga.contains("weird"));
+        let ss = pick_style_sample(d.path(), "cur");
+        assert!(ss.starts_with("hello"));
     }
 
     #[test]

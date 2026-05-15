@@ -74,7 +74,6 @@ mod tests {
 
     #[tokio::test]
     async fn embed_batch_empty_slice_is_noop_without_network() {
-        // Returns before any HTTP call, so an unreachable URL is fine.
         let c = reqwest::Client::new();
         let out = embed_batch(&c, "http://127.0.0.1:1", &[]).await.unwrap();
         assert!(out.is_empty());
