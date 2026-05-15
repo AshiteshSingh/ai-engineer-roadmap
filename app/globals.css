@@ -6428,6 +6428,68 @@
 /* <<< HP-TEAM-8 <<< */
 
 /* >>> HP-TEAM-9 A11Y / SEMANTICS (skip-link, focus-visible, sr-only) — DO NOT EDIT outside this fence >>> */
+/* ===== HP-TEAM-9 — A11Y / SEMANTICS ===== */
+
+/* Visually-hidden but screen-reader-available text (accessible names). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link: off-screen until focused, then a token-styled pill that
+   sits above the topbar. No layout shift (fixed/translate only). */
+.skip-link {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1000;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--ds-shadow-2);
+  transform: translateY(calc(-100% - var(--space-4)));
+  transition: transform var(--ds-dur) var(--ds-ease);
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid var(--ds-on-accent);
+  outline-offset: 2px;
+}
+
+/* Global keyboard focus fallback. Scoped to :focus-visible so it never
+   shows on mouse/touch. Per-team rings (.lp-card, .hp-research-card)
+   keep their own identical token outline; this only fills the gaps and
+   does not restyle them. No layout shift (outline is non-flowing). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+[role="link"]:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+  border-radius: var(--ds-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}
 /* <<< HP-TEAM-9 <<< */
 
 /* >>> HP-TEAM-10 COHESION / CROSS-SECTION RECONCILIATION (last-sourced; wins) — DO NOT EDIT outside this fence >>> */

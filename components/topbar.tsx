@@ -112,6 +112,8 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
           type="button"
           aria-label="Open menu"
           aria-expanded={navOpen}
+          aria-controls="yc-nav-drawer"
+          aria-haspopup="dialog"
           className="yc-nav-hamburger"
           onClick={() => setNavOpen(true)}
         >
@@ -141,8 +143,10 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
         />
       )}
       <div
+        id="yc-nav-drawer"
         className={`yc-nav-drawer ${navOpen ? "yc-nav-drawer--open" : ""}`}
         role="dialog"
+        aria-modal="true"
         aria-label="Navigation menu"
         aria-hidden={!navOpen}
       >

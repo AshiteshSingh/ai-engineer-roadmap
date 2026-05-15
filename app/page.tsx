@@ -25,6 +25,7 @@ export default async function HomePage() {
 
       <Hero lessonCount={total} domainCount={catCount} wordCount={wordCount} readingHours={readingHours} />
 
+      <main id="content">
       <ScrollReveal>
         <LearningPath groups={groups} />
       </ScrollReveal>
@@ -39,16 +40,15 @@ export default async function HomePage() {
         </section>
       </ScrollReveal>
 
-      <main>
-        {/* Research Collections */}
-        <ScrollReveal delay={100}>
-          <ResearchCollections />
-        </ScrollReveal>
+      {/* Research Collections */}
+      <ScrollReveal delay={100}>
+        <ResearchCollections />
+      </ScrollReveal>
 
-        {/* Search + Bento Grid */}
-        <div id="lessons">
-          <Search groups={groups} />
-        </div>
+      {/* Search + Bento Grid */}
+      <div id="lessons">
+        <Search groups={groups} />
+      </div>
       </main>
 
       <Footer wordCount={wordCount} />
