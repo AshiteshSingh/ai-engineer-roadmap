@@ -1,0 +1,507 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    },
+    {
+      "source": "/agent-:num(\\d+)-:slug",
+      "destination": "/:slug",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/agent-(\\d+)-((?:(?!-)[^/])+?)(?:/)?$"
+    },
+    {
+      "source": "/aws-lambda-serverless",
+      "destination": "/aws/lambda-serverless",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/aws-lambda-serverless(?:/)?$"
+    },
+    {
+      "source": "/aws-api-gateway-networking",
+      "destination": "/aws/api-gateway-networking",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/aws-api-gateway-networking(?:/)?$"
+    },
+    {
+      "source": "/aws-iam-security",
+      "destination": "/aws/iam-security",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/aws-iam-security(?:/)?$"
+    },
+    {
+      "source": "/aws-compute-containers",
+      "destination": "/aws/compute-containers",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/aws-compute-containers(?:/)?$"
+    },
+    {
+      "source": "/aws-storage-s3",
+      "destination": "/aws/storage-s3",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/aws-storage-s3(?:/)?$"
+    },
+    {
+      "source": "/aws-cicd-devops",
+      "destination": "/aws/cicd-devops",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/aws-cicd-devops(?:/)?$"
+    },
+    {
+      "source": "/aws-architecture",
+      "destination": "/aws/architecture",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/aws-architecture(?:/)?$"
+    },
+    {
+      "source": "/aws-ai-ml-services",
+      "destination": "/aws/ai-ml-services",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/aws-ai-ml-services(?:/)?$"
+    },
+    {
+      "source": "/dynamodb-data-services",
+      "destination": "/aws/dynamodb-data-services",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/dynamodb-data-services(?:/)?$"
+    }
+  ],
+  "headers": [],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/applications/[id]",
+      "regex": "^/api/applications/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/applications/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/applications/[id]/company",
+      "regex": "^/api/applications/([^/]+?)/company(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/applications/(?<nxtPid>[^/]+?)/company(?:/)?$"
+    },
+    {
+      "page": "/api/applications/[id]/memorize",
+      "regex": "^/api/applications/([^/]+?)/memorize(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/applications/(?<nxtPid>[^/]+?)/memorize(?:/)?$"
+    },
+    {
+      "page": "/api/applications/[id]/memorize/generate",
+      "regex": "^/api/applications/([^/]+?)/memorize/generate(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/applications/(?<nxtPid>[^/]+?)/memorize/generate(?:/)?$"
+    },
+    {
+      "page": "/api/applications/[id]/prep",
+      "regex": "^/api/applications/([^/]+?)/prep(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/applications/(?<nxtPid>[^/]+?)/prep(?:/)?$"
+    },
+    {
+      "page": "/api/applications/[id]/tech-dismissed",
+      "regex": "^/api/applications/([^/]+?)/tech\\-dismissed(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/applications/(?<nxtPid>[^/]+?)/tech\\-dismissed(?:/)?$"
+    },
+    {
+      "page": "/api/auth/[...all]",
+      "regex": "^/api/auth/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPall": "nxtPall"
+      },
+      "namedRegex": "^/api/auth/(?<nxtPall>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/course-review/[id]",
+      "regex": "^/api/course\\-review/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/course\\-review/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/coursework/[id]",
+      "regex": "^/api/coursework/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/coursework/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/learners/[id]",
+      "regex": "^/api/learners/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/learners/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/memorize/[categorySlug]",
+      "regex": "^/api/memorize/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcategorySlug": "nxtPcategorySlug"
+      },
+      "namedRegex": "^/api/memorize/(?<nxtPcategorySlug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/problems/[slug]/submit",
+      "regex": "^/api/problems/([^/]+?)/submit(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/api/problems/(?<nxtPslug>[^/]+?)/submit(?:/)?$"
+    },
+    {
+      "page": "/api/resume-pdf/[slug]",
+      "regex": "^/api/resume\\-pdf/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/api/resume\\-pdf/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/resume-pdf/[slug]/[variant]",
+      "regex": "^/api/resume\\-pdf/([^/]+?)/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPvariant": "nxtPvariant"
+      },
+      "namedRegex": "^/api/resume\\-pdf/(?<nxtPslug>[^/]+?)/(?<nxtPvariant>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/applications/[id]",
+      "regex": "^/applications/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/applications/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/applications/[id]/debrief",
+      "regex": "^/applications/([^/]+?)/debrief(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/applications/(?<nxtPid>[^/]+?)/debrief(?:/)?$"
+    },
+    {
+      "page": "/applications/[id]/interviewers",
+      "regex": "^/applications/([^/]+?)/interviewers(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/applications/(?<nxtPid>[^/]+?)/interviewers(?:/)?$"
+    },
+    {
+      "page": "/applications/[id]/notes",
+      "regex": "^/applications/([^/]+?)/notes(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/applications/(?<nxtPid>[^/]+?)/notes(?:/)?$"
+    },
+    {
+      "page": "/applications/[id]/prep",
+      "regex": "^/applications/([^/]+?)/prep(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/applications/(?<nxtPid>[^/]+?)/prep(?:/)?$"
+    },
+    {
+      "page": "/applications/[id]/prep/memorize",
+      "regex": "^/applications/([^/]+?)/prep/memorize(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/applications/(?<nxtPid>[^/]+?)/prep/memorize(?:/)?$"
+    },
+    {
+      "page": "/aws/[slug]",
+      "regex": "^/aws/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/aws/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/coursework/[slug]",
+      "regex": "^/coursework/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/coursework/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/coursework/[slug]/slovenia",
+      "regex": "^/coursework/([^/]+?)/slovenia(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/coursework/(?<nxtPslug>[^/]+?)/slovenia(?:/)?$"
+    },
+    {
+      "page": "/coursework/[slug]/slovenia/ideas",
+      "regex": "^/coursework/([^/]+?)/slovenia/ideas(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/coursework/(?<nxtPslug>[^/]+?)/slovenia/ideas(?:/)?$"
+    },
+    {
+      "page": "/coursework/[slug]/slovenia/images",
+      "regex": "^/coursework/([^/]+?)/slovenia/images(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/coursework/(?<nxtPslug>[^/]+?)/slovenia/images(?:/)?$"
+    },
+    {
+      "page": "/coursework/[slug]/slovenia/images/[imageSlug]",
+      "regex": "^/coursework/([^/]+?)/slovenia/images/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPimageSlug": "nxtPimageSlug"
+      },
+      "namedRegex": "^/coursework/(?<nxtPslug>[^/]+?)/slovenia/images/(?<nxtPimageSlug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/memorize/[categorySlug]",
+      "regex": "^/memorize/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcategorySlug": "nxtPcategorySlug"
+      },
+      "namedRegex": "^/memorize/(?<nxtPcategorySlug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/problems/[slug]",
+      "regex": "^/problems/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/problems/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/resume/[slug]",
+      "regex": "^/resume/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/resume/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/resume/[slug]/[variant]",
+      "regex": "^/resume/([^/]+?)/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPvariant": "nxtPvariant"
+      },
+      "namedRegex": "^/resume/(?<nxtPslug>[^/]+?)/(?<nxtPvariant>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[slug]",
+      "regex": "^/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/(?<nxtPslug>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/api/applications",
+      "regex": "^/api/applications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/applications(?:/)?$"
+    },
+    {
+      "page": "/api/audio-progress",
+      "regex": "^/api/audio\\-progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/audio\\-progress(?:/)?$"
+    },
+    {
+      "page": "/api/chat",
+      "regex": "^/api/chat(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/chat(?:/)?$"
+    },
+    {
+      "page": "/api/coursework",
+      "regex": "^/api/coursework(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/coursework(?:/)?$"
+    },
+    {
+      "page": "/api/coursework/upload",
+      "regex": "^/api/coursework/upload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/coursework/upload(?:/)?$"
+    },
+    {
+      "page": "/api/cron/backup",
+      "regex": "^/api/cron/backup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/backup(?:/)?$"
+    },
+    {
+      "page": "/api/graphql",
+      "regex": "^/api/graphql(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/graphql(?:/)?$"
+    },
+    {
+      "page": "/api/learners",
+      "regex": "^/api/learners(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/learners(?:/)?$"
+    },
+    {
+      "page": "/api/memorize",
+      "regex": "^/api/memorize(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/memorize(?:/)?$"
+    },
+    {
+      "page": "/applications",
+      "regex": "^/applications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/applications(?:/)?$"
+    },
+    {
+      "page": "/aws",
+      "regex": "^/aws(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/aws(?:/)?$"
+    },
+    {
+      "page": "/courses",
+      "regex": "^/courses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/courses(?:/)?$"
+    },
+    {
+      "page": "/coursework",
+      "regex": "^/coursework(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/coursework(?:/)?$"
+    },
+    {
+      "page": "/kv-quant",
+      "regex": "^/kv\\-quant(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/kv\\-quant(?:/)?$"
+    },
+    {
+      "page": "/langgraph/lead-gen",
+      "regex": "^/langgraph/lead\\-gen(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/langgraph/lead\\-gen(?:/)?$"
+    },
+    {
+      "page": "/langgraph/lead-gen/sd",
+      "regex": "^/langgraph/lead\\-gen/sd(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/langgraph/lead\\-gen/sd(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/memorize",
+      "regex": "^/memorize(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/memorize(?:/)?$"
+    },
+    {
+      "page": "/nexttech/senior-genai-engineer",
+      "regex": "^/nexttech/senior\\-genai\\-engineer(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/nexttech/senior\\-genai\\-engineer(?:/)?$"
+    },
+    {
+      "page": "/problems",
+      "regex": "^/problems(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/problems(?:/)?$"
+    },
+    {
+      "page": "/self-evaluation",
+      "regex": "^/self\\-evaluation(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/self\\-evaluation(?:/)?$"
+    },
+    {
+      "page": "/signup",
+      "regex": "^/signup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/signup(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

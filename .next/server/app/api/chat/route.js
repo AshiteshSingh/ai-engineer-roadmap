@@ -1,0 +1,12 @@
+var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/chat/route.js")
+R.c("server/chunks/[root-of-the-server]__0-_m7n_._.js")
+R.c("server/chunks/10ye_next_dist_0u97ii9._.js")
+R.c("server/chunks/0c~e_@opentelemetry_api_build_esm_00upx3e._.js")
+R.c("server/chunks/10ye_next_0.3fap7._.js")
+R.c("server/chunks/10ye_next_dist_03a1o24._.js")
+R.c("server/chunks/0czo_drizzle-orm_07zq9x~._.js")
+R.c("server/chunks/[root-of-the-server]__133e7v7._.js")
+R.c("server/chunks/apps_ai-engineer-roadmap_src_db_content_ts_11od7q4._.js")
+R.c("server/chunks/02dz_ai-engineer-roadmap__next-internal_server_app_api_chat_route_actions_02_.sbh.js")
+R.m(395679)
+module.exports=R.m(395679).exports

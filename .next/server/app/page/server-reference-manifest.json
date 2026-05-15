@@ -1,0 +1,29 @@
+{
+  "node": {
+    "40e0dc0faee56b26214fa914da31d11d0b64cbaef6": {
+      "workers": {
+        "app/page": {
+          "moduleId": 426889,
+          "async": false,
+          "exportedName": "searchContent",
+          "filename": "apps/ai-engineer-roadmap/lib/actions/search.ts"
+        }
+      },
+      "exportedName": "searchContent",
+      "filename": "apps/ai-engineer-roadmap/lib/actions/search.ts"
+    },
+    "40824bcd11e20198d12eee4ffe5eafb7371b7cb571": {
+      "workers": {
+        "app/page": {
+          "moduleId": 426889,
+          "async": false,
+          "exportedName": "deepSearch",
+          "filename": "apps/ai-engineer-roadmap/lib/actions/deep-search.ts"
+        }
+      },
+      "exportedName": "deepSearch",
+      "filename": "apps/ai-engineer-roadmap/lib/actions/deep-search.ts"
+    }
+  },
+  "edge": {}
+}

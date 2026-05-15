@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Theme } from "@radix-ui/themes";
 import { PostHogProvider, PostHogPageView } from "@posthog/next";
+import { Analytics } from "@vercel/analytics/next";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </Theme>
         </PostHogProvider>
+        <Analytics />
       </body>
     </html>
   );

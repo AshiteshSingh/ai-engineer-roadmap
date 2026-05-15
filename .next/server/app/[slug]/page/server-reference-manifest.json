@@ -1,0 +1,17 @@
+{
+  "node": {
+    "788eb070c674d5b99591eedd945f987a4c26485c44": {
+      "workers": {
+        "app/[slug]/page": {
+          "moduleId": 471681,
+          "async": false,
+          "exportedName": "trackAnalyticsEvent",
+          "filename": "apps/ai-engineer-roadmap/lib/actions/analytics.ts"
+        }
+      },
+      "exportedName": "trackAnalyticsEvent",
+      "filename": "apps/ai-engineer-roadmap/lib/actions/analytics.ts"
+    }
+  },
+  "edge": {}
+}

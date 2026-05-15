@@ -1,0 +1,3 @@
+{
+  "/api/resume-pdf/[slug]/route": "app/api/resume-pdf/[slug]/route.js"
+}

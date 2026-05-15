@@ -1,0 +1,3 @@
+module.exports=[388134,e=>{"use strict";var i=e.i(78046);e.s(["ApolloServerPluginDisableSuggestions",0,function(){return(0,i.internalPlugin)({__internal_plugin_id__:"DisableSuggestions",__is_disabled_plugin__:!1,requestDidStart:async()=>({validationDidStart:async()=>async e=>{e?.forEach(e=>{e.message=e.message.replace(/ ?Did you mean(.+?)\?$/,"")})}})})}])}];
+
+//# sourceMappingURL=0t2f_%40apollo_server_dist_esm_plugin_disableSuggestions_index_0.i-p15.js.map
