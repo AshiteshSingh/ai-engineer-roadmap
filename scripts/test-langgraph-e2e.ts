@@ -228,3 +228,7 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
+// Ensure this script is treated as a module so `main` is not declared in the
+// global script scope (avoids TS "Duplicate function implementation" across scripts/).
+export {};
