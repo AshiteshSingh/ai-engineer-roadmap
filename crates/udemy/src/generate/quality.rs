@@ -144,6 +144,28 @@ mod tests {
     }
 
     #[test]
+    fn issue_order_matches_python_exactly() {
+        // Fails every gate; locks the exact ordered issue strings (and the
+        // count interpolations) against the Python check_quality push order.
+        let q = check_quality("no title\n\n```mermaid\ngraph\n```\n");
+        assert_eq!(
+            q.issues,
+            vec![
+                "Too short: 5 words (min 1500)".to_string(),
+                "Too few code examples: 1 (min 2)".to_string(),
+                "Missing cross-references: 0 (min 1)".to_string(),
+                "Missing # title on first line".to_string(),
+                "Fewer than 3 ## sections".to_string(),
+                "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.".to_string(),
+                "Found 1 ```mermaid block(s) — replace each with a ```xyflow JSON diagram.".to_string(),
+                "Missing `## Mental Model` section (required as the second-level section before Core Concepts).".to_string(),
+                "Missing `## Runtime Internals` deep-dive section.".to_string(),
+            ]
+        );
+        assert!(!q.ok);
+    }
+
+    #[test]
     fn byte_parity_edge_cases() {
         // bare ``` fence (no language) is NOT counted; tagged fences ARE
         let q = check_quality("```\nno lang\n```\n```python\nx\n```");
