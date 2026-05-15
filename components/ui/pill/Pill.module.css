@@ -1,0 +1,22 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--ds-text);
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border-subtle);
+  padding: 6px 14px;
+  border-radius: var(--ds-radius-pill);
+  cursor: pointer;
+}
+.pill:hover {
+  border-color: var(--ds-border-strong);
+}
+.active,
+.pill[aria-pressed="true"] {
+  background: var(--ds-accent-bg);
+  border-color: var(--ds-accent-border);
+  color: var(--ds-accent-text);
+}

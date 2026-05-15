@@ -1,0 +1,19 @@
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.value {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--ds-ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.label {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-muted);
+}
