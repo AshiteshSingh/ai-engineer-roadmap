@@ -1,0 +1,122 @@
+/* Declared on BOTH :root and .radix-themes: the --ds-* accent/gray tokens
+   reference Radix scales (--accent-*, --gray-*) which Radix scopes to
+   .radix-themes. Declaring here too lets var(--accent-9) resolve correctly
+   for all in-theme content (closest ancestor wins on inheritance). */
+:root,
+.radix-themes {
+  color-scheme: dark;
+  --yc-topbar-height: 56px;
+
+  /* Type scale — fluid (clamp max == prior fixed desktop px, so desktop
+     renders byte-identical; the preferred term only engages below the
+     desktop container width). Token names unchanged. */
+  --text-2xs: 9px;
+  --text-xs: 11px;
+  --text-sm: clamp(12px, 0.5vw + 10px, 13px);
+  --text-base: clamp(13px, 0.6vw + 10.5px, 15px);
+  --text-lg: clamp(15px, 0.9vw + 11px, 18px);
+  --text-xl: clamp(18px, 1.6vw + 12px, 24px);
+  --text-2xl: clamp(22px, 2.6vw + 13px, 32px);
+  --text-3xl: clamp(26px, 4.2vw + 14px, 44px);
+  /* Fluid hero title (max == prior fixed .hero-title 3rem) */
+  --hero-title-size: clamp(1.75rem, 5.5vw + 0.5rem, 3rem);
+
+  /* Spacing scale — 8px base (fixed; used for internal component spacing) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Responsive shell tokens — section gutters/rhythm scale on small
+     screens; clamp max == prior fixed value so desktop is unchanged. */
+  --space-section-x: clamp(16px, 5vw, 24px);   /* max == --space-5 */
+  --space-section-y: clamp(40px, 8vw, 64px);   /* max == --space-8 */
+  --space-gutter: clamp(12px, 4vw, 16px);      /* max == --space-4 */
+
+  /* ============================================================
+     DS SEMANTIC TOKEN LAYER (dark-only + indigo)
+     Mapped onto Radix vars resolved under <Theme appearance="dark">.
+     Consumers reference --ds-* (intent), never raw scale numbers.
+     ============================================================ */
+
+  /* Ink / text */
+  --ds-ink: var(--gray-12);
+  --ds-text: var(--gray-11);
+  --ds-text-muted: var(--gray-10);
+  --ds-text-faint: var(--gray-9);
+
+  /* Surfaces */
+  --ds-bg: var(--color-background);
+  --ds-surface: var(--color-panel-solid);
+  --ds-surface-sub: var(--gray-3);
+  --ds-surface-hover: var(--gray-2);
+  --ds-overlay: color-mix(in srgb, var(--color-background) 85%, transparent);
+
+  /* Borders (hairline-first) */
+  --ds-border-subtle: var(--gray-4);
+  --ds-border: var(--gray-5);
+  --ds-border-strong: var(--gray-7);
+
+  /* Indigo accent ramp */
+  --ds-accent: var(--accent-9);
+  --ds-accent-hover: var(--accent-10);
+  --ds-accent-active: var(--accent-8);
+  --ds-accent-text: var(--accent-11);
+  --ds-accent-subtle: var(--accent-3);
+  --ds-accent-bg: var(--accent-2);
+  --ds-accent-border: var(--accent-7);
+  --ds-on-accent: #fff;
+
+  /* Semantic (levels, not brand) */
+  --ds-success: var(--jade-9);
+  --ds-success-text: var(--jade-11);
+  --ds-warn: var(--amber-9);
+  --ds-warn-text: var(--amber-11);
+  --ds-danger: var(--red-9);
+  --ds-danger-text: var(--red-11);
+
+  /* Radii */
+  --ds-radius-sm: 4px;
+  --ds-radius: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 12px;
+  --ds-radius-pill: 999px;
+
+  /* Elevation — shadows tuned for dark bg: deeper blacks for real
+     depth + a hairline top highlight so panels read as raised. */
+  --ds-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --ds-shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 10px 28px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --ds-shadow-3: 0 16px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* Motion */
+  --ds-dur-fast: 120ms;
+  --ds-dur: 180ms;
+  --ds-dur-slow: 280ms;
+  --ds-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Legacy category-gradient hooks → rerouted to indigo (no teal) */
+  --cat-from: var(--accent-9);
+  --cat-to: var(--accent-11);
+}
+
+/* ================================================================
+   CATEGORY CSS VARS (identity colors)
+   ================================================================ */
+.cat-foundations-architecture { --cat-from: var(--violet-9); --cat-to: var(--violet-11); }
+.cat-prompting-icl { --cat-from: var(--blue-9); --cat-to: var(--blue-11); }
+.cat-rag-retrieval { --cat-from: var(--cyan-9); --cat-to: var(--cyan-11); }
+.cat-fine-tuning { --cat-from: var(--jade-9); --cat-to: var(--jade-11); }
+.cat-agents-tools { --cat-from: var(--amber-9); --cat-to: var(--amber-11); }
+.cat-evals-testing { --cat-from: var(--crimson-9); --cat-to: var(--crimson-11); }
+.cat-infra-deployment { --cat-from: var(--indigo-9); --cat-to: var(--indigo-11); }
+.cat-safety-alignment { --cat-from: var(--orange-9); --cat-to: var(--orange-11); }
+.cat-multimodal-ai { --cat-from: var(--purple-9); --cat-to: var(--purple-11); }
+.cat-applied-production { --cat-from: var(--slate-9); --cat-to: var(--slate-11); }
+.cat-cloud-devops { --cat-from: var(--sky-9); --cat-to: var(--sky-11); }

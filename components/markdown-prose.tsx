@@ -6,6 +6,9 @@ import { useMemo, type ReactNode } from "react";
 import type { AudioChapter } from "@/lib/audio";
 import { MermaidFlow } from "@/components/mermaid-flow";
 import { XyflowDirect } from "@/components/xyflow-direct";
+// Scoped prose styles (extracted from globals.css, Phase 1). Owned here:
+// styles target react-markdown output under the .markdown-prose wrapper.
+import "@/app/styles/markdown.css";
 
 export const SEEK_AUDIO_EVENT = "knowledge:seek-audio";
 

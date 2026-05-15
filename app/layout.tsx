@@ -3,6 +3,10 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { Theme } from "@radix-ui/themes";
 import { Analytics } from "@vercel/analytics/next";
 import "@radix-ui/themes/styles.css";
+// Pinned cascade order (Phase 1 — globals.css dissolution):
+// radix base → design tokens → base resets → (transitional) legacy globals.
+import "./styles/tokens.css";
+import "./styles/base.css";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });

@@ -9,6 +9,9 @@ import {
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+// xyflow overrides extracted from globals.css (Phase 1); after the lib's
+// default CSS so .roadmap-graph/.rg-* overrides still win.
+import "@/app/styles/third-party.css";
 import type { RoadmapModel, RoadmapPhaseNode } from "@/lib/roadmap-flow";
 import { roadmapNodeTypes } from "./nodes";
 import { navigateToHref } from "./navigate";
