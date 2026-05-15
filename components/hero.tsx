@@ -14,30 +14,70 @@ export function Hero({
   const wordLabel =
     wordCount >= 1000 ? `${Math.round(wordCount / 1000)}K+` : String(wordCount);
 
+  const topics = [
+    "Evals",
+    "RAG",
+    "Agents",
+    "Fine-tuning",
+    "Prompting",
+    "Production",
+  ];
+
   return (
-    <section className="hero" aria-label="Course overview">
-      <div className="hero-content">
-        <p className="hero-kicker">From Zero to AI Engineer</p>
-        <h1 className="hero-title">
-          Your Deep-Dive into{" "}
-          <span className="hero-title-accent">AI Engineering</span>
-        </h1>
-        <p className="hero-subtitle">
-          {lessonCount} hands-on lessons across {domainCount} skill areas
-          — {wordLabel} words of practical knowledge covering evals, RAG, agents,
-          fine-tuning, prompting &amp; production AI systems. Built for junior
-          engineers ready to go deep.
-        </p>
-        <AnimatedStats
-          lessonCount={lessonCount}
-          domainCount={domainCount}
-          readingHours={readingHours}
-          wordLabel={wordLabel}
-          wordCount={wordCount}
-        />
-        <a href="#lessons" className="hero-cta">
-          Start Learning <span className="hero-cta-arrow">↓</span>
-        </a>
+    <section className="hx" aria-label="Course overview">
+      <div className="hx-aura" aria-hidden="true" />
+      <div className="hx-grid">
+        <div className="hx-lede">
+          <p className="hx-kicker">
+            <span className="hx-kicker-dot" aria-hidden="true" />
+            From Zero to AI Engineer
+          </p>
+
+          <h1 className="hx-title">
+            Your deep-dive into
+            <span className="hx-title-accent"> AI&nbsp;Engineering</span>
+          </h1>
+
+          <p className="hx-subtitle">
+            {lessonCount} hands-on lessons across {domainCount} skill areas —{" "}
+            {wordLabel} words of practical knowledge, built for junior engineers
+            ready to go deep.
+          </p>
+
+          <ul className="hx-topics" aria-label="Topics covered">
+            {topics.map((t) => (
+              <li key={t} className="hx-topic">
+                {t}
+              </li>
+            ))}
+          </ul>
+
+          <div className="hx-actions">
+            <a href="#lessons" className="hx-cta">
+              Start Learning
+              <span className="hx-cta-arrow" aria-hidden="true">
+                ↓
+              </span>
+            </a>
+            <a href="#lessons" className="hx-cta-ghost">
+              Browse the curriculum
+            </a>
+          </div>
+        </div>
+
+        <div className="hx-panel" aria-hidden={false}>
+          <div className="hx-panel-head">
+            <span className="hx-panel-tag">The Roadmap</span>
+            <span className="hx-panel-sub">at a glance</span>
+          </div>
+          <AnimatedStats
+            lessonCount={lessonCount}
+            domainCount={domainCount}
+            readingHours={readingHours}
+            wordLabel={wordLabel}
+            wordCount={wordCount}
+          />
+        </div>
       </div>
     </section>
   );

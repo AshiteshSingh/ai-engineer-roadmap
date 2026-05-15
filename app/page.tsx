@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { getGroupedLessons } from "@/lib/data";
+import { ResearchCollections } from "@/components/research-collections";
 import { Topbar } from "@/components/topbar";
 import { Hero } from "@/components/hero";
 import { LearningPath } from "@/components/learning-path";
@@ -42,18 +42,7 @@ export default async function HomePage() {
       <main>
         {/* Research Collections */}
         <ScrollReveal delay={100}>
-          <section className="research-collections">
-            <h2 className="research-collections-title">Research Collections</h2>
-            <div className="research-collections-grid">
-              <Link href="/kv-quant" className="cat-card">
-                <div className="cat-card-header">
-                  <span className="cat-card-icon">🗜️</span>
-                  <span className="cat-card-name">KV-Cache Quantization</span>
-                </div>
-                <p className="cat-card-desc">Research papers on quantizing key-value caches for efficient LLM inference — compression, pruning, and long-context methods.</p>
-              </Link>
-            </div>
-          </section>
+          <ResearchCollections />
         </ScrollReveal>
 
         {/* Search + Bento Grid */}

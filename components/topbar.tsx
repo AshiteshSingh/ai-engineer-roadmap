@@ -5,6 +5,14 @@ import Link from "next/link";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
+function initials(name?: string | null): string {
+  if (!name) return "AI";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "AI";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export function Topbar({ lessonCount }: { lessonCount?: number }) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -31,37 +39,73 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
     };
   }, [onScroll]);
 
+  const pct = Math.round(progress * 100);
+
   return (
-    <nav aria-label="Main navigation" className={`yc-topbar${scrolled ? " yc-topbar--scrolled" : ""}`}>
-      <Link href="/">
-        <span className="yc-topbar-logo" />
-        AI ENGINEERING
-      </Link>
-      {lessonCount != null && (
-        <span className="yc-topbar-count">{lessonCount} lessons</span>
+    <nav
+      aria-label="Main navigation"
+      className={`yc-topbar${scrolled ? " yc-topbar--scrolled" : ""}`}
+    >
+      {/* ── ZONE 1: brand lockup ─────────────────────────────── */}
+      <div className="yc-topbar-brand">
+        <Link href="/" className="yc-topbar-brandlink">
+          <span className="yc-topbar-logo" aria-hidden="true">
+            <span className="yc-topbar-logo-pulse" />
+          </span>
+          <span className="yc-topbar-wordmark">
+            <span className="yc-topbar-wordmark-main">AI ENGINEERING</span>
+            <span className="yc-topbar-wordmark-sub">ROADMAP</span>
+          </span>
+        </Link>
+        {lessonCount != null && (
+          <span className="yc-topbar-count" aria-label={`${lessonCount} lessons`}>
+            <span className="yc-topbar-count-dot" aria-hidden="true" />
+            {lessonCount}
+            <span className="yc-topbar-count-label"> lessons</span>
+          </span>
+        )}
+      </div>
+
+      {/* ── ZONE 2: centered segmented nav (auth only) ───────── */}
+      {session?.user && (
+        <div className="yc-topbar-seg" role="presentation">
+          <Link href="/applications" className="yc-topbar-seg-link">
+            Applications
+          </Link>
+          <Link href="/coursework" className="yc-topbar-seg-link">
+            Coursework
+          </Link>
+        </div>
       )}
+
+      {/* ── ZONE 3: identity / actions ───────────────────────── */}
       <div className="yc-topbar-right">
         {session?.user ? (
           <div className="yc-topbar-user">
-            <Link href="/applications" className="yc-topbar-signin">
-              Applications
-            </Link>
-            <Link href="/coursework" className="yc-topbar-signin">
-              Coursework
-            </Link>
-            <span className="yc-topbar-username">{session.user.name}</span>
+            <span className="yc-topbar-id" title={session.user.name ?? undefined}>
+              <span className="yc-topbar-avatar" aria-hidden="true">
+                {initials(session.user.name)}
+              </span>
+              <span className="yc-topbar-username">{session.user.name}</span>
+            </span>
             <button
               type="button"
               aria-label="Sign out"
-              className="yc-topbar-signin"
+              className="yc-topbar-signin yc-topbar-signin--ghost"
               onClick={() => signOut().then(() => router.push("/login"))}
             >
               Sign Out
             </button>
           </div>
         ) : (
-          <Link href="/login" className="yc-topbar-signin yc-topbar-signin--pill">
+          <Link
+            href="/login"
+            className="yc-topbar-signin yc-topbar-signin--pill yc-topbar-cta"
+          >
             Sign In
+            <span className="yc-topbar-cta-arrow" aria-hidden="true">
+              →
+            </span>
           </Link>
         )}
         <button
@@ -76,11 +120,19 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
           <span className="yc-nav-hamburger-bar" aria-hidden="true" />
         </button>
       </div>
+
+      {/* scroll progress (desktop styled; markup unchanged for mobile) */}
       <div
         className="yc-topbar-progress"
         style={{ transform: `scaleX(${progress})` }}
-        aria-hidden="true"
+        role="progressbar"
+        aria-label="Reading progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
       />
+
+      {/* ── MOBILE DRAWER (TEAM-A owned styling — DO NOT ALTER) ─ */}
       {navOpen && (
         <div
           className="yc-nav-drawer-backdrop yc-nav-drawer-backdrop--open"

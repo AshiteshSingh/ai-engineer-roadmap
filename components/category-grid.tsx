@@ -4,12 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Lesson, GroupedLessons } from "@/lib/articles";
 
-/** Fill incomplete last row: if 1 leftover → full-width, if 2 → last spans 2 */
+/** Fill incomplete last row: if 1 leftover → full-width, if 2 → last spans 2.
+ *  The base .cat-card classes are owned by HP-TEAM-6; identity gradient comes
+ *  from the .cat-<slug> class applied alongside. */
 function cardClass(index: number, total: number): string {
   const remainder = total % 3;
   if (remainder === 1 && index === total - 1) return "cat-card cat-card--full";
   if (remainder === 2 && index === total - 1) return "cat-card cat-card--wide";
   return "cat-card";
+}
+
+function diffLabel(d: Lesson["difficulty"]): string {
+  return d === "beginner" ? "Beginner" : d === "intermediate" ? "Mid" : "Adv";
 }
 
 function LessonCard({ lesson, isFirst }: { lesson: Lesson; isFirst?: boolean }) {
@@ -18,36 +24,34 @@ function LessonCard({ lesson, isFirst }: { lesson: Lesson; isFirst?: boolean }) 
   const onMove = useCallback((e: React.MouseEvent) => {
     const el = ref.current;
     if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    el.style.transform = `perspective(600px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg) scale(1.02)`;
-  }, []);
-
-  const onLeave = useCallback(() => {
-    const el = ref.current;
-    if (el) el.style.transform = "";
+    const x = (e.clientX - rect.left) / rect.width;
+    el.style.setProperty("--cat-mx", `${x * 100}%`);
   }, []);
 
   return (
     <Link
       ref={ref}
       href={lesson.url}
-      className="article-card"
+      className="cat-row"
       title={lesson.excerpt || undefined}
       onMouseMove={onMove}
-      onMouseLeave={onLeave}
     >
-      <span className="article-card-num">
+      <span className="cat-row-num">
         {String(lesson.number).padStart(2, "0")}
       </span>
-      {isFirst && <span className="article-card-start">Start here</span>}
-      <span className="article-card-title">{lesson.title}</span>
-      <span className={`article-card-level article-card-level--${lesson.difficulty}`}>
-        {lesson.difficulty === "beginner" ? "Beginner" : lesson.difficulty === "intermediate" ? "Mid" : "Adv"}
+      <span className="cat-row-body">
+        <span className="cat-row-title">{lesson.title}</span>
+        <span className="cat-row-meta">
+          <span className={`cat-row-level cat-row-level--${lesson.difficulty}`}>
+            {diffLabel(lesson.difficulty)}
+          </span>
+          <span className="cat-row-time">{lesson.readingTimeMin}m read</span>
+          {isFirst && <span className="cat-row-start">Start here</span>}
+        </span>
       </span>
-      <span className="article-card-time">{lesson.readingTimeMin}m</span>
-      <span className="article-card-arrow">&rarr;</span>
+      <span className="cat-row-arrow" aria-hidden="true">&rarr;</span>
     </Link>
   );
 }
@@ -80,57 +84,113 @@ export function CategoryGrid({ groups }: Props) {
 
   return (
     <>
-      <div className="cat-nav" role="navigation" aria-label="Category navigation">
-        {groups.map((g) => {
-          const isActive = activeSlug === `cat-${g.meta.slug}`;
-          return (
-            <button
-              key={g.category}
-              className={`cat-nav-pill cat-${g.meta.slug}${isActive ? " cat-nav-pill--active" : ""}`}
-              aria-pressed={isActive}
-              onClick={() => {
-                document.getElementById(`cat-${g.meta.slug}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-            >
-              <span className="cat-nav-icon">{g.meta.icon}</span>
-              {g.category}
-              <span className="cat-nav-count">{g.articles.length}</span>
-            </button>
-          );
-        })}
-      </div>
+      <nav className="cat-nav" aria-label="Category navigation">
+        <span className="cat-nav-label" aria-hidden="true">Jump to</span>
+        <div className="cat-nav-track">
+          {groups.map((g) => {
+            const isActive = activeSlug === `cat-${g.meta.slug}`;
+            return (
+              <button
+                key={g.category}
+                type="button"
+                className={`cat-nav-pill cat-${g.meta.slug}${isActive ? " cat-nav-pill--active" : ""}`}
+                aria-pressed={isActive}
+                onClick={() => {
+                  document
+                    .getElementById(`cat-${g.meta.slug}`)
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                <span className="cat-nav-dot" aria-hidden="true" />
+                <span className="cat-nav-icon" aria-hidden="true">{g.meta.icon}</span>
+                <span className="cat-nav-text">{g.category}</span>
+                <span className="cat-nav-count">{g.articles.length}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       <div className="bento-grid">
-        {groups.map((group, i) => (
-          <div
-            key={group.category}
-            id={`cat-${group.meta.slug}`}
-            className={`${cardClass(i, groups.length)} cat-${group.meta.slug}`}
-          >
-            <div className="cat-card-icon">{group.meta.icon}</div>
-            <div className="cat-card-header">
-              <span className="cat-card-name">{group.category}</span>
-              <span className="cat-card-count">
-                {group.articles.length} lesson{group.articles.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <div className="cat-card-desc">{group.meta.description}</div>
-            {group.meta.outcomes && group.meta.outcomes.length > 0 && (
-              <ul className="cat-card-outcomes">
-                {group.meta.outcomes.map((o, k) => (
-                  <li key={k}>{o}</li>
+        {groups.map((group, i) => {
+          const totalMin = Math.round(
+            group.articles.reduce((sum, a) => sum + a.readingTimeMin, 0),
+          );
+          const beginnerCount = group.articles.filter(
+            (a) => a.difficulty === "beginner",
+          ).length;
+          return (
+            <section
+              key={group.category}
+              id={`cat-${group.meta.slug}`}
+              className={`${cardClass(i, groups.length)} cat-${group.meta.slug}`}
+              aria-labelledby={`cat-${group.meta.slug}-title`}
+            >
+              <span className="cat-card-rail" aria-hidden="true" />
+              <span className="cat-card-aura" aria-hidden="true" />
+
+              <header className="cat-card-top">
+                <span className="cat-card-icon" aria-hidden="true">
+                  {group.meta.icon}
+                </span>
+                <span className="cat-card-head">
+                  <span
+                    className="cat-card-name"
+                    id={`cat-${group.meta.slug}-title`}
+                  >
+                    {group.category}
+                  </span>
+                  <span className="cat-card-stats">
+                    <span className="cat-card-count">
+                      {group.articles.length} lesson
+                      {group.articles.length !== 1 ? "s" : ""}
+                    </span>
+                    <span className="cat-card-dot" aria-hidden="true">&middot;</span>
+                    <span className="cat-card-mins">{totalMin} min</span>
+                  </span>
+                </span>
+              </header>
+
+              <p className="cat-card-desc">{group.meta.description}</p>
+
+              {group.meta.outcomes && group.meta.outcomes.length > 0 && (
+                <ul className="cat-card-outcomes">
+                  {group.meta.outcomes.map((o, k) => (
+                    <li key={k}>{o}</li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="cat-card-divider" role="presentation">
+                <span className="cat-card-divider-label">
+                  {group.articles.length} lesson
+                  {group.articles.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div className="cat-card-list">
+                {group.articles.map((lesson, j) => (
+                  <LessonCard
+                    key={lesson.slug}
+                    lesson={lesson}
+                    isFirst={j === 0}
+                  />
                 ))}
-              </ul>
-            )}
-            <div className="cat-card-divider" />
-            {group.articles.map((lesson, j) => (
-              <LessonCard key={lesson.slug} lesson={lesson} isFirst={j === 0} />
-            ))}
-            <div className="cat-card-footer">
-              {Math.round(group.articles.reduce((sum, a) => sum + a.readingTimeMin, 0))} min total reading
-            </div>
-          </div>
-        ))}
+              </div>
+
+              <footer className="cat-card-footer">
+                <span className="cat-card-footer-time">
+                  {totalMin} min total reading
+                </span>
+                {beginnerCount > 0 && (
+                  <span className="cat-card-footer-tag">
+                    {beginnerCount} beginner-friendly
+                  </span>
+                )}
+              </footer>
+            </section>
+          );
+        })}
       </div>
     </>
   );

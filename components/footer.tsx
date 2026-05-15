@@ -9,65 +9,99 @@ export function Footer({ wordCount }: { wordCount?: number }) {
     ? `${Math.round(wordCount / 1000)}K+`
     : wordCount ? String(wordCount) : "451K+";
 
-  return (
-    <footer className="site-footer">
-      <div className="footer-gradient-border" />
+  const stats: { value: string; label: string }[] = [
+    { value: String(lessonCount), label: "Lessons" },
+    { value: String(categoryCount), label: "Skill areas" },
+    { value: wordLabel, label: "Words written" },
+  ];
 
-      <div className="footer-columns">
-        {/* Left: Brand */}
-        <div className="footer-brand-col">
-          <div className="footer-brand">
-            <span className="footer-brand-dot" />
-            <span className="footer-brand-title">AI Engineering</span>
+  return (
+    <footer className="ftr">
+      <div className="ftr-rule" aria-hidden="true" />
+
+      {/* ── Marquee call-to-action ───────────────────────────── */}
+      <div className="ftr-cta">
+        <div className="ftr-cta-text">
+          <span className="ftr-eyebrow">The roadmap</span>
+          <h2 className="ftr-headline">
+            Become an AI engineer,
+            <br />
+            <span className="ftr-headline-accent">one lesson at a time.</span>
+          </h2>
+        </div>
+        <Link href="/#cat-phase-0-orientation" className="ftr-cta-btn">
+          <span>Start the path</span>
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+              d="M3 8h9M8.5 4l4 4-4 4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Link>
+      </div>
+
+      {/* ── Stat strip ───────────────────────────────────────── */}
+      <div className="ftr-stats" role="list">
+        {stats.map((s) => (
+          <div className="ftr-stat" role="listitem" key={s.label}>
+            <span className="ftr-stat-value">{s.value}</span>
+            <span className="ftr-stat-label">{s.label}</span>
           </div>
-          <p className="footer-tagline">
-            A deep-dive learning path for junior AI engineers — by Vadim Nicolai
+        ))}
+      </div>
+
+      {/* ── Main grid ────────────────────────────────────────── */}
+      <div className="ftr-grid">
+        <div className="ftr-brand-col">
+          <div className="ftr-brand">
+            <span className="ftr-brand-mark" aria-hidden="true" />
+            <span className="ftr-brand-name">AI Engineering</span>
+          </div>
+          <p className="ftr-tagline">
+            A deep-dive learning path for junior AI engineers — crafted by Vadim
+            Nicolai.
           </p>
-          <p className="footer-built-with">Built with Next.js &amp; Radix UI</p>
+          <p className="ftr-built">Built with Next.js &amp; Radix UI</p>
         </div>
 
-        {/* Center: Skill Areas */}
-        <div className="footer-links-col">
-          <h3 className="footer-col-heading">Skill Areas</h3>
-          <div className="footer-cats">
+        <nav className="ftr-nav" aria-label="Skill areas">
+          <h3 className="ftr-nav-heading">Skill areas</h3>
+          <ul className="ftr-nav-list">
             {CATEGORIES.map(([, , name]) => {
               const meta = CATEGORY_META[name];
               if (!meta) return null;
               return (
-                <Link
-                  key={name}
-                  href={`/#cat-${meta.slug}`}
-                  className="footer-cat-link"
-                >
-                  <span>{meta.icon}</span> {name}
-                </Link>
+                <li key={name}>
+                  <Link
+                    href={`/#cat-${meta.slug}`}
+                    className={`ftr-nav-link cat-${meta.slug}`}
+                  >
+                    <span className="ftr-nav-dot" aria-hidden="true" />
+                    <span className="ftr-nav-icon" aria-hidden="true">
+                      {meta.icon}
+                    </span>
+                    <span className="ftr-nav-label">{name}</span>
+                  </Link>
+                </li>
               );
             })}
-          </div>
-        </div>
-
-        {/* Right: Stats */}
-        <div className="footer-stats-col">
-          <h3 className="footer-col-heading">By the Numbers</h3>
-          <ul className="footer-stats-list">
-            <li className="footer-stat">
-              <span className="footer-stat-value">{lessonCount}</span>
-              <span className="footer-stat-label">Lessons</span>
-            </li>
-            <li className="footer-stat">
-              <span className="footer-stat-value">{categoryCount}</span>
-              <span className="footer-stat-label">Skill Areas</span>
-            </li>
-            <li className="footer-stat">
-              <span className="footer-stat-value">{wordLabel}</span>
-              <span className="footer-stat-label">Words</span>
-            </li>
           </ul>
-        </div>
+        </nav>
       </div>
 
-      <div className="footer-bottom">
-        <span>&copy; {year} All rights reserved.</span>
+      {/* ── Bottom bar ───────────────────────────────────────── */}
+      <div className="ftr-bottom">
+        <span className="ftr-copy">
+          &copy; {year} AI Engineering. All rights reserved.
+        </span>
+        <span className="ftr-sig">
+          <span className="ftr-sig-pulse" aria-hidden="true" />
+          Always learning
+        </span>
       </div>
     </footer>
   );

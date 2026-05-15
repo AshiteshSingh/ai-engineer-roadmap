@@ -22,7 +22,7 @@ function typeBadgeLabel(type: SearchResult["resultType"]) {
       return "Lesson";
     case "section":
       return "Section";
-}
+  }
 }
 
 interface Props {
@@ -79,6 +79,11 @@ export function Search({ groups }: Props) {
       .filter((g) => g.articles.length > 0);
   }, [groups, diffFilter]);
 
+  const totalLessons = useMemo(
+    () => groups.reduce((sum, g) => sum + g.articles.length, 0),
+    [groups],
+  );
+
   // Reset focused index when results change
   useEffect(() => {
     setFocusedIndex(-1);
@@ -132,6 +137,14 @@ export function Search({ groups }: Props) {
     inputRef.current?.focus();
   }
 
+  function setMode(deep: boolean) {
+    setIsDeepSearch(deep);
+    if (query.trim().length >= 2) {
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => doSearch(query), 100);
+    }
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (results.length === 0) return;
     if (e.key === "ArrowDown") {
@@ -152,48 +165,93 @@ export function Search({ groups }: Props) {
 
   return (
     <>
-      <div className="yc-search">
-        <input
-          ref={inputRef}
-          type="text"
-          aria-label="Search lessons"
-          placeholder={isDeepSearch ? "Deep search with AI embeddings..." : "Search lessons, topics, concepts..."}
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setInputFocused(false)}
-        />
-        <button
-          className={`yc-search-mode${isDeepSearch ? " yc-search-mode--active" : ""}`}
-          onClick={() => {
-            setIsDeepSearch((v) => !v);
-            if (query.trim().length >= 2) {
-              clearTimeout(timerRef.current);
-              timerRef.current = setTimeout(() => doSearch(query), 100);
-            }
-          }}
-          title={isDeepSearch ? "Deep search (pgvector + FTS)" : "Keyword search (FTS only)"}
+      <div className="cmd-search">
+        <div
+          className={`cmd-bar${inputFocused ? " cmd-bar--focused" : ""}${hasQuery ? " cmd-bar--active" : ""}`}
         >
-          {isDeepSearch ? "Deep" : "FTS"}
-        </button>
-        {!hasQuery && <span className="yc-search-hint">⌘K</span>}
-        {hasQuery && results.length > 0 && (
-          <span className="yc-search-count">{results.length}</span>
-        )}
-        {query.length > 0 && (
-          <button className="yc-search-clear" aria-label="Clear search" onClick={handleClear}>
-            ✕
-          </button>
-        )}
+          <span className="cmd-bar-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.8" />
+              <line x1="12.2" y1="12.2" x2="16" y2="16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </span>
+
+          <input
+            ref={inputRef}
+            type="text"
+            className="cmd-bar-input"
+            aria-label="Search lessons"
+            placeholder={
+              isDeepSearch
+                ? "Deep search by meaning across all lessons…"
+                : `Search ${totalLessons} lessons, topics, concepts…`
+            }
+            value={query}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+          />
+
+          {hasQuery && results.length > 0 && (
+            <span className="cmd-bar-count" aria-live="polite">
+              {results.length} {results.length === 1 ? "hit" : "hits"}
+            </span>
+          )}
+
+          {query.length > 0 ? (
+            <button
+              type="button"
+              className="cmd-bar-clear"
+              aria-label="Clear search"
+              onClick={handleClear}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <line x1="3.5" y1="3.5" x2="10.5" y2="10.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <line x1="10.5" y1="3.5" x2="3.5" y2="10.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          ) : (
+            <kbd className="cmd-bar-kbd" aria-hidden="true">
+              <span>⌘</span>K
+            </kbd>
+          )}
+
+          <div
+            className="cmd-mode"
+            role="group"
+            aria-label="Search mode"
+          >
+            <button
+              type="button"
+              className={`cmd-mode-btn${!isDeepSearch ? " cmd-mode-btn--on" : ""}`}
+              aria-pressed={!isDeepSearch}
+              onClick={() => setMode(false)}
+              title="Keyword search (full-text)"
+            >
+              Keyword
+            </button>
+            <button
+              type="button"
+              className={`cmd-mode-btn${isDeepSearch ? " cmd-mode-btn--on" : ""}`}
+              aria-pressed={isDeepSearch}
+              onClick={() => setMode(true)}
+              title="Deep search (semantic, pgvector + FTS)"
+            >
+              Deep AI
+            </button>
+          </div>
+        </div>
       </div>
 
       {!hasQuery && inputFocused && (
-        <div className="search-suggestions">
+        <div className="cmd-suggest">
+          <span className="cmd-suggest-label" aria-hidden="true">Try</span>
           {SEARCH_SUGGESTIONS.map((s) => (
             <button
               key={s}
-              className="search-suggestion-pill"
+              type="button"
+              className="cmd-suggest-pill"
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleSuggestionClick(s);
@@ -206,17 +264,18 @@ export function Search({ groups }: Props) {
       )}
 
       {!hasQuery && (
-        <div className="difficulty-filter">
+        <div className="cmd-filter" role="group" aria-label="Filter by difficulty">
           {DIFFICULTY_FILTERS.map((f) => (
             <button
               key={f.value}
-              className={`difficulty-filter-btn${f.value !== "all" ? ` difficulty-filter-btn--${f.value}` : ""}${diffFilter === f.value ? " difficulty-filter-btn--active" : ""}`}
+              type="button"
+              className={`cmd-filter-btn${f.value !== "all" ? ` cmd-filter-btn--${f.value}` : ""}${diffFilter === f.value ? " cmd-filter-btn--active" : ""}`}
               aria-pressed={diffFilter === f.value}
               onClick={() => setDiffFilter(f.value)}
             >
               {f.label}
               {f.value !== "all" && (
-                <span className="difficulty-filter-count">
+                <span className="cmd-filter-count">
                   {groups.reduce((sum, g) => sum + g.articles.filter((a) => a.difficulty === f.value).length, 0)}
                 </span>
               )}
@@ -229,58 +288,48 @@ export function Search({ groups }: Props) {
         <div className="search-results" aria-live="polite">
           {searching && results.length === 0 && (
             <div className="search-loading">
-              <div className="search-skeleton-card">
-                <div className="search-skeleton-header" />
-                <div className="search-skeleton-line" />
-                <div className="search-skeleton-line search-skeleton-line--short" />
-              </div>
-              <div className="search-skeleton-card">
-                <div className="search-skeleton-header" />
-                <div className="search-skeleton-line" />
-                <div className="search-skeleton-line search-skeleton-line--short" />
-              </div>
-              <div className="search-skeleton-card">
-                <div className="search-skeleton-header" />
-                <div className="search-skeleton-line" />
-                <div className="search-skeleton-line search-skeleton-line--short" />
-              </div>
-              <div className="search-skeleton-card">
-                <div className="search-skeleton-header" />
-                <div className="search-skeleton-line" />
-                <div className="search-skeleton-line search-skeleton-line--short" />
-              </div>
+              {[0, 1, 2, 3].map((k) => (
+                <div className="search-skeleton-card" key={k}>
+                  <div className="search-skeleton-header" />
+                  <div className="search-skeleton-line" />
+                  <div className="search-skeleton-line search-skeleton-line--short" />
+                </div>
+              ))}
             </div>
           )}
           {!searching && results.length === 0 && (
             <div className="no-results" role="status">
-              <div className="no-results-icon">
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <div className="no-results-icon" aria-hidden="true">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                   <circle cx="22" cy="22" r="14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
                   <line x1="32" y1="32" x2="42" y2="42" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
                   <line x1="16" y1="22" x2="28" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.25" />
                 </svg>
               </div>
-              <div className="no-results-title">Nothing matched your search</div>
+              <div className="no-results-title">No matches for &ldquo;{query.trim()}&rdquo;</div>
               <div className="no-results-hint">
                 {!isDeepSearch
-                  ? "No keyword hits — Deep search understands meaning, not just words"
+                  ? "No keyword hits — Deep AI search understands meaning, not just words"
                   : "Try rephrasing or broadening your query"}
               </div>
-              {!isDeepSearch && (
-                <button
-                  className="yc-search-mode yc-search-mode--inline"
-                  onClick={() => {
-                    setIsDeepSearch(true);
-                    clearTimeout(timerRef.current);
-                    timerRef.current = setTimeout(() => doSearch(query), 100);
-                  }}
-                >
-                  Try Deep Search
+              <div className="no-results-actions">
+                {!isDeepSearch && (
+                  <button
+                    type="button"
+                    className="no-results-deep"
+                    onClick={() => {
+                      setIsDeepSearch(true);
+                      clearTimeout(timerRef.current);
+                      timerRef.current = setTimeout(() => doSearch(query), 100);
+                    }}
+                  >
+                    Try Deep AI Search
+                  </button>
+                )}
+                <button type="button" className="no-results-clear" onClick={handleClear}>
+                  Clear search
                 </button>
-              )}
-              <button className="no-results-clear" onClick={handleClear}>
-                Clear search
-              </button>
+              </div>
             </div>
           )}
           {results.map((r, i) => {
@@ -291,6 +340,7 @@ export function Search({ groups }: Props) {
                 href={meta?.url ?? `/${r.lessonSlug}`}
                 className={`search-result-card${meta ? ` cat-${meta.catSlug}` : ""}${i === focusedIndex ? " search-result-card--focused" : ""}`}
               >
+                <span className="search-result-rail" aria-hidden="true" />
                 <div className="search-result-header">
                   <span className="badge-pill badge-pill--glass search-result-type">
                     {typeBadgeLabel(r.resultType)}

@@ -16,11 +16,11 @@ import type { RoadmapModel, RoadmapPhaseNode } from "@/lib/roadmap-flow";
 import { roadmapNodeTypes } from "./nodes";
 import { navigateToHref } from "./navigate";
 
-const NODE_W = 264;
-const NODE_H = 64;
-const V_GAP = 56;
-const APPENDIX_X = 400;
-const APPENDIX_GAP = 16;
+const NODE_W = 288;
+const NODE_H = 76;
+const V_GAP = 64;
+const APPENDIX_X = 440;
+const APPENDIX_GAP = 18;
 
 export function RoadmapGraph({ model }: { model: RoadmapModel }) {
   const { nodes: rfNodes, edges: rfEdges, graphH } = useMemo(() => {
@@ -85,12 +85,14 @@ export function RoadmapGraph({ model }: { model: RoadmapModel }) {
           sourceHandle: "bottom",
           targetHandle: "top",
           type: "smoothstep",
-          style: { stroke: "var(--ds-border-strong)", strokeWidth: 1.5 },
+          className: "rg-edge rg-edge--spine",
+          animated: true,
+          style: { stroke: "var(--ds-accent-border)", strokeWidth: 2.5 },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            width: 12,
-            height: 12,
-            color: "var(--ds-border-strong)",
+            width: 16,
+            height: 16,
+            color: "var(--ds-accent)",
           },
         });
       } else {
@@ -102,16 +104,17 @@ export function RoadmapGraph({ model }: { model: RoadmapModel }) {
           sourceHandle: "right",
           targetHandle: "left",
           type: "smoothstep",
+          className: "rg-edge rg-edge--branch",
           style: {
-            stroke: "var(--ds-border)",
-            strokeWidth: 1.5,
-            strokeDasharray: "4 4",
+            stroke: "var(--ds-border-strong)",
+            strokeWidth: 1.75,
+            strokeDasharray: "2 5",
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            width: 10,
-            height: 10,
-            color: "var(--ds-border)",
+            width: 11,
+            height: 11,
+            color: "var(--ds-border-strong)",
           },
         });
       }
@@ -162,7 +165,10 @@ export function RoadmapGraph({ model }: { model: RoadmapModel }) {
         </span>
         <span className="rg-legend__item">
           <span className="rg-legend__line rg-legend__line--dashed" />
-          Appendix
+          Side track
+        </span>
+        <span className="rg-legend__item rg-legend__item--hint">
+          Tap a node to jump in
         </span>
       </div>
     </>

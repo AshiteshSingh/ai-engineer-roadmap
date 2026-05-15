@@ -1,39 +1,110 @@
 /* Third-party / library-DOM overrides — extracted from globals.css (Phase 1).
    xyflow (React Flow) roadmap graph. Scoped under .roadmap-graph/.rg-*. */
 
-/* === T-XYFLOW ROADMAP GRAPH (integrated; uses T1 --ds-* tokens) === */
+/* === T-XYFLOW ROADMAP GRAPH (HP-TEAM-4 redesign; uses T1 --ds-* tokens) === */
 
-/* ── Roadmap node ─────────────────────────────────────────────────── */
+/* ── Roadmap node: layered "station card" ─────────────────────────── */
 .rg-node {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 264px;
-  min-height: 64px;
-  padding: 12px 16px;
-  background: var(--ds-surface);
+  gap: var(--space-3);
+  width: 288px;
+  min-height: 76px;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ds-surface) 92%, var(--ds-accent-subtle)),
+      var(--ds-surface)
+    );
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-radius-lg);
   cursor: pointer;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    border-color var(--ds-dur) var(--ds-ease),
+    box-shadow var(--ds-dur) var(--ds-ease),
+    transform var(--ds-dur) var(--ds-ease),
+    background var(--ds-dur) var(--ds-ease);
   box-sizing: border-box;
+}
+
+/* Accent rail on the leading edge */
+.rg-node__rail {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--ds-accent), var(--ds-accent-hover));
+  opacity: 0.55;
+  transition: opacity var(--ds-dur) var(--ds-ease), width var(--ds-dur) var(--ds-ease);
 }
 
 .rg-node:hover,
 .rg-node:focus-visible {
   border-color: var(--ds-accent-border);
   box-shadow: var(--ds-shadow-2);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ds-surface) 80%, var(--ds-accent-subtle)),
+      var(--ds-surface)
+    );
   outline: none;
+}
+
+.rg-node:hover .rg-node__rail,
+.rg-node:focus-visible .rg-node__rail {
+  opacity: 1;
+  width: 5px;
 }
 
 .rg-node:focus-visible {
   box-shadow: 0 0 0 3px var(--ds-accent-subtle), var(--ds-shadow-2);
 }
 
-.rg-node__icon {
-  font-size: 20px;
+/* Station marker: stacked index + icon */
+.rg-node__marker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-accent-bg);
+  border: 1px solid var(--ds-accent-border);
+  transition: background var(--ds-dur) var(--ds-ease), border-color var(--ds-dur) var(--ds-ease);
+}
+
+.rg-node:hover .rg-node__marker,
+.rg-node:focus-visible .rg-node__marker {
+  background: var(--ds-accent-subtle);
+  border-color: var(--ds-accent);
+}
+
+.rg-node__mark {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ds-on-accent);
+  background: var(--ds-accent);
+  border-radius: var(--ds-radius-pill);
+  box-shadow: var(--ds-shadow-1);
+}
+
+.rg-node__icon {
+  font-size: var(--text-xl);
   line-height: 1;
 }
 
@@ -42,20 +113,20 @@
   flex-direction: column;
   min-width: 0;
   flex: 1;
-  gap: 2px;
+  gap: 3px;
 }
 
 .rg-node__eyebrow {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: var(--text-2xs);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--ds-accent-text);
   white-space: nowrap;
 }
 
 .rg-node__title {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--ds-ink);
   white-space: nowrap;
@@ -65,47 +136,132 @@
 }
 
 .rg-node__meta {
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
   color: var(--ds-text-muted);
+  min-width: 0;
+}
+
+.rg-node__stat {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.rg-node__dot {
+  width: 3px;
+  height: 3px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+/* Difficulty chip */
+.rg-chip {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: var(--ds-radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: var(--ds-text);
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border);
+}
+
+.rg-chip--beginner {
+  color: var(--ds-success-text);
+  background: color-mix(in srgb, var(--ds-success) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ds-success) 40%, transparent);
+}
+
+.rg-chip--intermediate {
+  color: var(--ds-warn-text);
+  background: color-mix(in srgb, var(--ds-warn) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ds-warn) 40%, transparent);
+}
+
+.rg-chip--advanced {
+  color: var(--ds-danger-text);
+  background: color-mix(in srgb, var(--ds-danger) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ds-danger) 40%, transparent);
+}
+
+.rg-chip--mixed {
+  color: var(--ds-accent-text);
+  background: var(--ds-accent-bg);
+  border-color: var(--ds-accent-border);
 }
 
 .rg-node__chevron {
-  margin-left: auto;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--ds-radius-pill);
   color: var(--ds-text-faint);
-  font-size: 14px;
-  transition: transform 0.18s ease, color 0.18s ease;
+  transition:
+    transform var(--ds-dur) var(--ds-ease),
+    color var(--ds-dur) var(--ds-ease),
+    background var(--ds-dur) var(--ds-ease);
 }
 
 .rg-node:hover .rg-node__chevron,
 .rg-node:focus-visible .rg-node__chevron {
-  transform: translateX(2px);
-  color: var(--ds-accent-text);
+  transform: translateX(3px);
+  color: var(--ds-on-accent);
+  background: var(--ds-accent);
 }
 
-/* ── Entry + Ship variants (pill, dark fill) ──────────────────────── */
+/* ── Entry + Ship variants (bold gradient pill) ───────────────────── */
 .rg-node--entry,
 .rg-node--ship {
   width: auto;
-  min-width: 150px;
-  border-radius: 9999px;
-  background: var(--ds-ink);
+  min-width: 168px;
+  min-height: 56px;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--ds-radius-pill);
+  background: linear-gradient(135deg, var(--ds-accent), var(--ds-accent-hover));
   border-color: transparent;
   justify-content: center;
+  box-shadow: var(--ds-shadow-2);
+}
+
+.rg-node--entry .rg-node__rail,
+.rg-node--ship .rg-node__rail,
+.rg-node--entry .rg-node__marker,
+.rg-node--ship .rg-node__marker {
+  display: none;
+}
+
+.rg-node--entry .rg-node__icon,
+.rg-node--ship .rg-node__icon {
+  color: var(--ds-on-accent);
+}
+
+.rg-node--entry .rg-node__body,
+.rg-node--ship .rg-node__body {
+  flex: 0 1 auto;
+  align-items: center;
 }
 
 .rg-node--entry .rg-node__title,
 .rg-node--ship .rg-node__title {
-  color: var(--ds-bg);
+  color: var(--ds-on-accent);
+  font-size: var(--text-base);
+  letter-spacing: 0.01em;
 }
 
 .rg-node--entry .rg-node__eyebrow,
 .rg-node--ship .rg-node__eyebrow,
 .rg-node--entry .rg-node__meta,
-.rg-node--ship .rg-node__meta {
+.rg-node--ship .rg-node__meta,
+.rg-node--entry .rg-node__chevron,
+.rg-node--ship .rg-node__chevron {
   display: none;
 }
 
@@ -113,27 +269,76 @@
 .rg-node--ship:hover,
 .rg-node--entry:focus-visible,
 .rg-node--ship:focus-visible {
-  background: var(--ds-ink);
+  background: linear-gradient(135deg, var(--ds-accent-hover), var(--ds-accent-active));
   border-color: transparent;
-  opacity: 0.85;
+  transform: translateY(-3px);
+  box-shadow: var(--ds-shadow-3);
 }
 
-/* ── Appendix variant (dashed border, subtle bg) ──────────────────── */
+.rg-node--ship {
+  background: linear-gradient(135deg, var(--ds-ink), var(--ds-accent-hover));
+}
+
+.rg-node--ship:hover,
+.rg-node--ship:focus-visible {
+  background: linear-gradient(135deg, var(--ds-ink), var(--ds-accent));
+}
+
+/* Entry pulse ring */
+.rg-node__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--ds-accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: rg-pulse 2.6s var(--ds-ease) infinite;
+}
+
+@keyframes rg-pulse {
+  0% { opacity: 0.55; transform: scale(1); }
+  70% { opacity: 0; transform: scale(1.12); }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+
+/* ── Appendix variant (side-track card) ───────────────────────────── */
 .rg-node--appendix {
-  border-style: dashed;
   background: var(--ds-surface-sub);
+  border-style: dashed;
+  border-color: var(--ds-border-strong);
+}
+
+.rg-node--appendix .rg-node__rail {
+  background: var(--ds-border-strong);
+  opacity: 0.4;
+}
+
+.rg-node--appendix .rg-node__marker {
+  background: var(--ds-surface-hover);
+  border-color: var(--ds-border-strong);
+  border-style: dashed;
+}
+
+.rg-node--appendix .rg-node__mark {
+  color: var(--ds-text);
+  background: var(--ds-border-strong);
+}
+
+.rg-node--appendix:hover,
+.rg-node--appendix:focus-visible {
+  border-color: var(--ds-accent-border);
 }
 
 /* ── ReactFlow handle dots ────────────────────────────────────────── */
 .rg-handle {
   width: 7px !important;
   height: 7px !important;
-  background: var(--ds-border-strong) !important;
+  background: var(--ds-accent-border) !important;
   border: none !important;
   opacity: 0;
 }
 
-/* ── ReactFlow pane + edge overrides ─────────────────────────────── */
+/* ── ReactFlow pane + edge overrides ──────────────────────────────── */
 .roadmap-graph .react-flow__pane {
   cursor: grab;
 }
@@ -141,19 +346,33 @@
   cursor: grabbing;
 }
 .roadmap-graph .react-flow__edge-path {
+  stroke: var(--ds-accent-border);
+  stroke-width: 2.5;
+}
+.roadmap-graph .rg-edge--branch .react-flow__edge-path {
   stroke: var(--ds-border-strong);
-  stroke-width: 1.5;
+  stroke-width: 1.75;
+}
+/* Animated flow pulse on the spine */
+.roadmap-graph .rg-edge--spine.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 6 7;
+  animation: rg-flow 0.9s linear infinite;
+}
+@keyframes rg-flow {
+  to { stroke-dashoffset: -26; }
 }
 
 /* ── Legend ───────────────────────────────────────────────────────── */
 .rg-legend {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: var(--space-5);
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--text-xs);
+  font-weight: 600;
   color: var(--ds-text-muted);
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--ds-border-subtle);
   background: var(--ds-surface);
 }
@@ -161,34 +380,82 @@
 .rg-legend__item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
+}
+
+.rg-legend__item--hint {
+  color: var(--ds-text-faint);
+  font-weight: 600;
 }
 
 .rg-legend__line {
   display: inline-block;
-  width: 22px;
-  border-top: 1.5px solid var(--ds-border-strong);
+  width: 26px;
+  height: 0;
+  border-top: 2.5px solid var(--ds-accent-border);
+  border-radius: var(--ds-radius-pill);
 }
 
 .rg-legend__line--dashed {
   border-top-style: dashed;
-  border-top-color: var(--ds-border);
+  border-top-width: 1.75px;
+  border-top-color: var(--ds-border-strong);
 }
 
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .rg-node {
-    width: 220px;
+    width: 248px;
+    min-height: 72px;
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    gap: var(--space-2);
+  }
+  .rg-node__marker {
+    width: 40px;
+    height: 40px;
+  }
+  .rg-legend {
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .rg-node {
+    width: 232px;
+  }
+  .rg-chip {
+    display: none;
+  }
+  .rg-legend__item--hint {
+    display: none;
   }
 }
 
 /* ── Reduced motion ───────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .rg-node {
+  .rg-node,
+  .rg-node__rail,
+  .rg-node__marker,
+  .rg-node__chevron {
     transition: none;
   }
-  .rg-node:hover {
+  .rg-node:hover,
+  .rg-node:focus-visible {
     transform: none;
+  }
+  .rg-node--entry:hover,
+  .rg-node--ship:hover,
+  .rg-node--entry:focus-visible,
+  .rg-node--ship:focus-visible {
+    transform: none;
+  }
+  .rg-node__pulse {
+    animation: none;
+    opacity: 0;
+  }
+  .roadmap-graph .rg-edge--spine.react-flow__edge.animated .react-flow__edge-path {
+    animation: none;
+    stroke-dasharray: none;
   }
 }
 

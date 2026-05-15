@@ -6,11 +6,20 @@ function easeOutExpo(t: number): number {
   return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
 }
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function useCountUp(target: number, duration: number, started: boolean) {
   const [value, setValue] = useState(0);
 
   useEffect(() => {
     if (!started) return;
+    if (prefersReducedMotion()) {
+      setValue(target);
+      return;
+    }
     let raf: number;
     const start = performance.now();
 
@@ -68,24 +77,58 @@ export function AnimatedStats({
   const animatedWordLabel =
     wordCount >= 1000 ? `${Math.round(wordsRaw / 1000)}K+` : String(wordsRaw);
 
+  const rows = [
+    {
+      key: "lessons",
+      value: String(lessons),
+      label: "Lessons",
+      ratio: lessonCount ? lessons / lessonCount : 0,
+    },
+    {
+      key: "domains",
+      value: String(domains),
+      label: "Skill Areas",
+      ratio: domainCount ? domains / domainCount : 0,
+    },
+    {
+      key: "hours",
+      value: `${hours}h`,
+      label: "Reading Time",
+      ratio: readingHours ? hours / readingHours : 0,
+    },
+    {
+      key: "words",
+      value: animatedWordLabel,
+      label: "Words",
+      ratio: wordCount ? wordsRaw / wordCount : 0,
+    },
+  ];
+
   return (
-    <div className="hero-stats" ref={ref}>
-      <div className="hero-stat">
-        <span className="hero-stat-number">{lessons}</span>
-        <span className="hero-stat-label">Lessons</span>
-      </div>
-      <div className="hero-stat">
-        <span className="hero-stat-number">{domains}</span>
-        <span className="hero-stat-label">Skill Areas</span>
-      </div>
-      <div className="hero-stat">
-        <span className="hero-stat-number">{hours}h</span>
-        <span className="hero-stat-label">Reading Time</span>
-      </div>
-      <div className="hero-stat">
-        <span className="hero-stat-number">{animatedWordLabel}</span>
-        <span className="hero-stat-label">Words</span>
-      </div>
+    <div
+      className={`hx-ledger${visible ? " is-live" : ""}`}
+      ref={ref}
+      role="list"
+    >
+      {rows.map((r) => (
+        <div className="hx-row" role="listitem" key={r.key}>
+          <div className="hx-row-top">
+            <span className="hx-row-value">{r.value}</span>
+            <span className="hx-row-label">{r.label}</span>
+          </div>
+          <div className="hx-row-track" aria-hidden="true">
+            <span
+              className="hx-row-fill"
+              style={{
+                transform: `scaleX(${Math.max(
+                  0.04,
+                  Math.min(1, r.ratio),
+                )})`,
+              }}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

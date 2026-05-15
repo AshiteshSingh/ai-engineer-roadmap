@@ -4,29 +4,129 @@ interface Props {
   groups: GroupedLessons[];
 }
 
+const DIFFICULTY_RANK: Record<string, number> = {
+  beginner: 0,
+  intermediate: 1,
+  advanced: 2,
+};
+const DIFFICULTY_LABEL: Record<string, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+};
+
 export function LearningPath({ groups }: Props) {
+  const totalLessons = groups.reduce((s, g) => s + g.articles.length, 0);
+  const totalMin = groups.reduce(
+    (s, g) => s + g.articles.reduce((a, l) => a + l.readingTimeMin, 0),
+    0,
+  );
+  const totalHours = Math.max(1, Math.round(totalMin / 60));
+
   return (
-    <nav aria-label="Learning path" className="learning-path">
-      <div className="learning-path-title">Learning Path</div>
-      <div className="learning-path-track">
+    <nav aria-label="Learning path" className="lp">
+      <header className="lp-head">
+        <p className="lp-eyebrow">The Expedition</p>
+        <h2 className="lp-headline">Climb the AI engineering stack</h2>
+        <p className="lp-sub">
+          {groups.length} milestones, sequenced from fundamentals to production
+          systems. Follow the rail or jump to any station.
+        </p>
+        <dl className="lp-stats">
+          <div className="lp-stat">
+            <dt className="lp-stat-k">Milestones</dt>
+            <dd className="lp-stat-v">{groups.length}</dd>
+          </div>
+          <div className="lp-stat">
+            <dt className="lp-stat-k">Lessons</dt>
+            <dd className="lp-stat-v">{totalLessons}</dd>
+          </div>
+          <div className="lp-stat">
+            <dt className="lp-stat-k">Est. time</dt>
+            <dd className="lp-stat-v">~{totalHours}h</dd>
+          </div>
+        </dl>
+      </header>
+
+      <ol className="lp-rail">
         {groups.map((g, i) => {
-          const totalMin = g.articles.reduce((sum, a) => sum + a.readingTimeMin, 0);
+          const mins = g.articles.reduce((a, l) => a + l.readingTimeMin, 0);
+          const hardest = g.articles.reduce((max, l) => {
+            const r = DIFFICULTY_RANK[l.difficulty] ?? 0;
+            return r > max ? r : max;
+          }, 0);
+          const level =
+            (Object.keys(DIFFICULTY_RANK) as string[]).find(
+              (k) => DIFFICULTY_RANK[k] === hardest,
+            ) ?? "beginner";
+          const preview = g.articles.slice(0, 3);
+          const rest = g.articles.length - preview.length;
+
           return (
-            <a
+            <li
               key={g.category}
-              href={`#cat-${g.meta.slug}`}
-              className={`learning-path-node cat-${g.meta.slug}`}
-              data-step={i + 1}
+              className={`lp-station cat-${g.meta.slug}`}
+              style={{ ["--lp-i" as string]: i }}
             >
-              <span className="learning-path-icon">{g.meta.icon}</span>
-              <span className="learning-path-name">{g.category}</span>
-              <span className="learning-path-meta">
-                {g.articles.length} lessons &middot; {totalMin}m
-              </span>
-            </a>
+              <div className="lp-node" aria-hidden="true">
+                <span className="lp-node-num">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              </div>
+
+              <a href={`#cat-${g.meta.slug}`} className="lp-card">
+                <div className="lp-card-top">
+                  <span className="lp-icon" aria-hidden="true">
+                    {g.meta.icon}
+                  </span>
+                  <span className="lp-phase">Milestone {i + 1}</span>
+                  <span
+                    className="lp-level"
+                    data-level={level}
+                    title={`Peak difficulty: ${DIFFICULTY_LABEL[level]}`}
+                  >
+                    {DIFFICULTY_LABEL[level]}
+                  </span>
+                </div>
+
+                <h3 className="lp-title">{g.category}</h3>
+                <p className="lp-desc">{g.meta.description}</p>
+
+                <ul className="lp-lessons">
+                  {preview.map((l) => (
+                    <li key={l.slug} className="lp-lesson">
+                      <span className="lp-lesson-n">
+                        {String(l.number).padStart(2, "0")}
+                      </span>
+                      <span className="lp-lesson-t">{l.title}</span>
+                    </li>
+                  ))}
+                  {rest > 0 && (
+                    <li className="lp-lesson lp-lesson--more">
+                      <span className="lp-lesson-n">+</span>
+                      <span className="lp-lesson-t">
+                        {rest} more {rest === 1 ? "lesson" : "lessons"}
+                      </span>
+                    </li>
+                  )}
+                </ul>
+
+                <div className="lp-card-foot">
+                  <span className="lp-meta">
+                    {g.articles.length} lessons &middot; {mins}m
+                  </span>
+                  <span className="lp-go">
+                    Enter station
+                    <span className="lp-go-arrow" aria-hidden="true">
+                      &rarr;
+                    </span>
+                  </span>
+                </div>
+              </a>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </nav>
   );
 }
