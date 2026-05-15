@@ -4,6 +4,7 @@
    for all in-theme content (closest ancestor wins on inheritance). */
 :root,
 .radix-themes {
+  color-scheme: dark;
   --yc-topbar-height: 56px;
 
   /* Type scale — fluid (clamp max == prior fixed desktop px, so desktop
@@ -37,8 +38,8 @@
   --space-gutter: clamp(12px, 4vw, 16px);      /* max == --space-4 */
 
   /* ============================================================
-     DS SEMANTIC TOKEN LAYER (YC light + indigo)
-     Mapped onto Radix vars which auto-flip with <Theme appearance>.
+     DS SEMANTIC TOKEN LAYER (dark-only + indigo)
+     Mapped onto Radix vars resolved under <Theme appearance="dark">.
      Consumers reference --ds-* (intent), never raw scale numbers.
      ============================================================ */
 
@@ -85,10 +86,14 @@
   --ds-radius-lg: 12px;
   --ds-radius-pill: 999px;
 
-  /* Elevation — soft neutral shadows tuned for light bg */
-  --ds-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
-  --ds-shadow-2: 0 2px 4px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.08);
-  --ds-shadow-3: 0 12px 32px rgba(16, 24, 40, 0.12);
+  /* Elevation — shadows tuned for dark bg: deeper blacks for real
+     depth + a hairline top highlight so panels read as raised. */
+  --ds-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --ds-shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 10px 28px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --ds-shadow-3: 0 16px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   /* Motion */
   --ds-dur-fast: 120ms;
@@ -4667,6 +4672,139 @@ body {
    ================================================================== */
 
 /* >>> TEAM-A NAV/TOPBAR — DO NOT EDIT outside this fence >>> */
+
+/* Hamburger + mobile nav drawer. Desktop (>768px) is untouched:
+   both the hamburger and drawer are display:none above 768px. */
+.yc-nav-hamburger { display: none; }
+.yc-nav-drawer,
+.yc-nav-drawer-backdrop { display: none; }
+
+@media (max-width: 768px) {
+  /* Horizontal-overflow safety on the sticky bar + safe-area padding. */
+  .yc-topbar {
+    overflow-x: clip;
+    padding-left: max(var(--space-section-x), env(safe-area-inset-left));
+    padding-right: max(var(--space-section-x), env(safe-area-inset-right));
+  }
+
+  /* Hide the inline secondary nav; the drawer takes over on mobile. */
+  .yc-topbar-user,
+  .yc-topbar-username,
+  .yc-topbar-user .yc-topbar-signin {
+    display: none;
+  }
+
+  /* Hamburger: >=44x44 tap target, shown only on mobile. */
+  .yc-nav-hamburger {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    width: 44px;
+    height: 44px;
+    margin-left: 8px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    cursor: pointer;
+    color: var(--ds-ink);
+    flex-shrink: 0;
+    transition: background var(--ds-dur) var(--ds-ease),
+      border-color var(--ds-dur) var(--ds-ease);
+  }
+  .yc-nav-hamburger:hover {
+    background: var(--ds-surface-hover);
+    border-color: var(--ds-border-strong);
+  }
+  .yc-nav-hamburger-bar {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+
+  /* Backdrop overlay sits above the sticky topbar (z-index 50). */
+  .yc-nav-drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--ds-overlay);
+    -webkit-backdrop-filter: saturate(180%) blur(4px);
+    backdrop-filter: saturate(180%) blur(4px);
+    z-index: 60;
+  }
+  .yc-nav-drawer-backdrop--open { display: block; }
+
+  /* Bottom-sheet drawer: hidden via translateY(100%), open => 0. */
+  .yc-nav-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--ds-surface);
+    border-top: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
+    box-shadow: var(--ds-shadow-3);
+    padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
+    z-index: 70;
+    transform: translateY(100%);
+    transition: transform var(--ds-dur-slow) var(--ds-ease);
+  }
+  .yc-nav-drawer--open { transform: translateY(0); }
+
+  .yc-nav-drawer-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-border);
+    margin: 0 auto 12px;
+    flex-shrink: 0;
+  }
+
+  .yc-nav-drawer-username {
+    display: block;
+    padding: 8px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ds-text-muted);
+    text-transform: uppercase;
+  }
+
+  /* Full-width tappable rows, each >=44px tall. */
+  .yc-nav-drawer-link {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 4px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-decoration: none;
+    color: var(--ds-ink);
+    background: none;
+    border: none;
+    border-top: 1px solid var(--ds-border-subtle);
+    cursor: pointer;
+    transition: color var(--ds-dur) var(--ds-ease);
+  }
+  .yc-nav-drawer-link:hover { color: var(--ds-accent-text); }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .yc-nav-drawer { transition: none; }
+}
+
 /* <<< TEAM-A <<< */
 
 /* >>> TEAM-B HOME: HERO / LEARNING-PATH / ROADMAP — DO NOT EDIT outside this fence >>> */

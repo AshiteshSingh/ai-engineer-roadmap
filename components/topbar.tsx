@@ -10,6 +10,7 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [navOpen, setNavOpen] = useState(false);
   const rafRef = useRef(0);
 
   const onScroll = useCallback(() => {
@@ -63,12 +64,76 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
             Sign In
           </Link>
         )}
+        <button
+          type="button"
+          aria-label="Open menu"
+          aria-expanded={navOpen}
+          className="yc-nav-hamburger"
+          onClick={() => setNavOpen(true)}
+        >
+          <span className="yc-nav-hamburger-bar" aria-hidden="true" />
+          <span className="yc-nav-hamburger-bar" aria-hidden="true" />
+          <span className="yc-nav-hamburger-bar" aria-hidden="true" />
+        </button>
       </div>
       <div
         className="yc-topbar-progress"
         style={{ transform: `scaleX(${progress})` }}
         aria-hidden="true"
       />
+      {navOpen && (
+        <div
+          className="yc-nav-drawer-backdrop yc-nav-drawer-backdrop--open"
+          aria-hidden="true"
+          onClick={() => setNavOpen(false)}
+        />
+      )}
+      <div
+        className={`yc-nav-drawer ${navOpen ? "yc-nav-drawer--open" : ""}`}
+        role="dialog"
+        aria-label="Navigation menu"
+        aria-hidden={!navOpen}
+      >
+        <div className="yc-nav-drawer-handle" aria-hidden="true" />
+        {session?.user ? (
+          <>
+            <span className="yc-nav-drawer-username">{session.user.name}</span>
+            <Link
+              href="/applications"
+              className="yc-nav-drawer-link"
+              onClick={() => setNavOpen(false)}
+            >
+              Applications
+            </Link>
+            <Link
+              href="/coursework"
+              className="yc-nav-drawer-link"
+              onClick={() => setNavOpen(false)}
+            >
+              Coursework
+            </Link>
+            <button
+              type="button"
+              aria-label="Sign out"
+              className="yc-nav-drawer-link"
+              onClick={() => {
+                setNavOpen(false);
+                signOut().then(() => router.push("/login"));
+              }}
+            >
+              Sign Out
+            </button>
+          </>
+        ) : (
+          <Link
+            href="/login"
+            className="yc-nav-drawer-link"
+            onClick={() => setNavOpen(false)}
+          >
+            Sign In
+          </Link>
+        )}
+      </div>
     </nav>
   );
 }
