@@ -14,6 +14,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Prevent stray child overflow from forcing a page-level horizontal
+   scrollbar. `clip` instead of `hidden` so position: sticky still works. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 /* ---------- custom scrollbar ---------- */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
