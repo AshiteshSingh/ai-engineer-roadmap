@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`}>
-        <Theme appearance="light" accentColor="indigo" grayColor="slate" radius="small" panelBackground="solid">
+        <Theme appearance="dark" accentColor="indigo" grayColor="slate" radius="small" panelBackground="solid">
           {children}
         </Theme>
         <Analytics />
