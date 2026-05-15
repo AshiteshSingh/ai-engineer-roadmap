@@ -56,11 +56,7 @@ pub fn parse_topic_page(html: &str) -> TopicPageResult {
 
     // Filter promo slugs
     course_urls.retain(|url| {
-        let slug = url
-            .trim_end_matches('/')
-            .rsplit('/')
-            .next()
-            .unwrap_or("");
+        let slug = url.trim_end_matches('/').rsplit('/').next().unwrap_or("");
         !is_promo_slug(slug)
     });
 
@@ -139,9 +135,17 @@ mod tests {
         </body></html>
         "#;
         let result = parse_topic_page(html);
-        assert!(result.course_urls.iter().any(|u| u.contains("langchain-masterclass")));
-        assert!(result.course_urls.iter().any(|u| u.contains("deep-learning-pytorch")));
-        assert!(result.related_topics.contains(&"machine-learning".to_string()));
+        assert!(result
+            .course_urls
+            .iter()
+            .any(|u| u.contains("langchain-masterclass")));
+        assert!(result
+            .course_urls
+            .iter()
+            .any(|u| u.contains("deep-learning-pytorch")));
+        assert!(result
+            .related_topics
+            .contains(&"machine-learning".to_string()));
     }
 
     #[test]
@@ -154,8 +158,14 @@ mod tests {
         </head><body></body></html>
         "#;
         let result = parse_topic_page(html);
-        assert!(result.course_urls.iter().any(|u| u.contains("vector-databases-101")));
-        assert!(result.course_urls.iter().any(|u| u.contains("rag-pipeline")));
+        assert!(result
+            .course_urls
+            .iter()
+            .any(|u| u.contains("vector-databases-101")));
+        assert!(result
+            .course_urls
+            .iter()
+            .any(|u| u.contains("rag-pipeline")));
     }
 
     #[test]
@@ -167,7 +177,11 @@ mod tests {
         </body></html>
         "#;
         let result = parse_topic_page(html);
-        let count = result.course_urls.iter().filter(|u| u.contains("my-course")).count();
+        let count = result
+            .course_urls
+            .iter()
+            .filter(|u| u.contains("my-course"))
+            .count();
         assert_eq!(count, 1, "expected 1 deduplicated URL, got {count}");
     }
 
@@ -180,14 +194,24 @@ mod tests {
         </body></html>
         "#;
         let result = parse_topic_page(html);
-        assert!(!result.course_urls.iter().any(|u| u.contains("google-ai-fundamentals")));
-        assert!(result.course_urls.iter().any(|u| u.contains("real-course-here")));
+        assert!(!result
+            .course_urls
+            .iter()
+            .any(|u| u.contains("google-ai-fundamentals")));
+        assert!(result
+            .course_urls
+            .iter()
+            .any(|u| u.contains("real-course-here")));
     }
 
     #[test]
     fn cloudflare_detection() {
-        assert!(is_cloudflare_blocked("<html><head><title>Just a moment</title></head></html>"));
-        assert!(!is_cloudflare_blocked("<html><head><title>Udemy</title></head></html>"));
+        assert!(is_cloudflare_blocked(
+            "<html><head><title>Just a moment</title></head></html>"
+        ));
+        assert!(!is_cloudflare_blocked(
+            "<html><head><title>Udemy</title></head></html>"
+        ));
     }
 
     #[test]

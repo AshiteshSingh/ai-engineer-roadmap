@@ -110,79 +110,166 @@ pub const TOPIC_GROUPS: &[TopicGroup] = &[
     TopicGroup {
         name: "Generative AI & LLMs",
         signals: &[
-            "generative ai", "chatgpt", "gpt-4", "gpt-3", "gpt4", "gpt3",
-            "large language model", "llm", "prompt engineering", "openai api",
-            "anthropic", "claude", "gemini", "mistral", "llama 2", "llama2",
+            "generative ai",
+            "chatgpt",
+            "gpt-4",
+            "gpt-3",
+            "gpt4",
+            "gpt3",
+            "large language model",
+            "llm",
+            "prompt engineering",
+            "openai api",
+            "anthropic",
+            "claude",
+            "gemini",
+            "mistral",
+            "llama 2",
+            "llama2",
         ],
     },
     TopicGroup {
         name: "RAG & Vector Search",
         signals: &[
-            "rag", "retrieval augmented", "retrieval-augmented",
-            "vector database", "vector db", "vectorstore", "vector store",
-            "pinecone", "weaviate", "qdrant", "milvus", "chroma", "chromadb",
-            "pgvector", "faiss", "similarity search", "embedding model",
-            "semantic search", "vector search",
+            "rag",
+            "retrieval augmented",
+            "retrieval-augmented",
+            "vector database",
+            "vector db",
+            "vectorstore",
+            "vector store",
+            "pinecone",
+            "weaviate",
+            "qdrant",
+            "milvus",
+            "chroma",
+            "chromadb",
+            "pgvector",
+            "faiss",
+            "similarity search",
+            "embedding model",
+            "semantic search",
+            "vector search",
         ],
     },
     TopicGroup {
         name: "AI Agents & Frameworks",
         signals: &[
-            "ai agent", "langchain", "langgraph", "llamaindex", "llama-index",
-            "autogen", "crewai", "function calling", "tool calling", "tool use",
-            "agentic", "multi-agent",
+            "ai agent",
+            "langchain",
+            "langgraph",
+            "llamaindex",
+            "llama-index",
+            "autogen",
+            "crewai",
+            "function calling",
+            "tool calling",
+            "tool use",
+            "agentic",
+            "multi-agent",
         ],
     },
     TopicGroup {
         name: "Fine-tuning & RLHF",
         signals: &[
-            "fine-tun", "fine tune", "lora", "qlora", "peft",
-            "rlhf", "instruction tuning", "dpo", "sft", "adapter",
+            "fine-tun",
+            "fine tune",
+            "lora",
+            "qlora",
+            "peft",
+            "rlhf",
+            "instruction tuning",
+            "dpo",
+            "sft",
+            "adapter",
         ],
     },
     TopicGroup {
         name: "Deep Learning",
         signals: &[
-            "deep learning", "neural network", "pytorch", "tensorflow", "keras",
-            "backpropagation", "cnn", "rnn", "lstm", "gru", "attention mechanism",
+            "deep learning",
+            "neural network",
+            "pytorch",
+            "tensorflow",
+            "keras",
+            "backpropagation",
+            "cnn",
+            "rnn",
+            "lstm",
+            "gru",
+            "attention mechanism",
         ],
     },
     TopicGroup {
         name: "Computer Vision",
         signals: &[
-            "computer vision", "image recognition", "object detection",
-            "yolo", "image segmentation", "convolutional neural", "cv2", "opencv",
+            "computer vision",
+            "image recognition",
+            "object detection",
+            "yolo",
+            "image segmentation",
+            "convolutional neural",
+            "cv2",
+            "opencv",
         ],
     },
     TopicGroup {
         name: "NLP & Transformers",
         signals: &[
-            "natural language processing", "nlp", "transformers", "hugging face",
-            "bert", "text classification", "named entity", "sentiment analysis",
-            "text generation", "tokenization",
+            "natural language processing",
+            "nlp",
+            "transformers",
+            "hugging face",
+            "bert",
+            "text classification",
+            "named entity",
+            "sentiment analysis",
+            "text generation",
+            "tokenization",
         ],
     },
     TopicGroup {
         name: "MLOps & Deployment",
         signals: &[
-            "mlops", "model deployment", "model serving", "mlflow", "kubeflow",
-            "bentoml", "triton", "docker for ml", "kubernetes for ml",
-            "ci/cd for ml", "model monitoring",
+            "mlops",
+            "model deployment",
+            "model serving",
+            "mlflow",
+            "kubeflow",
+            "bentoml",
+            "triton",
+            "docker for ml",
+            "kubernetes for ml",
+            "ci/cd for ml",
+            "model monitoring",
         ],
     },
     TopicGroup {
         name: "Reinforcement Learning",
         signals: &[
-            "reinforcement learning", "rl agent", "openai gym", "ppo", "dqn",
-            "policy gradient", "q-learning", "actor-critic",
+            "reinforcement learning",
+            "rl agent",
+            "openai gym",
+            "ppo",
+            "dqn",
+            "policy gradient",
+            "q-learning",
+            "actor-critic",
         ],
     },
     TopicGroup {
         name: "ML Foundations",
         signals: &[
-            "machine learning", "scikit-learn", "sklearn", "xgboost",
-            "gradient boosting", "random forest", "decision tree",
-            "logistic regression", "linear regression", "statistics for data",
+            "machine learning",
+            "scikit-learn",
+            "sklearn",
+            "xgboost",
+            "gradient boosting",
+            "random forest",
+            "decision tree",
+            "logistic regression",
+            "linear regression",
+            "statistics for data",
             "data science",
         ],
     },
@@ -190,45 +277,97 @@ pub const TOPIC_GROUPS: &[TopicGroup] = &[
     TopicGroup {
         name: "CSS & Layout",
         signals: &[
-            "css", "flexbox", "css grid", "grid layout", "responsive design",
-            "css animation", "css layout", "box model", "css specificity",
-            "css positioning", "media queries", "sass", "scss", "tailwind",
-            "css architecture", "css modules", "styled-components",
+            "css",
+            "flexbox",
+            "css grid",
+            "grid layout",
+            "responsive design",
+            "css animation",
+            "css layout",
+            "box model",
+            "css specificity",
+            "css positioning",
+            "media queries",
+            "sass",
+            "scss",
+            "tailwind",
+            "css architecture",
+            "css modules",
+            "styled-components",
         ],
     },
     TopicGroup {
         name: "React & Frontend Frameworks",
         signals: &[
-            "react hooks", "usestate", "useeffect", "react component",
-            "react pattern", "jsx", "virtual dom", "react performance",
-            "react router", "next.js", "nextjs", "remix", "gatsby",
-            "react native", "react context", "react redux", "zustand",
-            "react query", "tanstack",
+            "react hooks",
+            "usestate",
+            "useeffect",
+            "react component",
+            "react pattern",
+            "jsx",
+            "virtual dom",
+            "react performance",
+            "react router",
+            "next.js",
+            "nextjs",
+            "remix",
+            "gatsby",
+            "react native",
+            "react context",
+            "react redux",
+            "zustand",
+            "react query",
+            "tanstack",
         ],
     },
     TopicGroup {
         name: "TypeScript & JavaScript",
         signals: &[
-            "typescript", "type system", "type inference", "generics",
-            "javascript", "es6", "es2015", "ecmascript", "promises",
-            "async await", "closure", "prototype", "dom manipulation",
+            "typescript",
+            "type system",
+            "type inference",
+            "generics",
+            "javascript",
+            "es6",
+            "es2015",
+            "ecmascript",
+            "promises",
+            "async await",
+            "closure",
+            "prototype",
+            "dom manipulation",
         ],
     },
     TopicGroup {
         name: "Design Systems & Accessibility",
         signals: &[
-            "design system", "component library", "design tokens",
-            "storybook", "accessibility", "a11y", "aria", "screen reader",
-            "keyboard navigation", "wcag", "inclusive design",
+            "design system",
+            "component library",
+            "design tokens",
+            "storybook",
+            "accessibility",
+            "a11y",
+            "aria",
+            "screen reader",
+            "keyboard navigation",
+            "wcag",
+            "inclusive design",
         ],
     },
     TopicGroup {
         name: "Frontend Interview Prep",
         signals: &[
-            "frontend interview", "front-end interview", "css interview",
-            "react interview", "javascript interview", "coding challenge",
-            "css challenge", "react challenge", "frontend assessment",
-            "take-home", "whiteboard",
+            "frontend interview",
+            "front-end interview",
+            "css interview",
+            "react interview",
+            "javascript interview",
+            "coding challenge",
+            "css challenge",
+            "react challenge",
+            "frontend assessment",
+            "take-home",
+            "whiteboard",
         ],
     },
 ];
@@ -248,18 +387,55 @@ pub fn classify_topic_group(text: &str) -> &'static str {
 
 /// Keywords used to decide whether to follow a discovered related topic.
 pub const FOLLOW_TOPIC_KEYWORDS: &[&str] = &[
-    "ai", "ml", "machine-learning", "deep-learning", "neural",
-    "llm", "gpt", "openai", "generative", "langchain", "llama",
-    "vector", "embed", "rag", "retriev",
-    "nlp", "natural-language", "transformers", "bert",
-    "computer-vision", "image", "object-detect",
-    "pytorch", "tensorflow", "keras",
-    "mlops", "deploy", "model-serv",
-    "fine-tun", "reinforcement", "agent",
+    "ai",
+    "ml",
+    "machine-learning",
+    "deep-learning",
+    "neural",
+    "llm",
+    "gpt",
+    "openai",
+    "generative",
+    "langchain",
+    "llama",
+    "vector",
+    "embed",
+    "rag",
+    "retriev",
+    "nlp",
+    "natural-language",
+    "transformers",
+    "bert",
+    "computer-vision",
+    "image",
+    "object-detect",
+    "pytorch",
+    "tensorflow",
+    "keras",
+    "mlops",
+    "deploy",
+    "model-serv",
+    "fine-tun",
+    "reinforcement",
+    "agent",
     // Frontend
-    "css", "react", "frontend", "front-end", "typescript", "javascript",
-    "component", "responsive", "accessibility", "design-system", "web-dev",
-    "layout", "flexbox", "grid", "sass", "tailwind", "next-js",
+    "css",
+    "react",
+    "frontend",
+    "front-end",
+    "typescript",
+    "javascript",
+    "component",
+    "responsive",
+    "accessibility",
+    "design-system",
+    "web-dev",
+    "layout",
+    "flexbox",
+    "grid",
+    "sass",
+    "tailwind",
+    "next-js",
 ];
 
 /// Returns true if a discovered topic slug is worth following.
@@ -705,12 +881,16 @@ mod tests {
 
     #[test]
     fn is_relevant_matches_known_keyword() {
-        assert!(is_relevant("A course about embedding models for semantic search"));
+        assert!(is_relevant(
+            "A course about embedding models for semantic search"
+        ));
     }
 
     #[test]
     fn is_relevant_rejects_unrelated_text() {
-        assert!(!is_relevant("Docker containers and Kubernetes orchestration"));
+        assert!(!is_relevant(
+            "Docker containers and Kubernetes orchestration"
+        ));
     }
 
     #[test]
@@ -729,7 +909,10 @@ mod tests {
     fn match_slugs_returns_matching_slug() {
         let results = match_slugs("fine-tuning lora peft qlora");
         let slugs: Vec<&str> = results.iter().map(|(s, _)| s.as_str()).collect();
-        assert!(slugs.contains(&"fine-tuning"), "expected fine-tuning in {slugs:?}");
+        assert!(
+            slugs.contains(&"fine-tuning"),
+            "expected fine-tuning in {slugs:?}"
+        );
     }
 
     #[test]
@@ -740,20 +923,31 @@ mod tests {
         let entry = results.iter().find(|(s, _)| s == "deep-learning");
         assert!(entry.is_some(), "deep-learning not found in results");
         let (_, score) = entry.unwrap();
-        assert!((score - 0.38).abs() < 0.005, "expected score ~0.38, got {score}");
+        assert!(
+            (score - 0.38).abs() < 0.005,
+            "expected score ~0.38, got {score}"
+        );
     }
 
     #[test]
     fn match_slugs_results_sorted_descending() {
         // fine-tuning: 5/11 hits → 0.68; deep-learning: 3/12 hits → 0.38
-        let text = "fine-tuning fine tuning lora peft qlora deep learning neural network convolutional";
+        let text =
+            "fine-tuning fine tuning lora peft qlora deep learning neural network convolutional";
         let results = match_slugs(text);
-        assert!(results.len() >= 2, "expected at least 2 matching slugs, got {}", results.len());
+        assert!(
+            results.len() >= 2,
+            "expected at least 2 matching slugs, got {}",
+            results.len()
+        );
         for window in results.windows(2) {
             assert!(
                 window[0].1 >= window[1].1,
                 "results not sorted: ({}, {:.2}) before ({}, {:.2})",
-                window[0].0, window[0].1, window[1].0, window[1].1,
+                window[0].0,
+                window[0].1,
+                window[1].0,
+                window[1].1,
             );
         }
         assert_eq!(results[0].0, "fine-tuning");
@@ -775,7 +969,8 @@ mod tests {
 
     #[test]
     fn top_slug_returns_highest_scored_slug() {
-        let text = "fine-tuning fine tuning lora peft qlora deep learning neural network convolutional";
+        let text =
+            "fine-tuning fine tuning lora peft qlora deep learning neural network convolutional";
         assert_eq!(top_slug(text), Some("fine-tuning".to_string()));
     }
 
@@ -788,32 +983,50 @@ mod tests {
 
     #[test]
     fn classify_generative_ai() {
-        assert_eq!(classify_topic_group("Learn ChatGPT and prompt engineering"), "Generative AI & LLMs");
+        assert_eq!(
+            classify_topic_group("Learn ChatGPT and prompt engineering"),
+            "Generative AI & LLMs"
+        );
     }
 
     #[test]
     fn classify_rag() {
-        assert_eq!(classify_topic_group("Build a RAG pipeline with vector database"), "RAG & Vector Search");
+        assert_eq!(
+            classify_topic_group("Build a RAG pipeline with vector database"),
+            "RAG & Vector Search"
+        );
     }
 
     #[test]
     fn classify_agents() {
-        assert_eq!(classify_topic_group("Build AI agent with LangChain"), "AI Agents & Frameworks");
+        assert_eq!(
+            classify_topic_group("Build AI agent with LangChain"),
+            "AI Agents & Frameworks"
+        );
     }
 
     #[test]
     fn classify_fine_tuning() {
-        assert_eq!(classify_topic_group("Fine-tuning models with LoRA and PEFT"), "Fine-tuning & RLHF");
+        assert_eq!(
+            classify_topic_group("Fine-tuning models with LoRA and PEFT"),
+            "Fine-tuning & RLHF"
+        );
     }
 
     #[test]
     fn classify_other_fallback() {
-        assert_eq!(classify_topic_group("Cooking recipes for beginners"), "Other");
+        assert_eq!(
+            classify_topic_group("Cooking recipes for beginners"),
+            "Other"
+        );
     }
 
     #[test]
     fn classify_is_case_insensitive() {
-        assert_eq!(classify_topic_group("DEEP LEARNING WITH PYTORCH"), "Deep Learning");
+        assert_eq!(
+            classify_topic_group("DEEP LEARNING WITH PYTORCH"),
+            "Deep Learning"
+        );
     }
 
     // should_follow_topic
@@ -842,7 +1055,9 @@ mod tests {
 
     #[test]
     fn is_relevant_matches_css() {
-        assert!(is_relevant("Master CSS Flexbox and Grid Layout for modern web design"));
+        assert!(is_relevant(
+            "Master CSS Flexbox and Grid Layout for modern web design"
+        ));
     }
 
     #[test]
@@ -852,12 +1067,16 @@ mod tests {
 
     #[test]
     fn is_relevant_matches_typescript() {
-        assert!(is_relevant("TypeScript Generics and Type Inference deep dive"));
+        assert!(is_relevant(
+            "TypeScript Generics and Type Inference deep dive"
+        ));
     }
 
     #[test]
     fn is_relevant_matches_accessibility() {
-        assert!(is_relevant("Web Accessibility with ARIA and screen reader testing"));
+        assert!(is_relevant(
+            "Web Accessibility with ARIA and screen reader testing"
+        ));
     }
 
     // ── Frontend topic group classification ────────────────────────────────
@@ -897,7 +1116,9 @@ mod tests {
     #[test]
     fn classify_frontend_interview() {
         assert_eq!(
-            classify_topic_group("Frontend interview prep with coding challenges and take-home projects"),
+            classify_topic_group(
+                "Frontend interview prep with coding challenges and take-home projects"
+            ),
             "Frontend Interview Prep"
         );
     }
@@ -916,21 +1137,31 @@ mod tests {
     fn match_slugs_css_layout() {
         let results = match_slugs("Learn flexbox css grid responsive design and media queries");
         let slugs: Vec<&str> = results.iter().map(|(s, _)| s.as_str()).collect();
-        assert!(slugs.contains(&"css-layout-fundamentals"), "expected css-layout-fundamentals in {slugs:?}");
+        assert!(
+            slugs.contains(&"css-layout-fundamentals"),
+            "expected css-layout-fundamentals in {slugs:?}"
+        );
     }
 
     #[test]
     fn match_slugs_react_patterns() {
-        let results = match_slugs("React hooks usestate useeffect custom hook component composition");
+        let results =
+            match_slugs("React hooks usestate useeffect custom hook component composition");
         let slugs: Vec<&str> = results.iter().map(|(s, _)| s.as_str()).collect();
-        assert!(slugs.contains(&"react-patterns"), "expected react-patterns in {slugs:?}");
+        assert!(
+            slugs.contains(&"react-patterns"),
+            "expected react-patterns in {slugs:?}"
+        );
     }
 
     #[test]
     fn match_slugs_typescript_for_react() {
         let results = match_slugs("TypeScript React with generics and type inference");
         let slugs: Vec<&str> = results.iter().map(|(s, _)| s.as_str()).collect();
-        assert!(slugs.contains(&"typescript-for-react"), "expected typescript-for-react in {slugs:?}");
+        assert!(
+            slugs.contains(&"typescript-for-react"),
+            "expected typescript-for-react in {slugs:?}"
+        );
     }
 
     // ── Frontend follow-topic ──────────────────────────────────────────────

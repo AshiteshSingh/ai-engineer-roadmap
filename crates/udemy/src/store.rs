@@ -41,10 +41,7 @@ fn schema(dim: i32) -> Arc<Schema> {
         Field::new("indexed_at", DataType::Float64, false),
         Field::new(
             "vector",
-            DataType::FixedSizeList(
-                Arc::new(Field::new("item", DataType::Float32, true)),
-                dim,
-            ),
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), dim),
             true,
         ),
     ]))
@@ -175,7 +172,11 @@ impl CourseStore {
     ) -> Result<Vec<CourseSearchResult>> {
         let table = self.conn.open_table(TABLE).execute().await?;
 
-        let stream = table.vector_search(query_vec)?.limit(top_k).execute().await?;
+        let stream = table
+            .vector_search(query_vec)?
+            .limit(top_k)
+            .execute()
+            .await?;
 
         let batches: Vec<RecordBatch> = stream.try_collect().await?;
 
@@ -193,7 +194,11 @@ impl CourseStore {
             }
         }
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         Ok(results)
     }
 

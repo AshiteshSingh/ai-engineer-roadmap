@@ -187,7 +187,11 @@ mod tests {
 
     #[test]
     fn detect_cloudflare_turnstile() {
-        assert!(detect_cloudflare(200, false, "<div class=\"cf-turnstile\"></div>"));
+        assert!(detect_cloudflare(
+            200,
+            false,
+            "<div class=\"cf-turnstile\"></div>"
+        ));
     }
 
     #[test]

@@ -271,9 +271,7 @@ async fn cmd_crawl(
                     let parsed = udemy::topic_parser::parse_topic_page(&html);
                     let n_courses = parsed.course_urls.len();
                     let n_topics = parsed.related_topics.len();
-                    eprintln!(
-                        "  /topic/{topic}/ — {n_courses} courses, {n_topics} related topics"
-                    );
+                    eprintln!("  /topic/{topic}/ — {n_courses} courses, {n_topics} related topics");
                     stats.topics_crawled += 1;
 
                     for url in parsed.course_urls {
@@ -466,14 +464,9 @@ async fn cmd_crawl(
         std::fs::create_dir_all(parent).ok();
     }
     let json = serde_json::to_string_pretty(&courses).context("serializing courses")?;
-    std::fs::write(&output, &json)
-        .with_context(|| format!("writing {}", output.display()))?;
+    std::fs::write(&output, &json).with_context(|| format!("writing {}", output.display()))?;
 
-    eprintln!(
-        "\nWrote {} courses to {}",
-        courses.len(),
-        output.display()
-    );
+    eprintln!("\nWrote {} courses to {}", courses.len(), output.display());
 
     // ── Phase 4 (optional): Embed + LanceDB ────────────────────────────────
     if embed && !courses.is_empty() {
@@ -674,7 +667,9 @@ async fn fetch_via_api(http: &reqwest::Client, slug: &str) -> Result<Course> {
         url: format!("https://www.udemy.com/course/{slug}/"),
         description,
         instructor,
-        level: api.instructional_level.unwrap_or_else(|| "All Levels".to_string()),
+        level: api
+            .instructional_level
+            .unwrap_or_else(|| "All Levels".to_string()),
         rating: api.avg_rating.unwrap_or(0.0) as f32,
         review_count: api.num_reviews.unwrap_or(0),
         num_students: api.num_subscribers.unwrap_or(0),
@@ -734,15 +729,13 @@ async fn cmd_add(
 
         // Try HTML scrape first, fall back to Udemy API
         let course = match crawler.fetch_page(&url).await {
-            FetchResult::Ok(html) => {
-                match parse_course_html(&html, &url) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        eprintln!("  parse error ({e}), falling back to API...");
-                        fetch_via_api(&http, slug).await?
-                    }
+            FetchResult::Ok(html) => match parse_course_html(&html, &url) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("  parse error ({e}), falling back to API...");
+                    fetch_via_api(&http, slug).await?
                 }
-            }
+            },
             _ => {
                 eprintln!("  Cloudflare blocked, using Udemy API...");
                 fetch_via_api(&http, slug).await?
@@ -770,14 +763,42 @@ async fn cmd_add(
             title: course.title.clone(),
             url: course.url.clone(),
             provider: "Udemy".to_string(),
-            description: if course.description.is_empty() { None } else { Some(course.description.clone()) },
-            level: if course.level.is_empty() { None } else { Some(course.level.clone()) },
-            rating: if course.rating > 0.0 { Some(course.rating as f64) } else { None },
-            review_count: if course.review_count > 0 { Some(course.review_count) } else { None },
-            duration_hours: if course.duration_hours > 0.0 { Some(course.duration_hours as f64) } else { None },
+            description: if course.description.is_empty() {
+                None
+            } else {
+                Some(course.description.clone())
+            },
+            level: if course.level.is_empty() {
+                None
+            } else {
+                Some(course.level.clone())
+            },
+            rating: if course.rating > 0.0 {
+                Some(course.rating as f64)
+            } else {
+                None
+            },
+            review_count: if course.review_count > 0 {
+                Some(course.review_count)
+            } else {
+                None
+            },
+            duration_hours: if course.duration_hours > 0.0 {
+                Some(course.duration_hours as f64)
+            } else {
+                None
+            },
             is_free: course.price.to_lowercase() == "free",
-            enrolled: if course.num_students > 0 { Some(course.num_students) } else { None },
-            image_url: if course.image_url.is_empty() { None } else { Some(course.image_url.clone()) },
+            enrolled: if course.num_students > 0 {
+                Some(course.num_students)
+            } else {
+                None
+            },
+            image_url: if course.image_url.is_empty() {
+                None
+            } else {
+                Some(course.image_url.clone())
+            },
             language: course.language.clone(),
             topic_group: topic_group.to_string(),
             metadata,
@@ -799,7 +820,11 @@ async fn cmd_add(
         }
         let json = serde_json::to_string_pretty(&ext_courses)?;
         std::fs::write(path, &json)?;
-        eprintln!("\nWrote {} course(s) to {}", ext_courses.len(), path.display());
+        eprintln!(
+            "\nWrote {} course(s) to {}",
+            ext_courses.len(),
+            path.display()
+        );
     }
 
     // Embed + store
@@ -844,11 +869,7 @@ async fn cmd_scrape(json: PathBuf, db: String, embed_url: String, batch: usize) 
         eprintln!("No courses found in {}", json.display());
         return Ok(());
     }
-    eprintln!(
-        "Loaded {} courses from {}",
-        courses.len(),
-        json.display()
-    );
+    eprintln!("Loaded {} courses from {}", courses.len(), json.display());
 
     let client = reqwest::Client::new();
     client
