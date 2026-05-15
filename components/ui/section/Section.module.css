@@ -1,0 +1,9 @@
+.section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-section-y) var(--space-section-x);
+}
+.tight {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+}
