@@ -90,7 +90,7 @@ const LESSON_SLUGS = [
   "memory-architectures",
   "dynamic-context-assembly",
   "context-compression",
-  // Phase 5 · Evals, Safety & Observability (45-61)
+  // Phase 5 · Evals, Safety & Observability (45-62)
   "eval-fundamentals",
   "benchmark-design",
   "llm-as-judge",
@@ -107,8 +107,9 @@ const LESSON_SLUGS = [
   "ai-governance",
   "interpretability",
   "observability",
+  "online-evaluation",
   "ai-gateway",
-  // Phase 6 · Ship on Cloudflare (62-72)
+  // Phase 6 · Ship on Cloudflare (63-73)
   "edge-deployment",
   "cost-optimization",
   "scaling-load-balancing",
@@ -120,20 +121,20 @@ const LESSON_SLUGS = [
   "vision-language-models",
   "audio-speech-ai",
   "ai-for-code",
-  // Appendix · Fine-tuning & Training (73-78) — beyond the edge
+  // Appendix · Fine-tuning & Training (74-79) — beyond the edge
   "fine-tuning-fundamentals",
   "lora-adapters",
   "rlhf-preference",
   "dataset-curation",
   "continual-learning",
   "distillation-compression",
-  // Appendix · Other Clouds & Platforms (79-83)
+  // Appendix · Other Clouds & Platforms (80-84)
   "aws",
   "azure",
   "gcp",
   "docker",
   "kubernetes",
-  // Appendix · AWS Deep Dives (84-92)
+  // Appendix · AWS Deep Dives (85-93)
   "aws-lambda-serverless",
   "aws-api-gateway-networking",
   "aws-iam-security",
@@ -143,7 +144,7 @@ const LESSON_SLUGS = [
   "aws-architecture",
   "aws-ai-ml-services",
   "dynamodb-data-services",
-  // Appendix · Engineering & Communication (93-101)
+  // Appendix · Engineering & Communication (94-102)
   "microservices",
   "ci-cd",
   "nodejs",
@@ -166,18 +167,18 @@ export const CATEGORIES: [number, number, string][] = [
   [10, 18, "Phase 2 · Prompting & Structured Output"],
   [19, 27, "Phase 3 · Embeddings & RAG on Vectorize"],
   [28, 44, "Phase 4 · Agents, Memory & Orchestration"],
-  [45, 61, "Phase 5 · Evals, Safety & Observability"],
-  [62, 72, "Phase 6 · Ship on Cloudflare"],
+  [45, 62, "Phase 5 · Evals, Safety & Observability"],
+  [63, 73, "Phase 6 · Ship on Cloudflare"],
   // Appendix · Beyond the Edge — reachable, excluded from the flow spine
-  [73, 78, "Appendix · Fine-tuning & Training"],
-  [79, 83, "Appendix · Other Clouds & Platforms"],
-  [84, 92, "Appendix · AWS Deep Dives"],
-  [93, 101, "Appendix · Engineering & Communication"],
+  [74, 79, "Appendix · Fine-tuning & Training"],
+  [80, 84, "Appendix · Other Clouds & Platforms"],
+  [85, 93, "Appendix · AWS Deep Dives"],
+  [94, 102, "Appendix · Engineering & Communication"],
 ];
 
 // The cut-off lesson number for the continuous-play spine. Lessons numbered
 // above this belong to the Appendix and are excluded from getFlowOrder().
-export const FLOW_MAX_NUMBER = 72;
+export const FLOW_MAX_NUMBER = 73;
 
 export const CATEGORY_META: Record<string, CategoryMeta> = {
   "Phase 0 · The AI Engineer on the Edge": {
