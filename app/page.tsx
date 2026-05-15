@@ -6,8 +6,8 @@ import { LearningPath } from "@/components/learning-path";
 import { Search } from "@/components/search";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
-import { XyflowDirect } from "@/components/xyflow-direct";
-import { buildRoadmapFlowJSON } from "@/lib/roadmap-flow";
+import { RoadmapGraph } from "@/components/roadmap-graph";
+import { buildRoadmapModel } from "@/lib/roadmap-flow";
 
 export default async function HomePage() {
   const groups = await getGroupedLessons();
@@ -16,7 +16,7 @@ export default async function HomePage() {
   const catCount = groups.length;
   const wordCount = allLessons.reduce((sum, l) => sum + l.wordCount, 0);
   const readingHours = Math.round(allLessons.reduce((sum, l) => sum + l.readingTimeMin, 0) / 60);
-  const roadmapJSON = buildRoadmapFlowJSON(groups);
+  const roadmapModel = buildRoadmapModel(groups);
   return (
     <div>
       <a href="#lessons" className="skip-link">Skip to lessons</a>
@@ -30,8 +30,11 @@ export default async function HomePage() {
 
       <ScrollReveal delay={60}>
         <section className="roadmap-flow" aria-label="AI Engineer roadmap flow">
-          <div className="learning-path-title">Roadmap</div>
-          <XyflowDirect json={roadmapJSON} />
+          <div className="yc-section" style={{ paddingBottom: 0 }}>
+            <span className="yc-eyebrow">The Path</span>
+            <h2 className="yc-heading">AI Engineer Roadmap</h2>
+          </div>
+          <RoadmapGraph model={roadmapModel} />
         </section>
       </ScrollReveal>
 

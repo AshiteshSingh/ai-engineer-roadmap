@@ -4424,3 +4424,196 @@ body {
 .prep-page iframe {
   background: transparent !important;
 }
+
+/* === T-XYFLOW ROADMAP GRAPH (integrated; uses T1 --ds-* tokens) === */
+
+/* ── Roadmap node ─────────────────────────────────────────────────── */
+.rg-node {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 264px;
+  min-height: 64px;
+  padding: 12px 16px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  box-sizing: border-box;
+}
+
+.rg-node:hover,
+.rg-node:focus-visible {
+  border-color: var(--ds-accent-border);
+  box-shadow: var(--ds-shadow-2);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.rg-node:focus-visible {
+  box-shadow: 0 0 0 3px var(--ds-accent-subtle), var(--ds-shadow-2);
+}
+
+.rg-node__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.rg-node__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.rg-node__eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-accent-text);
+  white-space: nowrap;
+}
+
+.rg-node__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ds-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.rg-node__meta {
+  font-size: 11px;
+  color: var(--ds-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rg-node__chevron {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--ds-text-faint);
+  font-size: 14px;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.rg-node:hover .rg-node__chevron,
+.rg-node:focus-visible .rg-node__chevron {
+  transform: translateX(2px);
+  color: var(--ds-accent-text);
+}
+
+/* ── Entry + Ship variants (pill, dark fill) ──────────────────────── */
+.rg-node--entry,
+.rg-node--ship {
+  width: auto;
+  min-width: 150px;
+  border-radius: 9999px;
+  background: var(--ds-ink);
+  border-color: transparent;
+  justify-content: center;
+}
+
+.rg-node--entry .rg-node__title,
+.rg-node--ship .rg-node__title {
+  color: var(--ds-bg);
+}
+
+.rg-node--entry .rg-node__eyebrow,
+.rg-node--ship .rg-node__eyebrow,
+.rg-node--entry .rg-node__meta,
+.rg-node--ship .rg-node__meta {
+  display: none;
+}
+
+.rg-node--entry:hover,
+.rg-node--ship:hover,
+.rg-node--entry:focus-visible,
+.rg-node--ship:focus-visible {
+  background: var(--ds-ink);
+  border-color: transparent;
+  opacity: 0.85;
+}
+
+/* ── Appendix variant (dashed border, subtle bg) ──────────────────── */
+.rg-node--appendix {
+  border-style: dashed;
+  background: var(--ds-surface-sub);
+}
+
+/* ── ReactFlow handle dots ────────────────────────────────────────── */
+.rg-handle {
+  width: 7px !important;
+  height: 7px !important;
+  background: var(--ds-border-strong) !important;
+  border: none !important;
+  opacity: 0;
+}
+
+/* ── ReactFlow pane + edge overrides ─────────────────────────────── */
+.roadmap-graph .react-flow__pane {
+  cursor: grab;
+}
+.roadmap-graph .react-flow__pane:active {
+  cursor: grabbing;
+}
+.roadmap-graph .react-flow__edge-path {
+  stroke: var(--ds-border-strong);
+  stroke-width: 1.5;
+}
+
+/* ── Legend ───────────────────────────────────────────────────────── */
+.rg-legend {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--ds-text-muted);
+  padding: 12px 16px;
+  border-top: 1px solid var(--ds-border-subtle);
+  background: var(--ds-surface);
+}
+
+.rg-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rg-legend__line {
+  display: inline-block;
+  width: 22px;
+  border-top: 1.5px solid var(--ds-border-strong);
+}
+
+.rg-legend__line--dashed {
+  border-top-style: dashed;
+  border-top-color: var(--ds-border);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .rg-node {
+    width: 220px;
+  }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .rg-node {
+    transition: none;
+  }
+  .rg-node:hover {
+    transform: none;
+  }
+}
+
+/* === END T-XYFLOW === */
