@@ -1,0 +1,13 @@
+/* Thin page layout wrapper — single-column port of the legacy .article-grid
+   container. Tokens / literals only; no global CSS. */
+.layout {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    padding: 16px 16px 64px;
+  }
+}
