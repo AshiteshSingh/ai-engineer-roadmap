@@ -6,8 +6,8 @@ import { LearningPath } from "@/components/learning-path";
 import { Search } from "@/components/search";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
-import { XyflowDirect } from "@/components/xyflow-direct";
-import { buildRoadmapFlowJSON } from "@/lib/roadmap-flow";
+import { RoadmapGraph } from "@/components/roadmap-graph";
+import { buildRoadmapModel } from "@/lib/roadmap-flow";
 
 export default async function HomePage() {
   const groups = await getGroupedLessons();
@@ -16,7 +16,7 @@ export default async function HomePage() {
   const catCount = groups.length;
   const wordCount = allLessons.reduce((sum, l) => sum + l.wordCount, 0);
   const readingHours = Math.round(allLessons.reduce((sum, l) => sum + l.readingTimeMin, 0) / 60);
-  const roadmapJSON = buildRoadmapFlowJSON(groups);
+  const roadmapModel = buildRoadmapModel(groups);
   return (
     <div>
       <a href="#lessons" className="skip-link">Skip to lessons</a>
@@ -30,8 +30,11 @@ export default async function HomePage() {
 
       <ScrollReveal delay={60}>
         <section className="roadmap-flow" aria-label="AI Engineer roadmap flow">
-          <div className="learning-path-title">Roadmap</div>
-          <XyflowDirect json={roadmapJSON} />
+          <div className="yc-section" style={{ paddingBottom: 0 }}>
+            <span className="yc-eyebrow">The Path</span>
+            <h2 className="yc-heading">AI Engineer Roadmap</h2>
+          </div>
+          <RoadmapGraph model={roadmapModel} />
         </section>
       </ScrollReveal>
 
@@ -39,9 +42,9 @@ export default async function HomePage() {
         {/* Research Collections */}
         <ScrollReveal delay={100}>
           <section className="research-collections">
-            <h2 className="research-collections-title">RESEARCH COLLECTIONS</h2>
+            <h2 className="research-collections-title">Research Collections</h2>
             <div className="research-collections-grid">
-              <Link href="/kv-quant" className="cat-card" style={{ "--cat-from": "var(--amber-9)", "--cat-to": "var(--red-9)" } as React.CSSProperties}>
+              <Link href="/kv-quant" className="cat-card">
                 <div className="cat-card-header">
                   <span className="cat-card-icon">🗜️</span>
                   <span className="cat-card-name">KV-Cache Quantization</span>

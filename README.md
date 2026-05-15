@@ -1,18 +1,64 @@
-# Knowledge
+<div align="center">
 
-AI engineering educational platform — 96 lessons across 15 categories with search, audio, knowledge graphs, and learning analytics.
+# 🧠 AI Engineering — From Zero to AI Engineer
 
-## Stack
+**A structured, hands-on learning path that takes junior engineers all the way to production AI systems.**
 
-- **Framework**: Next.js 15 (App Router, Turbopack)
-- **Database**: Neon PostgreSQL + pgvector
-- **ORM**: Drizzle ORM
-- **UI**: Radix UI Themes
-- **AI**: OpenAI, DeepSeek
-- **LangGraph backend**: Python FastAPI + LangGraph on Cloudflare Containers (`backend/`) — hosts all 5 graphs (`chat`, `app_prep`, `memorize_generate`, `article_generate`, `course_review`); `AsyncPostgresSaver` checkpointing on Neon
-- **File Storage**: Cloudflare R2
-- **Per-user playback state**: Cloudflare D1 (`knowledge-audio-progress`) reached via D1 REST API from Next.js
-- **Deployment**: Vercel (Next.js frontend) + Cloudflare Containers (LangGraph backend)
+108 deeply-researched lessons across 15 categories — RAG, agents, evals, fine-tuning, prompting & context engineering — wired together with semantic search, generated audio narration, an interactive knowledge graph, and per-learner mastery analytics.
+
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-5_graphs-1C3C3C?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Postgres](https://img.shields.io/badge/Neon_Postgres-pgvector-336791?logo=postgresql&logoColor=white)](https://neon.tech/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Containers_·_R2_·_D1-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/containers/)
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com/)
+
+[Quick Start](#-quick-start) · [Features](#-features) · [Architecture](#architecture) · [Database Schema](#database-schema) · [LangGraph Pipelines](#langgraph-pipelines) · [Dev](#dev)
+
+</div>
+
+---
+
+## ✨ Features
+
+| | |
+|---|---|
+| 📚 **108 lessons, 15 categories** | A curriculum from transformer internals → RAG → agents → evals → production, with prerequisite-aware ordering. |
+| 🔎 **Semantic + full-text search** | `Cmd+K` instant search over Postgres FTS *and* pgvector cosine similarity. |
+| 🎧 **Audio narration** | Every lesson has TTS audio (Rust pipeline → Cloudflare R2) with per-user resume positions stored in D1. |
+| 🕸️ **Interactive knowledge graph** | Concepts linked by `prerequisite` / `builds_on` / `related` edges, rendered as an explorable graph. |
+| 🤖 **AI tutor chat** | RAG chat grounded in lesson content, with intent routing (keyword vs. conceptual) and checkpointed threads. |
+| 📈 **Mastery analytics** | Bayesian Knowledge Tracing (`mastery / transit / slip / guess`) per learner per lesson. |
+| ✍️ **Self-authoring pipeline** | A 5-pass LangGraph writer (research → outline → draft → review → revise) generates new articles with a quality gate. |
+| 🎓 **Course reviewer** | 10 expert evaluators run concurrently to score & rank external AI courses. |
+
+## 🚀 Quick Start
+
+```bash
+# Node 22.x · pnpm
+pnpm install
+# create .env.local — see the "Environment" section below for the full list of keys
+
+pnpm db:push      # sync schema to Neon
+pnpm seed         # seed lessons from content/*.md
+pnpm dev          # → http://localhost:3006
+```
+
+Want the AI features (chat, article/flashcard/course-review generation)? Spin up the LangGraph backend too — see [LangGraph backend](#langgraph-backend-backend).
+
+## 🧱 Stack
+
+| Layer | Technology |
+|---|---|
+| **Framework** | Next.js 15 (App Router, Turbopack) |
+| **Database** | Neon PostgreSQL + pgvector |
+| **ORM** | Drizzle ORM |
+| **UI** | Radix UI Themes |
+| **AI / LLM** | OpenAI · DeepSeek |
+| **AI backend** | Python FastAPI + LangGraph on Cloudflare Containers — all 5 graphs (`chat`, `app_prep`, `memorize_generate`, `article_generate`, `course_review`) with `AsyncPostgresSaver` checkpointing on Neon |
+| **File storage** | Cloudflare R2 (audio files) |
+| **Playback state** | Cloudflare D1 (`knowledge-audio-progress`) via D1 REST API |
+| **Deployment** | Vercel (frontend) + Cloudflare Containers (LangGraph backend) |
 
 ## Architecture
 

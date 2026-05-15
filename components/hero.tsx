@@ -16,8 +16,6 @@ export function Hero({
 
   return (
     <section className="hero" aria-label="Course overview">
-      <div className="hero-glow" />
-      <div className="hero-grid-bg" />
       <div className="hero-content">
         <p className="hero-kicker">From Zero to AI Engineer</p>
         <h1 className="hero-title">
@@ -41,7 +39,6 @@ export function Hero({
           Start Learning <span className="hero-cta-arrow">↓</span>
         </a>
       </div>
-      <div className="hero-bottom-line" />
     </section>
   );
 }
