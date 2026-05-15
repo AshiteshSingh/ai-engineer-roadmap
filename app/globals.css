@@ -6344,6 +6344,87 @@
 /* <<< HP-TEAM-7 <<< */
 
 /* >>> HP-TEAM-8 MOTION / MICRO-INTERACTIONS (keyframes, transitions, reduced-motion) — DO NOT EDIT outside this fence >>> */
+/* === HP-TEAM-8: Motion / micro-interactions ===
+   This fence is sourced last among section fences, so these
+   .scroll-reveal rules override the legacy globals.css block at
+   equal specificity (later source order) — legacy left untouched
+   per the additive-fence pattern. */
+
+/* ---- Reveal-on-scroll primitive (token-driven, GPU-only) ---- */
+.scroll-reveal {
+  --sr-delay: 0ms;
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity var(--ds-dur-slow) var(--ds-ease) var(--sr-delay),
+    transform var(--ds-dur-slow) var(--ds-ease) var(--sr-delay);
+  will-change: opacity, transform;
+}
+.scroll-reveal--visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  /* Drop the compositor hint once settled — don't pin a layer forever. */
+  will-change: auto;
+}
+
+/* ---- Category-card staggered entrance accent ----
+   Cards already have a base cmd-fade-up entrance; --cc-stagger (0..5,
+   set in JS in document order) adds a small cohesive cascade delay.
+   Motion-only: does not alter the card's own keyframes/opacity authority. */
+.cat-card.in-view {
+  --cc-stagger: 0;
+  animation-delay: calc(var(--cc-stagger, 0) * var(--ds-dur-fast));
+}
+
+/* ---- Subtle scroll-progress accent (CSS-only, transform-driven) ----
+   Reads --scroll-progress (0..1) published on <html> by ScrollAnimations.
+   Fixed, 2px, scaleX only — no layout, no reflow, GPU-friendly. */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: scaleX(var(--scroll-progress, 0));
+  transform-origin: 0 50%;
+  background: currentColor;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 60;
+  will-change: transform;
+}
+
+/* ---- Shared entrance keyframe (available for opt-in motion classes) ---- */
+@keyframes hp-rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* ================================================================
+   STRICT GLOBAL REDUCED-MOTION CONTRACT
+   Neutralizes all transforms/animations introduced by this team.
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal,
+  .scroll-reveal--visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    will-change: auto !important;
+  }
+  .cat-card.in-view {
+    animation-delay: 0ms !important;
+  }
+  .scroll-progress {
+    display: none !important;
+  }
+}
 /* <<< HP-TEAM-8 <<< */
 
 /* >>> HP-TEAM-9 A11Y / SEMANTICS (skip-link, focus-visible, sr-only) — DO NOT EDIT outside this fence >>> */

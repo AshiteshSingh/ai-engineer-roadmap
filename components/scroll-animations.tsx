@@ -4,8 +4,13 @@ import { useEffect } from "react";
 
 /**
  * Global scroll-triggered animations:
- *  1. IntersectionObserver adds `.in-view` to `.cat-card` elements on scroll
- *  2. Count-up animation on `.hero-stat-number` elements when they enter the viewport
+ *  1. IntersectionObserver adds `.in-view` to `.cat-card` elements on scroll,
+ *     setting a per-row `--cc-stagger` index so CSS can cascade the entrance.
+ *  2. Count-up animation on `.hero-stat-number` elements when they enter.
+ *  3. A single passive scroll listener that publishes page scroll progress
+ *     (0..1) to `--scroll-progress` on <html> for subtle CSS-driven accents
+ *     (e.g. a top progress bar). Pure custom-property write — no layout,
+ *     no per-frame style of many nodes; rAF-coalesced and GPU-friendly.
  *
  * Respects `prefers-reduced-motion` — skips all JS-driven animation when set.
  */
@@ -24,18 +29,29 @@ export function ScrollAnimations() {
       document
         .querySelectorAll<HTMLElement>(".cat-card")
         .forEach((el) => el.classList.add("in-view"));
+      document.documentElement.style.setProperty("--scroll-progress", "0");
       return;
     }
 
-    /* ---- 1. Scroll-triggered fade-up for category cards ---- */
+    /* ---- 1. Scroll-triggered fade-up for category cards (staggered) ---- */
     const cardObserver = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            (entry.target as HTMLElement).classList.add("in-view");
-            cardObserver.unobserve(entry.target); // animate once
-          }
-        }
+        // Sort intersecting entries by document order so a group entering
+        // together cascades top-to-bottom rather than in observer order.
+        const hits = entries
+          .filter((e) => e.isIntersecting)
+          .sort(
+            (a, b) =>
+              (a.target as HTMLElement).offsetTop -
+              (b.target as HTMLElement).offsetTop,
+          );
+        hits.forEach((entry, i) => {
+          const el = entry.target as HTMLElement;
+          // Cap the stagger index so a large group never feels slow.
+          el.style.setProperty("--cc-stagger", String(Math.min(i, 5)));
+          el.classList.add("in-view");
+          cardObserver.unobserve(el); // animate once
+        });
       },
       { rootMargin: "0px 0px -60px 0px", threshold: 0.08 },
     );
@@ -91,9 +107,39 @@ export function ScrollAnimations() {
 
     statEls.forEach((el) => statObserver.observe(el));
 
+    /* ---- 3. Scroll progress accent (rAF-coalesced, passive) ---- */
+    const root = document.documentElement;
+    let ticking = false;
+    let lastProgress = -1;
+
+    function writeProgress() {
+      ticking = false;
+      const max = root.scrollHeight - root.clientHeight;
+      const p = max > 0 ? Math.min(Math.max(window.scrollY / max, 0), 1) : 0;
+      // Quantize to avoid redundant style writes on sub-pixel scroll.
+      const q = Math.round(p * 1000) / 1000;
+      if (q !== lastProgress) {
+        lastProgress = q;
+        root.style.setProperty("--scroll-progress", String(q));
+      }
+    }
+
+    function onScroll() {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(writeProgress);
+      }
+    }
+
+    writeProgress();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+
     return () => {
       cardObserver.disconnect();
       statObserver.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, []);
 
