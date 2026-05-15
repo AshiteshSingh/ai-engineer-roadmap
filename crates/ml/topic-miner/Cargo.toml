@@ -1,0 +1,39 @@
+[package]
+name = "topic-miner"
+version = "0.1.0"
+edition = "2021"
+description = "Offline codebase scanner — extracts learning topics and embeds them into LanceDB"
+license = "MIT"
+
+[features]
+default = ["metal"]
+metal   = ["candle/metal"]
+cuda    = ["candle/cuda"]
+
+[[bin]]
+name = "mine-topics"
+path = "src/bin/mine_topics.rs"
+
+[[bin]]
+name = "search-topics"
+path = "src/bin/search_topics.rs"
+
+[dependencies]
+candle       = { path = "../../../../../crates/candle", default-features = false }
+lancedb      = "0.27"
+arrow-array  = "57"
+arrow-schema = "57"
+futures      = "0.3"
+tokio        = { version = "1", features = ["full"] }
+serde        = { version = "1", features = ["derive"] }
+serde_json   = "1"
+thiserror    = "2"
+anyhow       = "1"
+tracing      = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+walkdir      = "2"
+regex        = "1"
+clap         = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3"

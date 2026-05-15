@@ -1,0 +1,53 @@
+[
+  {
+    "id": "chat-transformer-basics",
+    "message": "What problem does self-attention solve that RNNs couldn't?",
+    "context_snippets": [
+      "[Transformer Architecture] Self-attention lets every token look at every other token in the sequence in a single layer, so information flows in O(1) sequential steps regardless of sequence length.",
+      "[RNN Limitations] Recurrent networks process tokens sequentially; gradients must backprop through the entire chain, which makes learning long-range dependencies slow and unstable (vanishing/exploding gradients).",
+      "[Attention Is All You Need (2017)] The paper replaced recurrence entirely with multi-head attention, unlocking parallel training on sequences and enabling the scaling that led to modern LLMs."
+    ],
+    "must_mention": ["long-range", "parallel", "sequential"],
+    "expected_gist": "Self-attention lets every token attend to every other token in one step, removing the sequential bottleneck of RNNs and making long-range dependencies easier to learn and the model parallel to train."
+  },
+  {
+    "id": "chat-rag-chunking",
+    "message": "Why is naive fixed-size chunking a poor default for RAG?",
+    "context_snippets": [
+      "[RAG Fundamentals] Retrieval quality is dominated by chunk boundaries — a chunk that splits a code block or a sentence in half yields embeddings that represent neither concept cleanly.",
+      "[Advanced RAG] Semantic chunking (split on topic shifts) and structural chunking (respect headings, function boundaries) consistently beat fixed-size windows on retrieval recall.",
+      "[Embeddings] Embeddings encode the average meaning of a chunk; diluted chunks (mixed topics) drift toward generic vectors that retrieve equally badly for every query."
+    ],
+    "must_mention": ["boundaries", "semantic"],
+    "expected_gist": "Fixed-size windows ignore natural boundaries in the text, so a single chunk can mix unrelated topics (or split one topic across chunks), and the resulting embeddings represent neither cleanly — semantic/structural chunking wins."
+  },
+  {
+    "id": "chat-finetune-vs-rag",
+    "message": "When would you pick fine-tuning over RAG?",
+    "context_snippets": [
+      "[Fine-Tuning] Fine-tuning updates the model's weights toward a distribution of inputs/outputs — best when you need the model to adopt a style, follow a rigid format, or learn a skill that prompting can't reliably elicit.",
+      "[RAG Fundamentals] Retrieval injects knowledge at inference time; it's the right tool when answers depend on facts that change (docs, tickets, code) or are too large to fit in training.",
+      "[Hybrid Approaches] In practice teams fine-tune for behavior (format, tone, task) and use RAG for facts, since fine-tuning on facts doesn't keep up with a changing knowledge base."
+    ],
+    "must_mention": ["style", "format", "weights"],
+    "expected_gist": "Pick fine-tuning when the goal is behavior/style/format that prompting can't reliably get; pick RAG when the goal is retrieving factual, changing knowledge. They're complementary, not competing."
+  },
+  {
+    "id": "chat-eval-pitfall",
+    "message": "What's the main pitfall of using an LLM as a judge for evals?",
+    "context_snippets": [
+      "[Evaluations] LLM-as-judge is cheap and scales, but judges inherit the biases and failure modes of the generator — especially when the judge and candidate are the same model family.",
+      "[Self-Judgement Bias] Models rate their own outputs higher than outputs from other models; rotating judges or using a deliberately different model family is standard mitigation.",
+      "[Position Bias] Judges systematically prefer the first answer in pairwise comparisons; randomize order and average across swaps."
+    ],
+    "must_mention": ["bias", "judge"],
+    "expected_gist": "Judges share biases with the candidate (especially same-family judges) and exhibit position/self-preference effects — mitigate with different model families and randomized ordering."
+  },
+  {
+    "id": "chat-offtopic-redirect",
+    "message": "What's the best pizza place in Rome?",
+    "context_snippets": [],
+    "must_mention": [],
+    "expected_gist": "Politely redirect back to AI/ML engineering topics — the knowledge base doesn't cover restaurants."
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "title": "Ultimate CSS Grid Course: From Beginner to Advanced",
+    "url": "https://www.udemy.com/course/css-grid/",
+    "provider": "Udemy",
+    "description": "In this course, you'll... Learn how to use all CSS properties defined in the CSS Grid specification Complete several exercise sheets to apply your new skills and create your own layouts with CSS Grids Write concise and readable CSS code, even for complex layouts Sketch layout prototypes in no time using CSS grid layouts Learn the basics of how this complements Flexbox and can work in combination with Sass What Students Say About My Web Design Courses 1) From my Flexbox course: \"Well explained. Efficient teaching. Great skill to learn for CSS. Already applying it to my code and saving time and headaches.\" - Shane \"Thanks to this course I've got the understanding that going to rework 70% of my current project just to optimize and even simplify the scripts and CSS.. time to wipe out few JS functions and referencing items =)\" - Dmitriy \"It just works. I was able to create most of a \"holy grail\" style, responsive layout with NO extra CSS, and convert an existing template, reducing the code by 90%, in less than two hours after completing this course\" - Paul \"Very clear and organized explanation about flexbox. It covers all you need to know about the topic. This is one of the few courses that claims to be \"complete\" and really is! Very well done! Thanks Peter.\" - Fabio 2) From my Sass course: \"Great course! Very useful and detailed!\" - Vladislav \"This course provides an excellent in-depth look at how to get up and running using SASS/SCSS. I started with no experience using it and am now quite comfortable using it in all my projects. Highly recommended.\" - Jerry \"Really good course. The instructor was very knowledgeable about SASS/SCSS and was able to provide explanations and examples that were relatively easy to follow assuming you have a pretty good understanding of CSS. Would definitely recommend the course to anyone who has a basic understanding of SASS/SCSS and wants to learn even more.\" - John What Else You Can Expect As always, I'll answer all your questions inside the course to help you along the way. There are many practice exercises included in this course for you to apply what you learn, along with my proposed solutions to look up on GitHub. So you'll get to apply and manifest your skills right away. Remember there's a 30-day money-back guarantee so feel free to take a look inside the course with any risk. There are also several free preview lectures available for you to see if this course is for you.",
+    "level": "All Levels",
+    "rating": 4.46999979019165,
+    "review_count": 1026,
+    "duration_hours": 2.5,
+    "is_free": false,
+    "enrolled": 6496,
+    "image_url": "https://img-c.udemycdn.com/course/480x270/1222864_999f_5.jpg",
+    "language": "English",
+    "topic_group": "CSS & Layout",
+    "metadata": {
+      "instructors": [
+        "Peter Sommerhoff"
+      ],
+      "whatYoullLearn": []
+    },
+    "slug_mappings": [
+      {
+        "slug": "css-layout-fundamentals",
+        "relevance": 0.46
+      }
+    ]
+  }
+]

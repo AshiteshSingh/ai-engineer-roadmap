@@ -1,0 +1,17 @@
+.vercel
+.env*.local
+
+# SQLite content DB
+data/knowledge.db
+data/knowledge.db-wal
+data/knowledge.db-shm
+
+# Per-chapter DeepSeek caches written by apps/knowledge/ml/langgraph-audio.
+# Kept off git because they're easy to regenerate from the outline TOML and
+# can be many MB; the concatenated `<slug>.script.md` and `<slug>.json` next
+# to them ARE tracked so they ship to Vercel.
+data/*.chapters/
+
+# Audio binaries served from R2 — too large for Vercel's 100 MB file limit
+data/*.mp3
+data/*.wav

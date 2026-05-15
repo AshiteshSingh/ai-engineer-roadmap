@@ -1,0 +1,14 @@
+{
+  "name": "knowledge-langgraph-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "latest",
+    "wrangler": "latest"
+  }
+}

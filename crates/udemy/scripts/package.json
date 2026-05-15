@@ -1,0 +1,16 @@
+{
+  "name": "udemy-scraper",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "tsx scrape-udemy.ts",
+    "scrape:output": "tsx scrape-udemy.ts --output"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0"
+  }
+}

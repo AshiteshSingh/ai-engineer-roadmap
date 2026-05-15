@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.egg-info/
+*.pyc
+node_modules/
+.wrangler/
+.dev.vars
+.env

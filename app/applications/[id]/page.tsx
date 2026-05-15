@@ -1,0 +1,205 @@
+"use client";
+
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { Container, Heading, Button, Flex, Text, Box, Card, Skeleton, Tabs } from "@radix-ui/themes";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSession } from "@/lib/auth-client";
+import { ApplicationHeader } from "@/components/app-detail/ApplicationHeader";
+import { JobDescriptionTab } from "@/components/app-detail/JobDescriptionTab";
+import { TechStackTab } from "@/components/app-detail/TechStackTab";
+import { CompanyTab } from "@/components/app-detail/CompanyTab";
+import { InterviewPrepTab } from "@/components/app-detail/InterviewPrepTab";
+import type { AppData } from "@/components/app-detail/types";
+
+const TAB_VALUES = ["description", "tech", "company", "prep", "interviewers", "notes", "debrief"] as const;
+type TabValue = (typeof TAB_VALUES)[number];
+
+function ApplicationDetailInner() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session } = useSession();
+
+  const [app, setApp] = useState<AppData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const isAdmin = !!session?.user;
+
+  useEffect(() => {
+    if (params.id) {
+      fetch(`/api/applications/${params.id}`)
+        .then((r) => {
+          if (r.status === 401) {
+            router.push("/login");
+            return null;
+          }
+          if (!r.ok) throw new Error("Not found");
+          return r.json();
+        })
+        .then((data) => data && setApp(data))
+        .catch((e) => setError(e.message))
+        .finally(() => setLoading(false));
+    }
+  }, [params.id, router]);
+
+  // Tab state persisted to URL
+  const rawTab = searchParams.get("tab") ?? "description";
+  const activeTab: TabValue = TAB_VALUES.includes(rawTab as TabValue) ? (rawTab as TabValue) : "description";
+  const setActiveTab = useCallback(
+    (tab: string) => {
+      if (tab === "prep") {
+        router.push(`/applications/${params.id}/prep`);
+        return;
+      }
+      if (tab === "interviewers") {
+        router.push(`/applications/${params.id}/interviewers`);
+        return;
+      }
+      if (tab === "notes") {
+        router.push(`/applications/${params.id}/notes`);
+        return;
+      }
+      if (tab === "debrief") {
+        router.push(`/applications/${params.id}/debrief`);
+        return;
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      router.replace(url.pathname + url.search, { scroll: false });
+    },
+    [router, params.id],
+  );
+
+  // Keyboard shortcuts 1-3 to switch tabs
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const idx = Number(e.key) - 1;
+      if (idx >= 0 && idx < TAB_VALUES.length) {
+        setActiveTab(TAB_VALUES[idx]);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setActiveTab]);
+
+  if (loading) {
+    return (
+      <Container size="3" p="8">
+        <Skeleton height="32px" mb="6" style={{ maxWidth: 200 }} />
+        <Skeleton height="400px" />
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container size="3" p="8">
+        <Card>
+          <Flex direction="column" align="center" gap="4" p="6">
+            <Heading size="5">Error Loading Application</Heading>
+            <Text color="gray">{error}</Text>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </Flex>
+        </Card>
+      </Container>
+    );
+  }
+
+  if (!app) {
+    return (
+      <Container size="3" p="8">
+        <Card>
+          <Flex direction="column" align="center" gap="4" p="6">
+            <Heading size="5">Application Not Found</Heading>
+            <Text color="gray">This application doesn&apos;t exist or you don&apos;t have access.</Text>
+            <Button asChild>
+              <Link href="/applications">Back to Applications</Link>
+            </Button>
+          </Flex>
+        </Card>
+      </Container>
+    );
+  }
+
+  return (
+    <Container size="4" className="app-detail" style={{ maxWidth: "100%" }} px={{ initial: "3", sm: "5", md: "8" }} py={{ initial: "4", md: "8" }}>
+      <ApplicationHeader app={app} isAdmin={isAdmin} onUpdate={setApp} onSlugChange={(s) => router.replace(`/applications/${s}?tab=${activeTab}`)} />
+
+      <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+        <Tabs.List className="app-detail-tabs">
+          <Tabs.Trigger value="description">
+            <Flex direction="column" align="center" gap="0">
+              <Text>Job Description</Text>
+              <span className="tab-shortcut-hint">1</span>
+            </Flex>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="tech">
+            <Flex direction="column" align="center" gap="0">
+              <Text>Tech Stack</Text>
+              <span className="tab-shortcut-hint">2</span>
+            </Flex>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="company">
+            <Flex direction="column" align="center" gap="0">
+              <Text>Company</Text>
+              <span className="tab-shortcut-hint">3</span>
+            </Flex>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="prep">
+            <Flex direction="column" align="center" gap="0">
+              <Text>Prep</Text>
+              <span className="tab-shortcut-hint">4</span>
+            </Flex>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="interviewers">
+            <Flex direction="column" align="center" gap="0">
+              <Text>Interviewers</Text>
+              <span className="tab-shortcut-hint">5</span>
+            </Flex>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="notes">
+            <Flex direction="column" align="center" gap="0">
+              <Text>Notes</Text>
+              <span className="tab-shortcut-hint">6</span>
+            </Flex>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="debrief">
+            <Flex direction="column" align="center" gap="0">
+              <Text>Debrief</Text>
+              <span className="tab-shortcut-hint">7</span>
+            </Flex>
+          </Tabs.Trigger>
+        </Tabs.List>
+
+        <Box pt="4">
+          <Tabs.Content value="description">
+            <JobDescriptionTab app={app} isAdmin={isAdmin} onUpdate={setApp} />
+          </Tabs.Content>
+          <Tabs.Content value="tech">
+            <TechStackTab app={app} isAdmin={isAdmin} />
+          </Tabs.Content>
+          <Tabs.Content value="company">
+            <CompanyTab app={app} isAdmin={isAdmin} />
+          </Tabs.Content>
+        </Box>
+      </Tabs.Root>
+    </Container>
+  );
+}
+
+export default function ApplicationDetailPage() {
+  return (
+    <Suspense fallback={
+      <Container size="3" p="8">
+        <Skeleton height="32px" mb="6" style={{ maxWidth: 200 }} />
+        <Skeleton height="400px" />
+      </Container>
+    }>
+      <ApplicationDetailInner />
+    </Suspense>
+  );
+}

@@ -1,0 +1,1310 @@
+{
+  "totalPapers": 99,
+  "techniqueGroups": [
+    {
+      "id": "spaced-repetition",
+      "name": "Spaced Repetition",
+      "icon": "📅",
+      "description": "Reviewing material at increasing intervals strengthens long-term retention by leveraging the spacing effect.",
+      "practiceTip": "This system uses SM-2 scheduling to optimize your review intervals based on mastery.",
+      "papers": [
+        {
+          "title": "Memory: A Contribution to Experimental Psychology",
+          "authors": ["Ebbinghaus H"],
+          "year": 1885,
+          "evidenceLevel": "foundational_theory",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Discovered the forgetting curve — exponential decay of memory over time",
+            "Demonstrated that spaced repetition dramatically slows forgetting",
+            "Established the savings method for measuring memory retention"
+          ]
+        },
+        {
+          "title": "Distributed practice in verbal recall tasks: A review and quantitative synthesis",
+          "authors": ["Cepeda NJ", "Pashler H"],
+          "year": 2006,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 98,
+          "keyFindings": [
+            "Distributed practice significantly improves long-term retention",
+            "Optimal inter-study intervals depend on retention interval",
+            "Spacing effects are robust across diverse verbal recall tasks"
+          ]
+        },
+        {
+          "title": "The right time to learn: Mechanisms and optimization of spaced learning",
+          "authors": ["Smolen P", "Zhang Y"],
+          "year": 2016,
+          "evidenceLevel": "review",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Spaced learning engages synaptic tagging and capture mechanisms",
+            "Optimal spacing intervals can be computationally modeled",
+            "Molecular mechanisms of spacing effect identified"
+          ]
+        },
+        {
+          "title": "Spacing Repetitions Over Long Timescales: A Review and a Reconsolidation Explanation",
+          "authors": ["Toppino TC", "Gerbier E"],
+          "year": 2014,
+          "evidenceLevel": "review",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Spacing effects persist over long timescales",
+            "Memory reconsolidation provides mechanistic explanation",
+            "Expanding schedules may optimize long-term retention"
+          ]
+        },
+        {
+          "title": "Using spacing to enhance diverse forms of learning: Review and implications for instruction",
+          "authors": ["Carpenter SK", "Cepeda NJ"],
+          "year": 2012,
+          "evidenceLevel": "review",
+          "relevanceScore": 96,
+          "keyFindings": [
+            "Spacing enhances learning across diverse domains",
+            "Practical guidelines for implementing spacing in education",
+            "Spacing benefits extend beyond rote memorization"
+          ]
+        },
+        {
+          "title": "A Meta-Analytic Review of the Benefit of Spacing out Retrieval Practice",
+          "authors": ["Latimier A", "Peyre H"],
+          "year": 2021,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Spacing retrieval practice produces robust learning benefits",
+            "Effect sizes moderate to large across studies",
+            "Benefits generalize across content domains"
+          ]
+        },
+        {
+          "title": "Benefits of spaced learning are predicted by re-encoding of past experience in vmPFC",
+          "authors": ["Chanales AJH"],
+          "year": 2025,
+          "evidenceLevel": "rct",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "vmPFC re-encoding predicts spacing benefit magnitude",
+            "Neural signatures of spaced learning identified via fMRI",
+            "Individual differences in spacing benefit linked to brain activity"
+          ]
+        },
+        {
+          "title": "Evidence of the Spacing Effect and Influences on Perceptions of Learning and Science Curricula",
+          "authors": ["Mahadevan G"],
+          "year": 2022,
+          "evidenceLevel": "review",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Spacing effect confirmed in science education contexts",
+            "Students underestimate spacing benefits due to metacognitive illusions",
+            "Curriculum design should incorporate spacing"
+          ]
+        },
+        {
+          "title": "Spaced retrieval practice increases college students short- and long-term retention of mathematics knowledge",
+          "authors": ["Lyle KB", "Bego CR"],
+          "year": 2020,
+          "evidenceLevel": "rct",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Spaced retrieval improves math retention in college students",
+            "Long-term benefits demonstrated for complex knowledge",
+            "Practical application in higher education confirmed"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "active-recall",
+      "name": "Active Recall & Testing Effect",
+      "icon": "🧠",
+      "description": "Actively retrieving information from memory strengthens neural pathways far more effectively than passive review.",
+      "practiceTip": "Flashcards and fill-in-the-blank modes leverage the testing effect — retrieval IS the learning event.",
+      "papers": [
+        {
+          "title": "The Power of Testing Memory: Basic Research and Implications for Educational Practice",
+          "authors": ["Roediger HL", "Karpicke JD"],
+          "year": 2006,
+          "evidenceLevel": "review",
+          "relevanceScore": 98,
+          "keyFindings": [
+            "Testing is a powerful learning event, not just assessment",
+            "Direct and indirect benefits of testing on memory",
+            "Practical implications for self-directed learning"
+          ]
+        },
+        {
+          "title": "Test-enhanced learning: Taking memory tests improves long-term retention",
+          "authors": ["Roediger HL", "Karpicke JD"],
+          "year": 2006,
+          "evidenceLevel": "rct",
+          "relevanceScore": 98,
+          "keyFindings": [
+            "Taking tests produces greater retention than restudying",
+            "Testing effect robust across multiple retention intervals",
+            "Free recall tests most effective for long-term memory"
+          ]
+        },
+        {
+          "title": "Repeated retrieval during learning is the key to long-term retention",
+          "authors": ["Karpicke JD", "Roediger HL"],
+          "year": 2007,
+          "evidenceLevel": "rct",
+          "relevanceScore": 97,
+          "keyFindings": [
+            "Repeated retrieval is more effective than repeated study",
+            "Dropping items from further study after retrieval does not impair retention",
+            "Retrieval practice is the key driver of durable memory"
+          ]
+        },
+        {
+          "title": "Retrieval practice produces more learning than elaborative studying with concept mapping",
+          "authors": ["Karpicke JD", "Blunt JR"],
+          "year": 2011,
+          "evidenceLevel": "rct",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Retrieval practice outperforms concept mapping for retention",
+            "Active retrieval more effective than elaborative encoding",
+            "Results challenge primacy of elaboration in learning"
+          ]
+        },
+        {
+          "title": "Retrieval practice enhances new learning: The forward effect of testing",
+          "authors": ["Pastötter B", "Bäuml KHT"],
+          "year": 2014,
+          "evidenceLevel": "review",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Prior retrieval practice enhances encoding of new material",
+            "Forward testing effect reduces proactive interference",
+            "Testing benefits extend beyond tested material"
+          ]
+        },
+        {
+          "title": "Retrieval Practice in Classroom Settings: A Review of Applied Research",
+          "authors": ["Adesope OO", "Trevisan DA"],
+          "year": 2017,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Retrieval practice effective in real classroom settings",
+            "Benefits transfer to applied educational contexts",
+            "Effect sizes moderate to large in field studies"
+          ]
+        },
+        {
+          "title": "Investigating the testing effect: Retrieval as a characteristic of effective study strategies",
+          "authors": ["Smith MA", "Blunt JR"],
+          "year": 2016,
+          "evidenceLevel": "rct",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Retrieval is the active ingredient in effective study strategies",
+            "Strategies that incorporate retrieval outperform those that do not",
+            "Testing effect confirmed across multiple experimental conditions"
+          ]
+        },
+        {
+          "title": "Optimized schedules of retrieval practice for durable and efficient learning",
+          "authors": ["Rawson KA", "Dunlosky J"],
+          "year": 2011,
+          "evidenceLevel": "rct",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Criterion-based retrieval schedules optimize learning efficiency",
+            "Three correct retrievals per item is near-optimal",
+            "Schedules can be individualized for maximum benefit"
+          ]
+        },
+        {
+          "title": "Effects of retrieval practice on retention and application of complex educational concepts",
+          "authors": ["Corral D"],
+          "year": 2025,
+          "evidenceLevel": "rct",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Retrieval practice benefits extend to complex concepts",
+            "Application and transfer improved by retrieval practice",
+            "Effects persist over extended retention intervals"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "study-techniques",
+      "name": "Evidence-Based Study Techniques",
+      "icon": "📚",
+      "description": "Research identifies which study strategies actually work — and which popular ones don't.",
+      "practiceTip": "Practice testing and distributed practice are the two most effective techniques identified by research.",
+      "papers": [
+        {
+          "title": "Improving students learning with effective learning techniques",
+          "authors": ["Dunlosky J", "Rawson KA"],
+          "year": 2013,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 98,
+          "keyFindings": [
+            "10 learning techniques evaluated for effectiveness",
+            "Practice testing and distributed practice most effective",
+            "Comprehensive evidence-based framework for learning"
+          ]
+        },
+        {
+          "title": "Strengthening the student toolbox: Study strategies to boost learning",
+          "authors": ["Dunlosky J"],
+          "year": 2013,
+          "evidenceLevel": "review",
+          "relevanceScore": 96,
+          "keyFindings": [
+            "Practice testing and distributed practice rated as highly effective",
+            "Highlighting and rereading rated as low utility",
+            "Evidence-based study strategies identified and ranked"
+          ]
+        },
+        {
+          "title": "Making things hard on yourself, but in a good way: Creating desirable difficulties to enhance learning",
+          "authors": ["Bjork EL", "Bjork RA"],
+          "year": 2011,
+          "evidenceLevel": "review",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Desirable difficulties enhance long-term learning and retention",
+            "Interleaving, spacing, and testing are key desirable difficulties",
+            "Short-term performance decrements mask long-term benefits"
+          ]
+        },
+        {
+          "title": "Memory and metamemory considerations in the training of human beings",
+          "authors": ["Bjork RA"],
+          "year": 1994,
+          "evidenceLevel": "foundational_theory",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Introduced the desirable difficulties framework",
+            "Conditions that slow learning can enhance long-term retention",
+            "Storage strength vs retrieval strength distinction clarifies training design"
+          ]
+        },
+        {
+          "title": "Elaborative interrogation: Generating why questions to enhance learning",
+          "authors": ["Pressley M", "McDaniel MA"],
+          "year": 1987,
+          "evidenceLevel": "rct",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Asking why questions enhances fact learning",
+            "Elaborative interrogation improves memory more than reading",
+            "Generating explanations deepens encoding"
+          ]
+        },
+        {
+          "title": "Dual coding theory and education",
+          "authors": ["Paivio A"],
+          "year": 2006,
+          "evidenceLevel": "review",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Dual coding (verbal + visual) enhances memory",
+            "Imagery and language systems provide complementary encoding",
+            "Educational applications widely validated"
+          ]
+        },
+        {
+          "title": "The generation effect: A meta-analytic review",
+          "authors": ["Bertsch S", "Pesta BJ"],
+          "year": 2007,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Self-generated information remembered better than read information",
+            "Generation effect robust across materials and conditions",
+            "Active generation enhances encoding depth"
+          ]
+        },
+        {
+          "title": "The production effect: Delineation of a phenomenon",
+          "authors": ["MacLeod CM", "Gopie N"],
+          "year": 2010,
+          "evidenceLevel": "rct",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Producing words aloud enhances memory vs silent reading",
+            "Production effect robust and easily implemented",
+            "Distinctiveness of production underlies memory benefit"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "encoding-depth",
+      "name": "Depth of Processing & Encoding",
+      "icon": "🔬",
+      "description": "How deeply you process information during encoding determines how well you remember it.",
+      "practiceTip": "Relate CSS properties to real projects you've built — self-referential encoding is the strongest form.",
+      "papers": [
+        {
+          "title": "Depth of processing and the retention of words in episodic memory",
+          "authors": ["Craik FIM", "Tulving E"],
+          "year": 1975,
+          "evidenceLevel": "rct",
+          "relevanceScore": 98,
+          "keyFindings": [
+            "Deeper encoding produces better retention",
+            "Congruent semantic processing most effective",
+            "Encoding specificity principle demonstrated"
+          ]
+        },
+        {
+          "title": "Levels of processing: A framework for memory research",
+          "authors": ["Craik FIM", "Lockhart RS"],
+          "year": 1972,
+          "evidenceLevel": "review",
+          "relevanceScore": 98,
+          "keyFindings": [
+            "Deeper processing leads to more durable memory traces",
+            "Semantic processing superior to structural or phonemic",
+            "Foundational framework for understanding encoding quality"
+          ]
+        },
+        {
+          "title": "Self-referencing and memory: How the self drives encoding and retrieval",
+          "authors": ["Symons CS", "Johnson BT"],
+          "year": 1997,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Self-referential encoding produces superior memory",
+            "Relating material to self enhances depth of processing",
+            "Self-reference effect robust across study designs"
+          ]
+        },
+        {
+          "title": "Drawing enhances cross-modal memory plasticity in the human brain",
+          "authors": ["Fernandes MA"],
+          "year": 2018,
+          "evidenceLevel": "rct",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Drawing enhances memory through cross-modal brain plasticity",
+            "Drawing engages motor, visual, and semantic processing",
+            "Superior to writing for memory retention"
+          ]
+        },
+        {
+          "title": "Keyword mnemonic and how to use it effectively",
+          "authors": ["Pressley M", "Levin JR"],
+          "year": 1982,
+          "evidenceLevel": "rct",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Keyword mnemonic highly effective for vocabulary learning",
+            "Interactive imagery enhances keyword effectiveness",
+            "Systematic application guidelines established"
+          ]
+        },
+        {
+          "title": "Emotion enhances remembering of neutral events past",
+          "authors": ["Anderson AK", "Yamaguchi Y"],
+          "year": 2006,
+          "evidenceLevel": "rct",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Emotional context enhances memory for neutral information",
+            "Retroactive enhancement of memory by emotion",
+            "Emotional tagging can improve retention of mundane material"
+          ]
+        },
+        {
+          "title": "Emotional arousal and memory binding",
+          "authors": ["Mather M"],
+          "year": 2006,
+          "evidenceLevel": "rct",
+          "relevanceScore": 80,
+          "keyFindings": [
+            "Emotional arousal enhances memory binding for central details",
+            "Amygdala-hippocampal interaction mediates emotional memory",
+            "Emotion can be leveraged for better encoding"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "interleaving",
+      "name": "Interleaving",
+      "icon": "🔀",
+      "description": "Mixing different topics during practice improves discrimination and long-term retention.",
+      "practiceTip": "Practice across categories, not just one at a time — the Visual Matcher mode naturally interleaves topics.",
+      "papers": [
+        {
+          "title": "The interleaving effect: Mixing it up boosts learning",
+          "authors": ["Rohrer D"],
+          "year": 2012,
+          "evidenceLevel": "review",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Interleaving different topics enhances learning",
+            "Mixed practice superior to blocked practice for retention",
+            "Interleaving improves discrimination and transfer"
+          ]
+        },
+        {
+          "title": "Interleaved practice improves mathematics learning",
+          "authors": ["Rohrer D", "Dedrick RF"],
+          "year": 2015,
+          "evidenceLevel": "rct",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Interleaved math practice improves test scores",
+            "Benefits persist over extended retention intervals",
+            "Applicable to self-directed study schedules"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "method-of-loci",
+      "name": "Method of Loci (Memory Palace)",
+      "icon": "🏛️",
+      "description": "Associating information with spatial locations in a familiar environment creates powerful memory anchors.",
+      "practiceTip": "Create a mental walk through your home — place each CSS property in a specific room for vivid recall.",
+      "papers": [
+        {
+          "title": "The method of loci in the context of psychological research: A systematic review and meta-analysis",
+          "authors": ["Various"],
+          "year": 2025,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Method of loci produces large effect sizes for memory",
+            "Effective across age groups and content types",
+            "Most studied and validated mnemonic strategy"
+          ]
+        },
+        {
+          "title": "Durable memories and efficient neural coding through mnemonic training using the method of loci",
+          "authors": ["Dresler M"],
+          "year": 2017,
+          "evidenceLevel": "rct",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Method of loci training produces durable memory improvements",
+            "Training reshapes functional brain connectivity",
+            "Memory athletes and trained novices show similar brain patterns"
+          ]
+        },
+        {
+          "title": "Mnemonic training reshapes brain networks to support superior memory",
+          "authors": ["Dresler M"],
+          "year": 2017,
+          "evidenceLevel": "rct",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Mnemonic training reorganizes brain network connectivity",
+            "Changes persist months after training",
+            "Novices can achieve memory champion-level performance"
+          ]
+        },
+        {
+          "title": "Building a memory palace in minutes: Equivalent performance using virtual versus conventional environments",
+          "authors": ["Legge ELG", "Madan CR"],
+          "year": 2012,
+          "evidenceLevel": "rct",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Virtual memory palaces as effective as physical ones",
+            "Rapid construction possible with digital tools",
+            "Accessibility of method of loci increased through VR"
+          ]
+        },
+        {
+          "title": "Location, Location, Location! Demonstrating the mnemonic benefit of the Method of Loci",
+          "authors": ["McCabe JA"],
+          "year": 2015,
+          "evidenceLevel": "rct",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Method of loci produces significant memory benefits in classroom settings",
+            "Students effectively learn and apply the technique",
+            "Benefits persist beyond initial training session"
+          ]
+        },
+        {
+          "title": "The method of loci as a mnemonic device to facilitate learning in endocrinology",
+          "authors": ["Qureshi A"],
+          "year": 2014,
+          "evidenceLevel": "rct",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Method of loci effective for complex scientific content",
+            "Students showed significant retention improvements",
+            "Applicable to self-directed medical education"
+          ]
+        },
+        {
+          "title": "A feasibility study on the use of the Method of Loci for improving episodic memory performance",
+          "authors": ["Sousa AE"],
+          "year": 2021,
+          "evidenceLevel": "rct",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Method of loci feasible for episodic memory improvement",
+            "Participants successfully learned and applied technique",
+            "Self-directed practice produced measurable gains"
+          ]
+        },
+        {
+          "title": "Optimized VR-based Method of Loci memorization techniques through increased immersion",
+          "authors": ["Various"],
+          "year": 2022,
+          "evidenceLevel": "rct",
+          "relevanceScore": 80,
+          "keyFindings": [
+            "VR immersion enhances method of loci effectiveness",
+            "Higher immersion produces better memory outcomes",
+            "Technology can augment traditional mnemonic strategies"
+          ]
+        },
+        {
+          "title": "The Mind of a Mnemonist",
+          "authors": ["Luria AR"],
+          "year": 1968,
+          "evidenceLevel": "case_study",
+          "relevanceScore": 80,
+          "keyFindings": [
+            "Documented extraordinary synesthetic memory in patient S.V. Shereshevsky",
+            "Demonstrated that vivid multi-sensory imagery underlies exceptional memory",
+            "Foundational case for understanding mnemonic imagery techniques"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sleep-memory",
+      "name": "Sleep & Memory Consolidation",
+      "icon": "😴",
+      "description": "Sleep actively consolidates memories through neural replay — it's when learning becomes permanent.",
+      "practiceTip": "Study before sleep for best consolidation. Even a 20-minute nap after study boosts retention.",
+      "papers": [
+        {
+          "title": "The memory function of sleep",
+          "authors": ["Rasch B", "Born J"],
+          "year": 2013,
+          "evidenceLevel": "review",
+          "relevanceScore": 98,
+          "keyFindings": [
+            "Active systems consolidation during sleep transforms memories",
+            "Sleep spindles and slow oscillations coordinate memory transfer",
+            "Sleep selectively strengthens relevant memories"
+          ]
+        },
+        {
+          "title": "About sleep's role in memory",
+          "authors": ["Diekelmann S", "Born J"],
+          "year": 2010,
+          "evidenceLevel": "review",
+          "relevanceScore": 98,
+          "keyFindings": [
+            "Sleep actively consolidates memories through replay mechanisms",
+            "Both NREM and REM sleep contribute to different memory types",
+            "Sleep-dependent consolidation enhances both declarative and procedural memory"
+          ]
+        },
+        {
+          "title": "Sleep, learning, and memory at a glance",
+          "authors": ["Abel T", "Havekes R"],
+          "year": 2013,
+          "evidenceLevel": "review",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Sleep is essential for memory encoding, consolidation, and retrieval",
+            "Sleep deprivation impairs hippocampal function",
+            "Molecular mechanisms of sleep-dependent memory identified"
+          ]
+        },
+        {
+          "title": "Sleep deprivation and memory: Meta-analytic reviews",
+          "authors": ["Newbury CR", "Monaghan P"],
+          "year": 2022,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Sleep deprivation before learning impairs encoding",
+            "Sleep deprivation after learning impairs consolidation",
+            "Both effects are robust across study types"
+          ]
+        },
+        {
+          "title": "Sleep and memory consolidation in healthy, neurotypical children, and adults",
+          "authors": ["Webb AR"],
+          "year": 2024,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Sleep consolidation benefits confirmed across age groups",
+            "Slow-wave sleep particularly important for declarative memory",
+            "Consistent benefits for both children and adults"
+          ]
+        },
+        {
+          "title": "Promoting memory consolidation during sleep: A meta-analysis of targeted memory reactivation",
+          "authors": ["Hu X", "Cheng LY"],
+          "year": 2020,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Targeted memory reactivation during sleep enhances consolidation",
+            "Auditory and olfactory cues effective during NREM sleep",
+            "Effect sizes small to moderate but consistent"
+          ]
+        },
+        {
+          "title": "The effect of sleep on novel word learning in healthy adults",
+          "authors": ["Weighall A"],
+          "year": 2021,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Sleep enhances novel word learning in healthy adults",
+            "Consolidation during sleep integrates new words into lexicon",
+            "Benefits evident for both explicit and implicit word knowledge"
+          ]
+        },
+        {
+          "title": "Sleep quality and episodic memory performance",
+          "authors": ["Hokett E"],
+          "year": 2020,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Better sleep quality associated with better episodic memory",
+            "Relationship consistent across age groups",
+            "Sleep efficiency and continuity are key predictors"
+          ]
+        },
+        {
+          "title": "Sleep spindles and memory consolidation",
+          "authors": ["Kumral D"],
+          "year": 2023,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Sleep spindles positively associated with memory consolidation",
+            "Sigma-band activity predicts learning gains",
+            "Spindle-slow oscillation coupling enhances memory transfer"
+          ]
+        },
+        {
+          "title": "A systematic and meta-analytic review of the impact of sleep restriction on memory formation",
+          "authors": ["Newbury CR"],
+          "year": 2024,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Sleep restriction impairs memory formation across domains",
+            "Effects are dose-dependent on restriction severity",
+            "Declarative memory is particularly vulnerable"
+          ]
+        },
+        {
+          "title": "Daytime naps, motor memory consolidation and regionally specific sleep spindles",
+          "authors": ["Nishida M", "Walker MP"],
+          "year": 2007,
+          "evidenceLevel": "rct",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Daytime naps consolidate motor memory",
+            "Nap spindle activity predicts memory improvement",
+            "Brief naps sufficient for consolidation benefit"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exercise-memory",
+      "name": "Exercise & Memory",
+      "icon": "🏃",
+      "description": "Physical exercise improves memory through increased BDNF, hippocampal neurogenesis, and enhanced blood flow.",
+      "practiceTip": "A brisk 20-minute walk before study enhances encoding. Regular exercise grows your hippocampus.",
+      "papers": [
+        {
+          "title": "Exercise training increases size of hippocampus and improves memory",
+          "authors": ["Erickson KI"],
+          "year": 2011,
+          "evidenceLevel": "rct",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Aerobic exercise increases hippocampal volume by 2%",
+            "Hippocampal growth correlated with memory improvement",
+            "Exercise reverses age-related hippocampal volume loss"
+          ]
+        },
+        {
+          "title": "Effectiveness of exercise for improving cognition, memory and executive function",
+          "authors": ["Singh B"],
+          "year": 2025,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 95,
+          "keyFindings": [
+            "Exercise improves cognition, memory, and executive function",
+            "Aerobic exercise shows strongest effects",
+            "Benefits observed across age groups in healthy adults"
+          ]
+        },
+        {
+          "title": "The effects of cardiovascular exercise on human memory: A review with meta-analysis",
+          "authors": ["Roig M", "Nordbrandt S"],
+          "year": 2013,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Cardiovascular exercise improves long-term memory",
+            "Acute exercise enhances memory consolidation",
+            "Exercise timing relative to learning matters"
+          ]
+        },
+        {
+          "title": "Acute and chronic exercise effects on human memory",
+          "authors": ["Loprinzi PD"],
+          "year": 2021,
+          "evidenceLevel": "review",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Both acute and chronic exercise improve memory",
+            "Acute exercise enhances memory encoding and consolidation",
+            "Chronic exercise produces structural brain changes supporting memory"
+          ]
+        },
+        {
+          "title": "Aerobic exercise improves episodic memory in late adulthood",
+          "authors": ["Barha CK"],
+          "year": 2022,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Aerobic exercise improves episodic memory in older adults",
+            "Effects moderate and clinically meaningful",
+            "Exercise intensity and duration modulate benefit"
+          ]
+        },
+        {
+          "title": "Exercise and hippocampal volume: A meta-analysis",
+          "authors": ["Wilckens KA"],
+          "year": 2021,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Exercise associated with larger hippocampal volume",
+            "Aerobic exercise shows strongest hippocampal effects",
+            "Volume changes linked to memory performance"
+          ]
+        },
+        {
+          "title": "Aerobic exercise and neurocognitive performance",
+          "authors": ["Smith PJ"],
+          "year": 2010,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Aerobic exercise improves neurocognitive performance",
+            "Attention and processing speed show largest improvements",
+            "Memory benefits moderate but significant"
+          ]
+        },
+        {
+          "title": "A systematic review and Bayesian meta-analysis: Acute physical activity and cognition in young adults",
+          "authors": ["Basso JC"],
+          "year": 2024,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Acute physical activity improves cognition in young adults",
+            "Effects strongest for executive function and memory",
+            "Moderate intensity most effective"
+          ]
+        },
+        {
+          "title": "A single bout of exercise improves motor memory",
+          "authors": ["Roig M"],
+          "year": 2012,
+          "evidenceLevel": "rct",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Single exercise bout enhances motor memory consolidation",
+            "High-intensity exercise most effective",
+            "Exercise after practice improves retention"
+          ]
+        },
+        {
+          "title": "Optimal exercise interventions for enhancing cognitive function in older adults",
+          "authors": ["Zhang Y"],
+          "year": 2025,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Mind-body and aerobic exercise most effective for cognition",
+            "Optimal frequency and duration identified",
+            "Combined interventions may provide additive benefits"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "working-memory",
+      "name": "Working Memory Training",
+      "icon": "⚙️",
+      "description": "Working memory capacity can be expanded through targeted training, with transfer to fluid intelligence.",
+      "practiceTip": "The Timed Drill mode exercises working memory under pressure — the cognitive load is the training.",
+      "papers": [
+        {
+          "title": "Working Memory",
+          "authors": ["Baddeley AD", "Hitch G"],
+          "year": 1974,
+          "evidenceLevel": "foundational_theory",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Proposed the multi-component model of working memory",
+            "Identified phonological loop, visuospatial sketchpad, and central executive",
+            "Foundational model underpinning all subsequent working memory training research"
+          ]
+        },
+        {
+          "title": "Improving fluid intelligence with training on working memory",
+          "authors": ["Jaeggi SM", "Buschkuehl M"],
+          "year": 2008,
+          "evidenceLevel": "rct",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Working memory training can improve fluid intelligence",
+            "Transfer effects dose-dependent on training duration",
+            "Dual n-back task effective for cognitive enhancement"
+          ]
+        },
+        {
+          "title": "Working memory training revisited: A multi-level meta-analysis",
+          "authors": ["Soveri A"],
+          "year": 2017,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "N-back training produces reliable near-transfer to working memory",
+            "Far transfer to fluid intelligence is small",
+            "Training gains maintained at follow-up"
+          ]
+        },
+        {
+          "title": "Do brain-training programs work?",
+          "authors": ["Simons DJ"],
+          "year": 2016,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Evidence for broad transfer from brain training is weak",
+            "Some programs show near-transfer benefits",
+            "Critical evaluation needed before commercial claims"
+          ]
+        },
+        {
+          "title": "Short- and long-term benefits of cognitive training",
+          "authors": ["Jaeggi SM", "Buschkuehl M"],
+          "year": 2011,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Cognitive training can be effective and durable",
+            "Effects transfer to untrained tasks in some conditions",
+            "Working memory and executive function training most promising"
+          ]
+        },
+        {
+          "title": "Dual n-back working memory training evinces superior transfer effects compared to the method of loci",
+          "authors": ["Ngetich RK"],
+          "year": 2021,
+          "evidenceLevel": "rct",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "N-back training shows broader transfer than method of loci",
+            "Method of loci superior for direct memorization tasks",
+            "Different training approaches have complementary benefits"
+          ]
+        },
+        {
+          "title": "Near and far transfer effects of working memory training",
+          "authors": ["Various"],
+          "year": 2025,
+          "evidenceLevel": "rct",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Working memory training produces near transfer effects",
+            "Far transfer evidence mixed but present in some domains",
+            "Preregistered design increases confidence in findings"
+          ]
+        },
+        {
+          "title": "Exploring the n-back task: Insights, applications, and future directions",
+          "authors": ["Various"],
+          "year": 2025,
+          "evidenceLevel": "review",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "N-back task is a valid measure and training tool for working memory",
+            "Multiple variants available for different training goals",
+            "Future directions include adaptive and gamified versions"
+          ]
+        },
+        {
+          "title": "Dual n-back training improves functional connectivity",
+          "authors": ["Salminen T"],
+          "year": 2020,
+          "evidenceLevel": "rct",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "N-back training improves resting-state brain connectivity",
+            "Right inferior frontal gyrus connectivity enhanced",
+            "Neural changes persist after training cessation"
+          ]
+        },
+        {
+          "title": "Transfer after dual n-back training depends on striatal activation change",
+          "authors": ["Küper K", "Karbach J"],
+          "year": 2016,
+          "evidenceLevel": "rct",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Training transfer depends on striatal activation changes",
+            "Individual differences in neural response predict transfer",
+            "Neuroimaging can guide personalized training approaches"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mindfulness",
+      "name": "Mindfulness & Cognition",
+      "icon": "🧘",
+      "description": "Mindfulness meditation improves attention, working memory, and executive function through focused awareness practice.",
+      "practiceTip": "A 5-minute breathing exercise before study can improve focus and encoding quality.",
+      "papers": [
+        {
+          "title": "Mindfulness enhances cognitive functioning: A meta-analysis of 111 RCTs",
+          "authors": ["Zainal NH", "Newman MG"],
+          "year": 2023,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "Mindfulness improves cognitive functioning across 111 RCTs",
+            "Effects on attention, working memory, and executive function",
+            "Benefits observed in healthy adult populations"
+          ]
+        },
+        {
+          "title": "The effects of mindfulness meditation on attention, executive control and working memory",
+          "authors": ["Yakobi O", "Smilek D"],
+          "year": 2021,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Mindfulness meditation improves attention and working memory in healthy adults",
+            "Executive control benefits moderate but significant",
+            "Effects scale with practice duration"
+          ]
+        },
+        {
+          "title": "Mindfulness induction and cognition: A systematic review and meta-analysis",
+          "authors": ["Gill LN"],
+          "year": 2020,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Even brief mindfulness inductions improve cognition",
+            "Attention and executive function most responsive",
+            "Accessible intervention for cognitive enhancement"
+          ]
+        },
+        {
+          "title": "The effects of mindfulness on working memory",
+          "authors": ["Various"],
+          "year": 2025,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Mindfulness produces small to moderate working memory improvements",
+            "Effects consistent across diverse populations",
+            "Both brief and extended programs effective"
+          ]
+        },
+        {
+          "title": "Effects of mindfulness-based intervention on cognitive functions in tertiary students",
+          "authors": ["Jong S"],
+          "year": 2025,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Mindfulness improves cognitive functions in university students",
+            "Working memory and attention show largest gains",
+            "Practical for self-directed implementation"
+          ]
+        },
+        {
+          "title": "A randomized controlled trial examining the effect of mindfulness meditation on working memory capacity in adolescents",
+          "authors": ["Quach D", "Mano KE"],
+          "year": 2016,
+          "evidenceLevel": "rct",
+          "relevanceScore": 78,
+          "keyFindings": [
+            "Mindfulness meditation increases working memory capacity",
+            "Benefits observed after relatively brief training period",
+            "Applicable across developmental stages"
+          ]
+        },
+        {
+          "title": "Brief mindfulness meditation improves attention in novices",
+          "authors": ["Norris CJ"],
+          "year": 2018,
+          "evidenceLevel": "rct",
+          "relevanceScore": 78,
+          "keyFindings": [
+            "Brief meditation improves attention in complete novices",
+            "ERP evidence confirms neural attention changes",
+            "Personality moderates meditation benefits"
+          ]
+        },
+        {
+          "title": "Mindfulness training enhances face working memory",
+          "authors": ["Wu R"],
+          "year": 2025,
+          "evidenceLevel": "rct",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Mindfulness training enhances working memory for faces",
+            "Improved evidence accumulation rate underlies benefit",
+            "Brief training sufficient for measurable gains"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stress-memory",
+      "name": "Stress & Memory",
+      "icon": "⚡",
+      "description": "Moderate acute stress enhances memory consolidation, but chronic stress impairs it — timing and intensity matter.",
+      "practiceTip": "A little pressure helps — the Timed Drill uses beneficial stress. But chronic stress hurts memory, so manage it.",
+      "papers": [
+        {
+          "title": "Stress and memory: Opposing effects of glucocorticoids",
+          "authors": ["Roozendaal B"],
+          "year": 2002,
+          "evidenceLevel": "review",
+          "relevanceScore": 90,
+          "keyFindings": [
+            "Stress hormones enhance memory consolidation but impair retrieval",
+            "Timing of stress relative to learning determines effect",
+            "Moderate stress can benefit memory formation"
+          ]
+        },
+        {
+          "title": "The stressed hippocampus, synaptic plasticity and lost memories",
+          "authors": ["Kim JJ", "Diamond DM"],
+          "year": 2002,
+          "evidenceLevel": "review",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Chronic stress impairs hippocampal synaptic plasticity",
+            "Stress-induced memory impairment is reversible",
+            "Hippocampal vulnerability to stress affects declarative memory"
+          ]
+        },
+        {
+          "title": "Cortisol effects on memory consolidation and retrieval in healthy young adults",
+          "authors": ["Het S", "Ramlow G"],
+          "year": 2005,
+          "evidenceLevel": "rct",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Cortisol enhances consolidation but impairs retrieval in healthy adults",
+            "Timing of cortisol elevation relative to learning is critical",
+            "Practical implications for exam and study scheduling"
+          ]
+        },
+        {
+          "title": "Managing stress to improve memory: A practical guide based on cognitive science",
+          "authors": ["Various"],
+          "year": 2020,
+          "evidenceLevel": "review",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Practical stress management strategies improve memory",
+            "Relaxation techniques protect encoding and retrieval",
+            "Evidence-based stress reduction accessible for self-directed use"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nutrition",
+      "name": "Nutrition & Brain Health",
+      "icon": "🥗",
+      "description": "Omega-3 fatty acids, flavonoids, and Mediterranean diet patterns support memory and cognitive function.",
+      "practiceTip": "DHA-rich foods (fish, walnuts) and berries support the brain structures you're training.",
+      "papers": [
+        {
+          "title": "DHA supplementation improved both memory and reaction time in healthy young adults",
+          "authors": ["Stonehouse W"],
+          "year": 2013,
+          "evidenceLevel": "rct",
+          "relevanceScore": 92,
+          "keyFindings": [
+            "DHA supplementation improves memory in healthy young adults",
+            "Reaction time also improved",
+            "Benefits observed in non-deficient population"
+          ]
+        },
+        {
+          "title": "A systematic review and dose-response meta-analysis of omega-3 supplementation on cognitive function",
+          "authors": ["Various"],
+          "year": 2025,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Omega-3 supplementation improves cognitive function dose-dependently",
+            "DHA shows strongest effects on memory domains",
+            "Optimal dosing ranges identified"
+          ]
+        },
+        {
+          "title": "The relationship of omega-3 fatty acids with dementia and cognitive decline",
+          "authors": ["Zhang Y"],
+          "year": 2023,
+          "evidenceLevel": "meta_analysis",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Higher omega-3 intake associated with reduced cognitive decline",
+            "DHA particularly protective for memory",
+            "Prospective evidence supports long-term benefits"
+          ]
+        },
+        {
+          "title": "Effects of omega-3 polyunsaturated fatty acids on brain functions",
+          "authors": ["Dighriri IM"],
+          "year": 2022,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Omega-3 PUFAs support multiple brain functions",
+            "Memory and learning particularly responsive",
+            "Both dietary and supplemental sources effective"
+          ]
+        },
+        {
+          "title": "Mediterranean diet and cognitive function: A systematic review",
+          "authors": ["Loughrey DG"],
+          "year": 2017,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 85,
+          "keyFindings": [
+            "Mediterranean diet associated with better cognitive function",
+            "Memory particularly benefits from dietary pattern",
+            "Polyphenols, omega-3s, and antioxidants contribute"
+          ]
+        },
+        {
+          "title": "Blueberry supplementation improves memory in older adults",
+          "authors": ["Krikorian R"],
+          "year": 2010,
+          "evidenceLevel": "rct",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Blueberry supplementation improves memory in older adults",
+            "Anthocyanins may mediate cognitive benefits",
+            "12-week intervention showed significant word list learning improvement"
+          ]
+        },
+        {
+          "title": "Effect of a 2-year diet intervention with walnuts on cognitive decline (WAHA study)",
+          "authors": ["Sala-Vila A", "Valls-Pedret C"],
+          "year": 2020,
+          "evidenceLevel": "rct",
+          "relevanceScore": 80,
+          "keyFindings": [
+            "Walnut supplementation may slow cognitive decline",
+            "2-year intervention showed neuroprotective trends",
+            "Omega-3 ALA from walnuts contributes to brain health"
+          ]
+        },
+        {
+          "title": "Flavonoids, cognition, and dementia: Actions, mechanisms, and potential therapeutic utility",
+          "authors": ["Spencer JPE"],
+          "year": 2010,
+          "evidenceLevel": "review",
+          "relevanceScore": 78,
+          "keyFindings": [
+            "Flavonoids enhance cognitive function through multiple mechanisms",
+            "Neuroprotective and neuroplasticity-enhancing effects",
+            "Dietary flavonoids accessible intervention for memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cognitive-enhancement",
+      "name": "Cognitive Enhancement Protocols",
+      "icon": "📋",
+      "description": "Comprehensive protocols combining multiple approaches for systematic cognitive improvement.",
+      "practiceTip": "Combine multiple evidence-based techniques: spaced practice + exercise + sleep for maximum effect.",
+      "papers": [
+        {
+          "title": "Protocols for cognitive enhancement. A user manual for Brain Health Services—part 5 of 6",
+          "authors": ["Andrea Brioschi Guevara", "Mélanie Bieler"],
+          "year": 2021,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 88,
+          "keyFindings": [
+            "Cognitive, mental, or physical training has clinically relevant effects",
+            "Strategic learning-based training significantly improves objective memory",
+            "Encouraging evidence for non-invasive brain stimulation for memory enhancement"
+          ]
+        },
+        {
+          "title": "Cognitive reserve in ageing and Alzheimer's disease",
+          "authors": ["Stern Y"],
+          "year": 2012,
+          "evidenceLevel": "review",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Cognitive reserve protects against age-related memory decline",
+            "Education, occupation, and leisure activities build reserve",
+            "Active engagement throughout life maintains cognitive function"
+          ]
+        },
+        {
+          "title": "The Potential Role for Cognitive Training in Sport",
+          "authors": ["Courtney C. Walton", "Richard Keegan"],
+          "year": 2018,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 82,
+          "keyFindings": [
+            "Working memory, attentional control, and pattern recognition are key cognitive functions",
+            "These functions may be particularly susceptible to training",
+            "Need for more ecologically valid cognitive training tasks"
+          ]
+        },
+        {
+          "title": "The impact of social activities, social networks on cognitive functioning",
+          "authors": ["Kelly ME"],
+          "year": 2017,
+          "evidenceLevel": "systematic_review",
+          "relevanceScore": 78,
+          "keyFindings": [
+            "Social engagement associated with better cognitive functioning",
+            "Memory and executive functions particularly benefit",
+            "Social activities may provide cognitive reserve"
+          ]
+        }
+      ]
+    }
+  ]
+}

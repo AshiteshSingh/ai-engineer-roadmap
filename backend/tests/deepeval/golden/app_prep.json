@@ -1,0 +1,42 @@
+[
+  {
+    "id": "app-prep-senior-ml",
+    "company": "Acme AI",
+    "position": "Senior ML Engineer",
+    "job_description": "We're looking for a Senior ML Engineer to build production LLM applications on AWS. You'll own inference infra (vLLM, SageMaker), ship RAG pipelines on pgvector, and evaluate models with deepeval. Stack: Python, PyTorch, Hugging Face Transformers, FastAPI, Postgres, Redis. Nice-to-have: Rust, Triton kernels, experience with RLHF.",
+    "expected_tech_tags": ["python", "pytorch", "fastapi", "postgres", "redis", "aws"],
+    "expected_themes": ["RAG", "LLM inference", "evaluation", "vector search"]
+  },
+  {
+    "id": "app-prep-fullstack-ts",
+    "company": "Vercel",
+    "position": "Full-Stack Engineer",
+    "job_description": "Full-stack engineer to ship customer-facing features on the Vercel dashboard. Day-to-day: Next.js 15 (App Router, RSC), TypeScript, Tailwind, tRPC, Drizzle ORM on Neon Postgres, deployed on Vercel. You'll collaborate with product and design to ship weekly. Bonus: familiarity with Cloudflare Workers or edge runtimes.",
+    "expected_tech_tags": ["next-js", "typescript", "tailwind", "postgres", "drizzle"],
+    "expected_themes": ["server components", "edge runtime", "full-stack"]
+  },
+  {
+    "id": "app-prep-platform-go",
+    "company": "Stripe",
+    "position": "Platform Engineer",
+    "job_description": "Platform engineer for Stripe's payments infrastructure. You'll write Go services handling 100k+ RPS, design Kafka-backed event pipelines, and run Kubernetes on GCP. Strong background in distributed systems, idempotency, at-least-once semantics, and observability (Prometheus, Grafana, OpenTelemetry) expected. SQL fluency required.",
+    "expected_tech_tags": ["go", "kafka", "kubernetes", "postgres", "prometheus", "grafana"],
+    "expected_themes": ["distributed systems", "observability", "high throughput", "idempotency"]
+  },
+  {
+    "id": "app-prep-frontend-react",
+    "company": "Linear",
+    "position": "Senior Frontend Engineer",
+    "job_description": "Senior frontend engineer to work on Linear's desktop-class web app. Heavy React + TypeScript with a homegrown GraphQL client and real-time sync over WebSockets. You'll profile and optimize rendering with React DevTools, maintain our design system (Vanilla Extract), and ship polish-obsessed UIs. Nice-to-have: experience with CRDTs or sync engines.",
+    "expected_tech_tags": ["react", "typescript", "graphql", "websockets"],
+    "expected_themes": ["performance optimization", "real-time sync", "design systems"]
+  },
+  {
+    "id": "app-prep-backend-python",
+    "company": "Anthropic",
+    "position": "Backend Engineer, API Platform",
+    "job_description": "Backend engineer on the Claude API team. You'll build Python services (FastAPI, asyncio) handling billions of tokens/day, design rate-limiting and quota systems at global scale, and ship billing pipelines on BigQuery. Postgres for durable state, Redis for hot paths. Experience with gRPC, Protocol Buffers, and streaming HTTP responses (SSE) is a plus.",
+    "expected_tech_tags": ["python", "fastapi", "postgres", "redis", "grpc"],
+    "expected_themes": ["API platform", "rate limiting", "streaming", "high scale"]
+  }
+]

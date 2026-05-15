@@ -1,0 +1,383 @@
+[
+  {
+    "slug": "complete-agentic-ai-bootcamp-with-langgraph-and-langchain",
+    "url": "https://www.udemy.com/course/complete-agentic-ai-bootcamp-with-langgraph-and-langchain/",
+    "title": "Complete Agentic AI Bootcamp With LangGraph and Langchain",
+    "headline": "Learn to build real-world AI agents, multi-agent workflows, and autonomous apps with LangGraph and LangChain",
+    "instructor": {
+      "name": "Krish Naik",
+      "company": "KRISHAI Technologies Private Limited",
+      "role": "Chief AI Engineer",
+      "bio": "Industry veteran with 13+ years of experience in data analytics. Over 1M+ students worldwide across platforms. Runs KrishNaik Academy.",
+      "instructor_rating": 4.8,
+      "total_reviews": 28000,
+      "total_students": 900000,
+      "total_courses": null
+    },
+    "rating": 4.54,
+    "num_reviews": 4947,
+    "num_students": 42641,
+    "num_lectures": 164,
+    "total_hours": 38.5,
+    "price": {
+      "current": null,
+      "currency": "USD",
+      "note": "RON 76.99 observed via API (region-dependent pricing)"
+    },
+    "level": "All Levels",
+    "language": "English",
+    "created": "2025-02-26",
+    "last_updated": "2025-12-18",
+    "description": "This bootcamp teaches intelligent agent development using LangGraph and LangChain frameworks. Students learn how AI agents differ from traditional models, covering essential components like memory, tools, and decision-making systems. The curriculum spans from foundational AI agent concepts through deploying production-ready multi-agent systems capable of autonomous reasoning and tool integration.",
+    "what_youll_learn": [
+      "Comprehend foundational Agentic AI principles and autonomous agent design for practical applications",
+      "Develop proficiency in LangGraph for constructing workflows, handling state, memory, and event-driven systems",
+      "Create and implement collaborative multi-agent frameworks capable of communication and complex problem-solving",
+      "Core concepts behind Agentic AI and how intelligent agents operate",
+      "Hands-on mastery of LangGraph and LangChain for building agent systems",
+      "Building autonomous event-driven AI workflows with memory, reasoning, and tools",
+      "Deploying and optimizing single-agent and multi-agent applications",
+      "Real-world project experience with RAG agents and auto-research agents"
+    ],
+    "prerequisites": [
+      "Basic knowledge of Python programming (variables, functions, classes)",
+      "Understanding of APIs and RESTful services (basic level)",
+      "Familiarity with Large Language Model concepts (helpful but not required)",
+      "No prior LangGraph experience needed"
+    ],
+    "curriculum_sections": [
+      "Fundamentals of Agentic AI — how agents differ from traditional AI models; key components: memory, tools, decision-making",
+      "LangGraph and LangChain Mastery — hands-on experience building and deploying intelligent agents; complex agentic workflows with memory, reasoning, and tools",
+      "Single and Multi-Agent Systems — building single-agent and multi-agent collaborative systems that communicate, reason, and solve complex problems",
+      "Real-World Applications — autonomous research agents, task automation systems, RAG-based assistants",
+      "Environment Setup — Anaconda, VS Code installation and configuration",
+      "LangChain and LCEL Fundamentals",
+      "Agent Fundamentals, Memory Management, and Tool Usage",
+      "Multi-Agent Collaboration Architectures",
+      "RAG Agent Implementation",
+      "API Deployment with Langserve"
+    ],
+    "target_audience": [
+      "Software developers and engineers",
+      "ML/AI professionals",
+      "Data scientists and researchers",
+      "Product builders and entrepreneurs",
+      "AI enthusiasts and early adopters"
+    ],
+    "career_pathways": [
+      "AI Engineer",
+      "Machine Learning Engineer",
+      "Generative AI Developer",
+      "Autonomous Systems Engineer",
+      "Backend Developer",
+      "NLP Engineer"
+    ],
+    "reviews": [
+      {
+        "source": "Medium (Javarevisited)",
+        "quote": "If you're comfortable with Python but new to LangChain, this bootcamp provides the perfect on-ramp and assumes no prior LLM knowledge.",
+        "rating": null
+      },
+      {
+        "source": "Medium (Javarevisited)",
+        "quote": "The agent I built in this course handles customer support queries autonomously, reducing response time by 80%. The multi-agent system project teaches how to coordinate multiple AI agents working together.",
+        "rating": null
+      },
+      {
+        "source": "Medium (Javarevisited)",
+        "quote": "Power-packed Udemy course on Agentic AI and LLM — the perfect course if you want to master LLMs and AI Agents in tandem.",
+        "rating": null
+      }
+    ]
+  },
+  {
+    "slug": "ultimate-rag-bootcamp-using-langchainlanggraph-langsmith",
+    "url": "https://www.udemy.com/course/ultimate-rag-bootcamp-using-langchainlanggraph-langsmith/",
+    "title": "Ultimate RAG Bootcamp Using Langchain, LangGraph & Langsmith",
+    "headline": "Build powerful RAG pipelines: Traditional, Advanced, Multimodal & Agentic AI with LangChain, LangGraph and Langsmith",
+    "instructor": {
+      "name": "Krish Naik",
+      "company": "KRISHAI Technologies Private Limited",
+      "role": "Chief AI Engineer",
+      "bio": "Industry veteran with 13+ years of experience in data analytics. Over 1M+ students worldwide across platforms. Runs KrishNaik Academy.",
+      "instructor_rating": 4.8,
+      "total_reviews": 28000,
+      "total_students": 900000,
+      "total_courses": null
+    },
+    "rating": 4.62,
+    "num_reviews": 2450,
+    "num_students": 21138,
+    "num_lectures": 137,
+    "total_hours": 31.5,
+    "price": {
+      "current": 9.99,
+      "currency": "USD",
+      "original": 99.99,
+      "discount": "90% off (coupon dependent)",
+      "note": "RON 59.99 observed via API (region-dependent pricing)"
+    },
+    "level": "All Levels",
+    "language": "English",
+    "created": "2025-06-30",
+    "last_updated": "2025-12-18",
+    "description": "The Ultimate RAG Bootcamp is a complete, step-by-step guide to mastering RAG using LangChain, LangGraph, and LangSmith. Takes learners from the fundamentals of RAG pipelines all the way to advanced Agentic RAG architectures used in production by leading companies. Covers vector databases, chunking strategies, and production deployment while mastering LangChain, LangGraph, and LangSmith tools.",
+    "what_youll_learn": [
+      "Build traditional RAG pipelines for accurate and efficient information retrieval",
+      "Implement advanced retrieval methods like hybrid search, multimodal RAG, and persistent memory",
+      "Design multi-agent and autonomous RAG systems using LangGraph for collaborative AI reasoning",
+      "Use LangSmith for tracking, debugging, and optimizing RAG workflows in real-world projects",
+      "Use vector databases like FAISS, Pinecone, and Weaviate efficiently",
+      "Build domain-specific knowledge chatbots with hybrid search",
+      "Develop multimodal AI assistants that process both text and images",
+      "Take AI apps from development to production with cloud deployment"
+    ],
+    "prerequisites": [
+      "Basic Python programming knowledge (variables, loops, functions)",
+      "No prior RAG experience required",
+      "Familiarity with LLM concepts recommended",
+      "Basic LangChain knowledge helpful but not required"
+    ],
+    "curriculum_sections": [
+      "LangChain — Build modular RAG pipelines",
+      "LangGraph — Create advanced agent-based workflows with memory",
+      "LangSmith — Track, debug, and evaluate RAG systems",
+      "Vector Databases — FAISS, Pinecone, Weaviate, and more",
+      "Cloud Deployment — Take AI apps from development to production",
+      "Traditional RAG Pipelines",
+      "Advanced Retrieval Methods (hybrid search, multimodal)",
+      "Multi-Agent Autonomous RAG Systems",
+      "Domain-Specific Knowledge Chatbots",
+      "Multimodal AI Assistants"
+    ],
+    "target_audience": [
+      "AI beginners wanting to learn RAG from scratch",
+      "Experienced developers looking to master advanced RAG architectures",
+      "Data scientists and ML engineers",
+      "Anyone interested in production-grade RAG systems"
+    ],
+    "career_pathways": null,
+    "reviews": [
+      {
+        "source": "CoursSpeak",
+        "quote": "Bestseller course with aggregate rating of 4.6 out of 5. Strong enrollment base demonstrating course popularity and trust.",
+        "rating": 4.6
+      },
+      {
+        "source": "LinkedIn (Krish Naik)",
+        "quote": "So here you go — the Ultimate RAG Bootcamp. Takes you from fundamentals all the way to advanced Agentic RAG architectures.",
+        "rating": null
+      }
+    ]
+  },
+  {
+    "slug": "agentic-ai-private-agentic-rag-with-langgraph-and-ollama",
+    "url": "https://www.udemy.com/course/agentic-ai-private-agentic-rag-with-langgraph-and-ollama/",
+    "title": "Agentic AI - Private Agentic RAG with LangGraph and Ollama",
+    "headline": "LangGraph v1, Ollama, Agentic RAG, Private RAG, Corrective RAG, CRAG, Reflexion, Self-RAG, Adaptive RAG, MySQL Agent",
+    "instructor": {
+      "name": "Laxmi Kant Tiwari",
+      "company": "KGP Talkie",
+      "role": "Senior Data Science & AI Engineer",
+      "bio": "IIT Kharagpur graduate with 10+ years of industry experience across startups and MNCs. Worked on real-world ML, deep learning, LLMs, LangChain, LangGraph, RAG systems, and AI agent workflows. KGP Talkie is his global teaching platform.",
+      "instructor_rating": null,
+      "total_reviews": null,
+      "total_students": null,
+      "total_courses": null
+    },
+    "rating": 4.61,
+    "num_reviews": 248,
+    "num_students": 3377,
+    "num_lectures": 152,
+    "total_hours": 16.5,
+    "price": {
+      "current": null,
+      "currency": "USD",
+      "note": "RON 59.99 observed via API (region-dependent pricing)"
+    },
+    "level": "All Levels (advanced-level content; requires prior LangChain/LangGraph knowledge)",
+    "language": "English",
+    "created": "2025-11-17",
+    "last_updated": "2026-03-28",
+    "description": "Advanced, project-based course teaching developers how to build private, production-ready RAG systems using LangGraph, LangChain, Ollama, ChromaDB, Docling, and Python. All projects run 100% locally with no external API cost and no data leaving your system. Uses real SEC financial filings from Amazon, Google, Apple, and Microsoft as data sources.",
+    "what_youll_learn": [
+      "Build private, production-ready Agentic RAG systems using LangGraph v1 and Ollama",
+      "Create custom LLM workflows with LangGraph state machines, nodes, edges, and conditional routing",
+      "Implement PageRAG, metadata extraction, PDF processing with Docling, and page-level ingestion",
+      "Use ChromaDB, embeddings, metadata filtering, and MMR retrieval for high-accuracy search",
+      "Apply BM25+ re-ranking and advanced retrieval pipelines for financial document analysis",
+      "Build Agentic RAG: tool calling, reasoning loops, structured outputs, and multi-step workflows",
+      "Implement Corrective RAG (CRAG) with document grading, query rewriting, and web search fallback",
+      "Create custom Ollama models, Modelfiles, embeddings, and integrate with LangChain",
+      "Build Reflexion, Self-RAG and Adaptive RAG systems",
+      "Build MySQL Agent for database queries",
+      "Install and configure Ollama for private LLM deployment",
+      "Work with models: Qwen3, GPT-OSS, Llama 3.2, nomic-embed",
+      "Master production-grade private RAG systems running entirely locally"
+    ],
+    "prerequisites": [
+      "Good LangGraph or LangChain knowledge required",
+      "Not suitable for absolute beginners in AI",
+      "Basic Python programming skills",
+      "Understanding of LLM fundamentals"
+    ],
+    "curriculum_sections": [
+      "Ollama Installation & Configuration — private LLM deployment",
+      "Custom LLMs with Modelfiles",
+      "LangGraph State Machines — TypedDict, nodes, edges, conditional routing",
+      "Complete RAG System from Scratch",
+      "PDF Ingestion using Docling — OCR and table extraction",
+      "ChromaDB Document Storage — metadata filtering",
+      "Advanced Retrieval Pipelines — BM25+ re-ranking",
+      "Agentic RAG — tool calling, reasoning loops, structured outputs",
+      "Corrective RAG (CRAG) — document grading, query rewriting, web search fallback",
+      "Reflexion & Self-RAG",
+      "Adaptive RAG",
+      "SQL Agent Integration (MySQL)",
+      "Multi-step Workflow Creation with State Management"
+    ],
+    "target_audience": [
+      "Developers who want strong control over their data and full privacy",
+      "Engineers wanting complete end-to-end workflows using local LLMs",
+      "AI developers interested in production-ready RAG without API costs"
+    ],
+    "career_pathways": null,
+    "reviews": []
+  },
+  {
+    "slug": "production-ai-agents-with-javascript-langchain-langgraph",
+    "url": "https://www.udemy.com/course/production-ai-agents-with-javascript-langchain-langgraph/",
+    "title": "Production AI Agents with JavaScript: LangChain & LangGraph",
+    "headline": "Production-grade AI agents with LangChain.js, LangGraph.js, RAG, Next.js, LangSmith & real JS/TS projects",
+    "instructor": {
+      "name": "Sangam Mukherjee",
+      "company": "AceDevHub",
+      "role": "Full-Stack & DevOps Instructor",
+      "bio": "Senior Engineer (L5) at Target with 8+ years experience in full-stack web development. Previously at Walmart and Oracle. YouTube channel with 77,000+ subscribers teaching Web Development, DevOps, and AI-powered app development.",
+      "instructor_rating": null,
+      "total_reviews": null,
+      "total_students": null,
+      "total_courses": null
+    },
+    "rating": 4.61,
+    "num_reviews": 72,
+    "num_students": 624,
+    "num_lectures": 112,
+    "total_hours": 16.5,
+    "price": {
+      "current": null,
+      "currency": "USD",
+      "note": "RON 59.99 observed via API (region-dependent pricing)"
+    },
+    "level": "All Levels",
+    "language": "English",
+    "created": "2025-10-16",
+    "last_updated": "2025-12-07",
+    "description": "Built from the ground up for JavaScript & TypeScript engineers who want real, shippable agentic systems — not disconnected demos. Build a sequence of end-to-end projects that mirror how modern teams ship AI features: clean TypeScript code, clear APIs, JSON contracts, LangGraph orchestration, RAG, proper vector stores, and real Next.js frontends wired to real agents.",
+    "what_youll_learn": [
+      "Design, build and deploy production-ready AI agents using LangChain.js and LangGraph.js with TypeScript/JavaScript",
+      "Develop practical projects: web search agents, documentation chatbots with RAG, and agentic workflows with clean APIs",
+      "Apply JSON-first methodology, Zod schema validation, tool calling, and structured outputs for reliable, observable agent systems",
+      "Modern AI app architecture: UI -> orchestration -> models -> tools -> storage",
+      "Where LangChain.js fits, where LangGraph.js fits, and how they work together",
+      "Multi-provider setup: OpenAI, Gemini, Groq via a single provider factory",
+      "Choosing models (OpenAI / Gemini / Groq / local) smartly for cost, speed & reliability",
+      "Tokens, context windows, cost-aware thinking, sampling knobs (temperature, top_p, max_tokens)",
+      "Zod schemas as contracts for every response, with validate -> repair -> fallback strategies",
+      "Chunk -> embed -> upsert into a real vector store; ask -> retrieve -> summarize with citations & confidence",
+      "Deploying & Observing Agents with LangSmith + LangGraph Cloud",
+      "Connecting JS agents to LangSmith for logs, spans, errors, prompts",
+      "Deploying a LangGraph graph to LangGraph Cloud with API testing and HITL (approve/deny) flows"
+    ],
+    "prerequisites": [
+      "JavaScript/TypeScript proficiency",
+      "Familiarity with Node.js and modern JS tooling",
+      "No prior AI/ML experience explicitly required"
+    ],
+    "curriculum_sections": [
+      "Introduction & Course Structure",
+      "Foundational Concepts — AI app architecture, model selection, agent definitions",
+      "Technical Setup — TS/Node project config, tsconfig, env patterns, multi-provider setup",
+      "LLM Fundamentals in JS — tokens, context windows, sampling parameters",
+      "Structured Outputs — Zod schemas, validation/repair/fallback strategies",
+      "Tool Calling — calculator, date planner, summarize tools",
+      "LangGraph Orchestration — nodes, edges, state management",
+      "RAG Implementation — chunk, embed, upsert; vector store; retrieve with citations",
+      "Next.js Frontend Integration — real frontends wired to agents",
+      "Deployment & Observability — LangSmith logs, LangGraph Cloud, HITL flows"
+    ],
+    "target_audience": [
+      "Full-stack, backend and Next.js engineers ready to add LangChain.js, LangGraph.js, RAG and tool-calling skills",
+      "Developers coming from Python-only AI content who want a JS-native, framework-driven path to shipping agentic apps",
+      "JavaScript/TypeScript engineers who want production-grade agentic systems"
+    ],
+    "career_pathways": null,
+    "reviews": []
+  },
+  {
+    "slug": "langgraph-ai-agents-agentic-rag-multi-agent-systems",
+    "url": "https://www.udemy.com/course/langgraph-ai-agents-agentic-rag-multi-agent-systems/",
+    "title": "LangGraph Mastery: Build AI Agents, RAG & Multi-Agent System",
+    "headline": "Build AI agents using LangGraph. Learn ReAct agents, Agentic RAG, multi-agent systems, memory & human-in-the-loop apps",
+    "instructor": {
+      "name": "Pratham Chandratre",
+      "company": null,
+      "role": "AI & Data Science Expert",
+      "bio": "13x AI Internships at organizations like Amazon, IBM, EY, and Infosys. 22+ global certifications across AI, ML, GenAI, Agentic AI, Data Science, and Cloud Computing (6x Microsoft Azure, 12x Oracle Cloud, 2x GitHub, 2x Salesforce).",
+      "instructor_rating": null,
+      "total_reviews": null,
+      "total_students": null,
+      "total_courses": null
+    },
+    "rating": 4.0,
+    "num_reviews": 1,
+    "num_students": 11,
+    "num_lectures": 54,
+    "total_hours": 7.5,
+    "price": {
+      "current": null,
+      "currency": "USD",
+      "note": "RON 59.99 observed via API (region-dependent pricing)"
+    },
+    "level": "All Levels",
+    "language": "English",
+    "created": "2025-12-17",
+    "last_updated": "2026-03-25",
+    "description": "Project-based course teaching building modern agentic AI systems rather than simple prompt-response chains. Topics include agent design, multi-agent collaboration, retrieval-augmented generation, memory implementation, human-in-the-loop workflows, and tool integration. Each major section includes a hands-on mini project.",
+    "what_youll_learn": [
+      "Develop production-ready AI agents using LangGraph's node, edge, and state management systems",
+      "Design ReAct agents capable of reasoning, executing actions, and leveraging external tools for autonomous problem-solving",
+      "Create memory systems enabling agents to maintain conversation history and contextual awareness",
+      "Build Agentic RAG systems where AI decides when to retrieve information",
+      "Develop multi-agent systems where specialized AI agents collaborate",
+      "Build human-in-the-loop AI systems",
+      "Design intelligent AI workflows using LangGraph loops, routing, and conditional logic",
+      "Integrate tools, APIs, and search systems into AI agents"
+    ],
+    "prerequisites": [
+      "Basic Python knowledge and curiosity about modern AI technologies",
+      "No prior LangGraph experience required",
+      "Familiarity with Python libraries (pip, virtual environments) helpful but not mandatory",
+      "No prior experience with AI agents or RAG systems needed"
+    ],
+    "curriculum_sections": [
+      "LangGraph Fundamentals — nodes, edges, state management, intelligent AI workflows",
+      "ReAct Agents — reasoning, action execution, external tool usage",
+      "Memory Systems — conversation history, contextual awareness",
+      "Agentic RAG — AI-driven retrieval decisions",
+      "Multi-Agent Systems — specialized agent collaboration",
+      "Human-in-the-Loop — interactive AI systems with human oversight",
+      "Tool Integration — APIs, search systems, external tools",
+      "Mini Projects — hands-on implementation per section"
+    ],
+    "target_audience": [
+      "Python developers who want to learn how to build AI agents using LangGraph",
+      "Machine learning and AI enthusiasts interested in building modern agentic AI systems",
+      "Developers who want to move beyond prompt engineering",
+      "Engineers and software developers exploring Generative AI",
+      "Students and professionals who want hands-on experience building AI agents and agentic workflows"
+    ],
+    "career_pathways": null,
+    "reviews": []
+  }
+]

@@ -1,0 +1,26 @@
+[package]
+name = "knowledge-bkt"
+version = "0.1.0"
+edition = "2021"
+description = "Bayesian Knowledge Tracing engine with SM-2 spaced repetition"
+license = "MIT"
+
+[features]
+default = []
+server = ["axum", "tokio"]
+
+[[bin]]
+name = "bkt-server"
+path = "src/bin/server.rs"
+required-features = ["server"]
+
+[dependencies]
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror  = "2"
+chrono     = { version = "0.4", features = ["serde"] }
+tracing    = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+axum  = { version = "0.8", optional = true }
+tokio = { version = "1", features = ["full"], optional = true }

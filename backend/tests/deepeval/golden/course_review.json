@@ -1,0 +1,87 @@
+[
+  {
+    "id": "course-deeplearning-nlp",
+    "course": {
+      "course_id": "eval-001",
+      "title": "Natural Language Processing Specialization",
+      "url": "https://www.coursera.org/specializations/natural-language-processing",
+      "provider": "DeepLearning.AI",
+      "description": "Four-course specialization by Younes Bensouda Mourri and Łukasz Kaiser covering classification, sequence models, attention, and transformers. Includes hands-on labs in TensorFlow.",
+      "level": "Intermediate",
+      "rating": 4.6,
+      "review_count": 8421,
+      "duration_hours": 80,
+      "is_free": false
+    },
+    "expected_verdict_in": ["excellent", "recommended"],
+    "expected_aggregate_min": 7.0
+  },
+  {
+    "id": "course-fastai-practical",
+    "course": {
+      "course_id": "eval-002",
+      "title": "Practical Deep Learning for Coders",
+      "url": "https://course.fast.ai",
+      "provider": "fast.ai",
+      "description": "Jeremy Howard's project-first deep learning course. Start with a working classifier in lesson 1 using fastai on top of PyTorch, then work downward into the internals. Covers vision, tabular, collaborative filtering, NLP.",
+      "level": "Beginner",
+      "rating": 4.8,
+      "review_count": 12000,
+      "duration_hours": 40,
+      "is_free": true
+    },
+    "expected_verdict_in": ["excellent", "recommended"],
+    "expected_aggregate_min": 7.5
+  },
+  {
+    "id": "course-generic-bootcamp",
+    "course": {
+      "course_id": "eval-003",
+      "title": "Complete AI & Machine Learning Bootcamp 2022",
+      "url": "https://example.com/ai-bootcamp-2022",
+      "provider": "UnnamedAcademy",
+      "description": "Learn AI and ML from zero in 10 hours! Covers every topic in AI: NumPy basics, linear regression, a bit of TensorFlow 1.x, and a chatbot project. No prerequisites assumed.",
+      "level": "Beginner",
+      "rating": 3.6,
+      "review_count": 54,
+      "duration_hours": 10,
+      "is_free": false
+    },
+    "expected_verdict_in": ["average", "skip"],
+    "expected_aggregate_max": 6.0
+  },
+  {
+    "id": "course-cs231n-stanford",
+    "course": {
+      "course_id": "eval-004",
+      "title": "CS231n: Deep Learning for Computer Vision",
+      "url": "https://cs231n.stanford.edu",
+      "provider": "Stanford University",
+      "description": "Graduate-level course by Fei-Fei Li et al. on CNN architectures, training, and visual recognition. Includes programming assignments, a final project, and the classic backprop-by-hand section. Lecture videos + notes free; certification through SCPD.",
+      "level": "Advanced",
+      "rating": 4.9,
+      "review_count": 3200,
+      "duration_hours": 90,
+      "is_free": true
+    },
+    "expected_verdict_in": ["excellent", "recommended"],
+    "expected_aggregate_min": 7.5
+  },
+  {
+    "id": "course-shallow-prompt",
+    "course": {
+      "course_id": "eval-005",
+      "title": "ChatGPT Prompt Engineering Masterclass 2023",
+      "url": "https://example.com/chatgpt-masterclass",
+      "provider": "SideHustleAcademy",
+      "description": "Unlock ChatGPT's full power! 50 prompts that will 10x your productivity. No prior experience needed. Bonus: includes templates for resume writing and social media.",
+      "level": "Beginner",
+      "rating": 4.2,
+      "review_count": 180,
+      "duration_hours": 2,
+      "is_free": false
+    },
+    "expected_verdict_in": ["average", "skip"],
+    "expected_aggregate_max": 6.0
+  }
+]

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "article-prompt-caching",
+    "slug": "prompt-caching-eval",
+    "topic": "Prompt Caching",
+    "category": "Inference Infrastructure",
+    "related_topics": "context-engineering, prompt-engineering, inference-optimization, kv-cache",
+    "existing_articles": "- [Transformer Architecture](/transformer-architecture)\n- [KV Cache](/kv-cache)\n- [Context Engineering](/context-engineering)\n- [Inference Optimization](/inference-optimization)",
+    "style_sample": "# Example Article\n\nThis is a technical article with concrete code and cross-references to [related topics](/related-topic). Sections go here.",
+    "expected_themes": ["KV cache reuse", "TTL", "cost reduction", "first-token latency"]
+  },
+  {
+    "id": "article-mixture-of-experts",
+    "slug": "mixture-of-experts-eval",
+    "topic": "Mixture of Experts",
+    "category": "Transformer Variants",
+    "related_topics": "transformer-architecture, scaling-laws, attention-variants, sparse-attention",
+    "existing_articles": "- [Transformer Architecture](/transformer-architecture)\n- [Scaling Laws](/scaling-laws)\n- [Attention Variants](/attention-variants)",
+    "style_sample": "# Example Article\n\nThis is a technical article with concrete code and cross-references to [related topics](/related-topic). Sections go here.",
+    "expected_themes": ["sparse activation", "router", "load balancing", "expert capacity"]
+  },
+  {
+    "id": "article-speculative-decoding",
+    "slug": "speculative-decoding-eval",
+    "topic": "Speculative Decoding",
+    "category": "Inference Infrastructure",
+    "related_topics": "inference-optimization, kv-cache, quantization, batched-inference",
+    "existing_articles": "- [Inference Optimization](/inference-optimization)\n- [KV Cache](/kv-cache)\n- [Quantization](/quantization)",
+    "style_sample": "# Example Article\n\nThis is a technical article with concrete code and cross-references to [related topics](/related-topic). Sections go here.",
+    "expected_themes": ["draft model", "verification", "acceptance rate", "tokens per second"]
+  },
+  {
+    "id": "article-dpo",
+    "slug": "dpo-eval",
+    "topic": "Direct Preference Optimization",
+    "category": "Fine-Tuning",
+    "related_topics": "rlhf, fine-tuning, reward-modeling, instruction-tuning",
+    "existing_articles": "- [RLHF](/rlhf)\n- [Fine-Tuning](/fine-tuning)\n- [Reward Modeling](/reward-modeling)",
+    "style_sample": "# Example Article\n\nThis is a technical article with concrete code and cross-references to [related topics](/related-topic). Sections go here.",
+    "expected_themes": ["preference pairs", "reference model", "KL divergence", "no reward model"]
+  },
+  {
+    "id": "article-tool-use",
+    "slug": "tool-use-eval",
+    "topic": "LLM Tool Use",
+    "category": "Agents",
+    "related_topics": "agents, function-calling, agent-architectures, json-schema",
+    "existing_articles": "- [Agent Architectures](/agent-architectures)\n- [Function Calling](/function-calling)\n- [Agents](/agents)",
+    "style_sample": "# Example Article\n\nThis is a technical article with concrete code and cross-references to [related topics](/related-topic). Sections go here.",
+    "expected_themes": ["JSON schema", "tool choice", "parallel tool calls", "error handling"]
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "knowledge-langgraph",
+  "main": "src/index.js",
+  "compatibility_date": "2026-04-22",
+  "observability": { "enabled": true },
+  "vars": {
+    "LLM_BASE_URL": "https://api.deepseek.com",
+    "LLM_MODEL": "deepseek-chat",
+    // D1 LangGraph checkpointer (langgraph-checkpoint-cloudflare-d1), replaces
+    // the Neon AsyncPostgresSaver. account_id + database_id non-secret;
+    // CLOUDFLARE_API_TOKEN is a plain wrangler secret (`wrangler secret put`).
+    "CLOUDFLARE_ACCOUNT_ID": "a036f50e02431c89170b8f977e982a3d",
+    "CHECKPOINTER_D1_DATABASE_ID": "1763082a-ca0b-4c3b-8900-b19dfbc77c75"
+  },
+  "containers": [
+    {
+      "class_name": "KnowledgeContainer",
+      "image": "./Dockerfile",
+      "max_instances": 1,
+      "instance_type": "standard-1"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "CONTAINER", "class_name": "KnowledgeContainer" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["KnowledgeContainer"] }
+  ]
+}

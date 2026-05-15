@@ -1,0 +1,235 @@
+[
+  {
+    "url": "https://www.udemy.com/course/langgraph-from-basics-to-advanced-ai-agents-with-llms/",
+    "title": "LangGraph: From Basics to Advanced AI Agents with LLMs",
+    "headline": "Learn how to build custom AI Agents with LangGraph",
+    "instructor": {
+      "name": "Tensor Teach",
+      "title": "AI Education That Bridges Theory and Practice"
+    },
+    "rating": 4.56,
+    "num_reviews": 44,
+    "num_students": 966,
+    "num_lectures": 19,
+    "total_hours": 1.6,
+    "price": "RON 59.99 (~$13 USD)",
+    "level": "Intermediate",
+    "last_updated": "2025-05-27",
+    "language": "English",
+    "description": "A structured, step-by-step approach to mastering AI agent development with LangGraph, guiding you from fundamental concepts to advanced techniques.",
+    "what_you_will_learn": [
+      "Core principles of graphs, nodes, edges, and states as foundations of LangGraph workflows",
+      "Constructing a basic agent",
+      "Building a News Writer Agent",
+      "Integrating state and tools into agents",
+      "Reflection techniques",
+      "Human-in-the-loop processes",
+      "Checkpointers and threads",
+      "Incorporating custom tools for versatility and functionality"
+    ],
+    "prerequisites": [
+      "Prior Python programming experience",
+      "Some experience with LangChain"
+    ],
+    "curriculum_sections": [
+      "LangGraph fundamentals (graphs, nodes, edges, states)",
+      "Building a basic agent",
+      "News Writer Agent project",
+      "State and tools integration",
+      "Advanced techniques: reflection, human-in-the-loop, checkpointers, threads",
+      "Custom tools"
+    ],
+    "reviews": [],
+    "course_id": null
+  },
+  {
+    "url": "https://www.udemy.com/course/langgraph-mastery-develop-llm-agents-with-langgraph/",
+    "title": "LangGraph Mastery: Develop LLM Agents with LangGraph",
+    "headline": "Master the Power of LLM Agents with LangChain and LangGraph: Create AI Workflows, Automate Tasks and Transform Your Apps",
+    "instructor": {
+      "name": "Andrei Dumitrescu",
+      "title": "Software Engineer, Crystal Mind Academy co-founder, 50,000+ students"
+    },
+    "rating": 4.41,
+    "num_reviews": 413,
+    "num_students": 4235,
+    "num_lectures": 74,
+    "total_hours": 5.4,
+    "price": "RON 59.99 (~$13 USD)",
+    "level": "Intermediate",
+    "last_updated": "2026-03-20",
+    "language": "English",
+    "description": "Delves into LangGraph, an extension of LangChain specifically designed for agent and multi-agent workflows. Teaches building autonomous LLM agents, mastering agent workflows, multi-agent systems, and production-grade debugging techniques.",
+    "what_you_will_learn": [
+      "Master LangGraph fundamentals including nodes, edges, and state management",
+      "Integrate LangChain with real-world tools for multi-agent workflows",
+      "Build autonomous agents with memory and tool observation capabilities",
+      "Implement RAG using Pinecone",
+      "Debug production applications with LangSmith",
+      "Understand LLM patterns: reflection and reflexion",
+      "Learn about Tavily AI and agentic search",
+      "Learn about flow engineering"
+    ],
+    "prerequisites": [
+      "Good knowledge of Python",
+      "Good knowledge of LangChain",
+      "Not for beginners"
+    ],
+    "curriculum_sections": [
+      "LangGraph concepts and core components",
+      "Nodes, edges, and conditional edges",
+      "Implementing advanced agents",
+      "Tavily AI and agentic search",
+      "Reflection and reflexion LLM patterns",
+      "LangSmith debugging and tracing",
+      "Flow engineering",
+      "Project 1: ReAct agent from scratch",
+      "Project 2: ChatBot app using LangGraph",
+      "Project 3: Tweet generator using reflection",
+      "Project 4: Essay writer",
+      "Project 5 (Master Project): Research agent with LangGraph, GPT-4o, RAG, Pinecone, ArXiv, Google SerpAPI"
+    ],
+    "reviews": [
+      {
+        "source": "Sendowl/aggregator",
+        "quote": "Course includes 5 hands-on projects building real-world LLM agent applications"
+      }
+    ],
+    "course_id": null
+  },
+  {
+    "url": "https://www.udemy.com/course/langgraph-in-action-develop-advanced-ai-agents-with-llms/",
+    "title": "LangGraph in Action: Develop Advanced AI Agents with LLMs",
+    "headline": "Master the Fundamentals of AI Agents with LangGraph (Version 1.0.0)",
+    "instructor": {
+      "name": "Markus Lang",
+      "title": "Software Engineer, Python Developer, LLM Expert in finance"
+    },
+    "rating": 4.45,
+    "num_reviews": 685,
+    "num_students": 5089,
+    "num_lectures": 48,
+    "total_hours": 3.5,
+    "price": "RON 66.99 (~$14 USD)",
+    "level": "Intermediate",
+    "last_updated": "2026-01-05",
+    "language": "English",
+    "description": "Your ultimate guide to mastering the design and deployment of advanced AI agents using LangGraph. Explore fundamentals of building modular, scalable, and production-ready agents, all with a hands-on approach.",
+    "what_you_will_learn": [
+      "State-based design with LangGraph's nodes and edges",
+      "Memory management: short-term memory with checkpointers and long-term memory with the Store object",
+      "Advanced workflows: human-in-the-loop systems, parallel execution, multi-agent patterns",
+      "Production-ready development: asynchronous operations, subgraphs",
+      "Full-stack applications using FastAPI and Docker",
+      "Unit testing LangGraph applications"
+    ],
+    "prerequisites": [
+      "Software engineering experience",
+      "Experience with LangChain",
+      "Python proficiency"
+    ],
+    "curriculum_sections": [
+      "TypedDict concepts and basic LangGraph workflows",
+      "Tool calling",
+      "Core agent creation, patterns, and design",
+      "RAG basics through advanced implementations with memory",
+      "State management",
+      "Human-in-the-loop workflows",
+      "Parallel execution",
+      "Async operations",
+      "Subgraphs",
+      "Long-term / durable memory patterns",
+      "Capstone: Full-stack project (FastAPI backend, Angular frontend, PostgreSQL, human-in-the-loop)"
+    ],
+    "reviews": [],
+    "course_id": null
+  },
+  {
+    "url": "https://www.udemy.com/course/ai-agents/",
+    "title": "AI Agents: Develop Autonomous AI Agents with LangGraph [NEW]",
+    "headline": "Develop High-Performance, Autonomous, AI Agents, Using LangChain, LangGraph (Python)",
+    "instructor": {
+      "name": "Paulo Dichone",
+      "title": "Software Engineer, AWS Cloud Practitioner, 350,000+ students"
+    },
+    "rating": 4.67,
+    "num_reviews": 418,
+    "num_students": 3719,
+    "num_lectures": 38,
+    "total_hours": 3.0,
+    "price": "RON 66.99 (~$14 USD)",
+    "level": "All Levels",
+    "last_updated": "2025-02-20",
+    "language": "English",
+    "description": "Meticulously designed to elevate your understanding from beginner to advanced, enabling you to create scalable AI agents using LangChain and LangGraph. Build a comprehensive Financial Report Writer/Researcher Agent.",
+    "what_you_will_learn": [
+      "Understand the fundamentals and significance of AI agents in various industries",
+      "Explore core principles, key characteristics, and diverse use cases of AI agents",
+      "Build a first simple AI agent using LLMs",
+      "Understand LangGraph building blocks and main components",
+      "Step-by-step agent construction from basic to advanced techniques",
+      "Build a full Financial Report Writer/Researcher Agent",
+      "Advanced optimization for efficient, scalable, high-performing agents"
+    ],
+    "prerequisites": [
+      "Knowledge of Python basics or any object-oriented modern programming language",
+      "Basics of LLM and AI"
+    ],
+    "curriculum_sections": [
+      "Understanding AI Agents fundamentals",
+      "Building your first simple agent with LLMs",
+      "Introduction to LangGraph: building blocks and components",
+      "Building agents with LangGraph (basic to advanced)",
+      "Financial Report Writer/Researcher Agent project",
+      "Advanced optimization techniques for scalability and performance"
+    ],
+    "reviews": [],
+    "course_id": null
+  },
+  {
+    "url": "https://www.udemy.com/course/agentic-rag-with-langchain-and-langgraph/",
+    "title": "Basic RAG with LangChain and LangGraph - Ollama",
+    "headline": "Step-by-Step Guide to RAG with LangChain, LangGraph, and Ollama | DeepSeek R1, QWEN, LLAMA, FAISS, Doclings, VectorDB",
+    "instructor": {
+      "name": "Laxmi Kant (KGP Talkie)",
+      "title": "IIT Kharagpur graduate, Senior Data Science & AI Engineer, 100,000+ students"
+    },
+    "rating": 4.46,
+    "num_reviews": 52,
+    "num_students": 2349,
+    "num_lectures": 68,
+    "total_hours": 7.4,
+    "price": "RON 66.99 (~$14 USD)",
+    "level": "All Levels",
+    "last_updated": "2026-02-01",
+    "language": "English",
+    "description": "Step-by-step guide to building smart AI systems using LangChain, LangGraph, Ollama, and OpenAI to create Retrieval-Augmented Generation (RAG) systems.",
+    "what_you_will_learn": [
+      "Ollama setup: learn to set up and use Ollama for AI models",
+      "LangChain and LangGraph basics: understand the tools and how to use them together",
+      "Document loader (Doclings): load and prepare documents for AI systems",
+      "Vector stores and retrievals: use databases to find and retrieve information quickly",
+      "Agentic RAG: build AI systems that act like smart assistants",
+      "Create intelligent and adaptive RAG systems using agentic, corrective, adaptive, and self-improving methods",
+      "Deploy AI solutions using Streamlit and AWS EC2"
+    ],
+    "prerequisites": [
+      "Basic Python knowledge",
+      "Curiosity to learn and willingness to explore AI concepts"
+    ],
+    "curriculum_sections": [
+      "Ollama Setup",
+      "LangChain and LangGraph Basics",
+      "Document Loading with Doclings",
+      "Vector Stores and Retrievals (FAISS, VectorDB)",
+      "Basic RAG implementation",
+      "Agentic RAG",
+      "Corrective RAG",
+      "Adaptive RAG",
+      "Self-improving RAG methods",
+      "Deployment with Streamlit and AWS EC2"
+    ],
+    "reviews": [],
+    "course_id": null
+  }
+]

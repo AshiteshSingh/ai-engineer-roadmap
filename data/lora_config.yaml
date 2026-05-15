@@ -1,0 +1,27 @@
+adapter_path: /Users/vadimnicolai/Public/ai-apps/apps/knowledge/data/adapters
+batch_size: 2
+data: /Users/vadimnicolai/Public/ai-apps/apps/knowledge/data
+fine_tune_type: lora
+grad_accumulation_steps: 8
+grad_checkpoint: true
+iters: 81
+learning_rate: 2.0e-05
+lora_parameters:
+  dropout: 0.05
+  rank: 16
+  scale: 2.0
+lr_schedule:
+  arguments:
+  - 2.0e-05
+  - 81
+  - 0.0
+  name: cosine_decay
+  warmup: 50
+mask_prompt: true
+max_seq_length: 4096
+model: mlx-community/Qwen2.5-3B-Instruct-4bit
+num_layers: -1
+save_every: 100
+steps_per_eval: 50
+steps_per_report: 10
+train: true

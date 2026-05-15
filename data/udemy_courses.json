@@ -1,0 +1,342 @@
+[
+  {
+    "url": "https://www.udemy.com/course/langgraph/",
+    "title": "LangGraph- Develop LLM powered AI agents with LangGraph",
+    "headline": "Learn LangGraph by building FAST a real world LLM AI Agents (Python)",
+    "instructor": {
+      "name": "Eden Marco",
+      "title": "GenAI Architect @ Google Cloud, LangChain Ambassador",
+      "bio": "Eden Marco is a GenAI Architect at Google Cloud, helping organizations design and deploy advanced generative AI and cloud-native solutions. He is a LangChain Ambassador actively contributing to the open-source community.",
+      "total_students_all_courses": "100K+",
+      "total_reviews_all_courses": "25K+"
+    },
+    "rating": 4.54,
+    "num_reviews": 3336,
+    "num_students": 25140,
+    "num_lectures": 80,
+    "total_hours": 7.7,
+    "total_hours_note": "~7h 41m (API reported 27602 seconds of video content)",
+    "price": "RON 71.99 (~$16 USD, varies by region)",
+    "level": "Advanced",
+    "last_updated": "2026-03-02",
+    "language": "English",
+    "category": "IT & Software > Other IT & Software",
+    "description": "This comprehensive course teaches developers how to leverage the LangGraph library for building sophisticated LLM-powered agentic applications. The instructor positions LangGraph as superior to standard LangChain for complex agent flows, emphasizing 'flow engineering' as a strategic approach to AI system development. This is NOT a beginner course.",
+    "what_you_will_learn": [
+      "Gain proficiency with LangGraph for building LLM agentic applications",
+      "Implement advanced agent patterns (Multi-agent, Reflection, Reflexion)",
+      "Build end-to-end working generative AI agents",
+      "Navigate the LangGraph open-source codebase",
+      "Master the LangGraph ecosystem (Studio/IDE, Cloud API, Cloud Managed Service)",
+      "Advanced RAG architectures: Corrective RAG (CRAG), Adaptive RAG, Self-RAG",
+      "Parallel execution with fan-out/fan-in patterns",
+      "Human-in-the-loop workflows",
+      "Persistence and checkpointing",
+      "CrewAI vs LangGraph comparison"
+    ],
+    "prerequisites": [
+      "Strong Python proficiency (environment variables, package management, OOP, Git)",
+      "Solid LangChain expertise",
+      "Software engineering background",
+      "PyCharm IDE familiarity (debugging, script execution)",
+      "Understanding of LLM fundamentals"
+    ],
+    "curriculum_sections": [
+      "Introduction & Fundamentals (LangGraph overview, graph theory, state machines, flow engineering)",
+      "Core Components (Nodes, edges, conditional edges, state management, node functions)",
+      "Advanced Agent Patterns (Multi-agent systems, Reflection agents, Reflexion agents)",
+      "RAG Architectures (Corrective RAG, Adaptive RAG, Self-RAG, Advanced RAG)",
+      "Production Deployment (LangGraph Studio/IDE, Docker, LangGraph Cloud API, persistent state)",
+      "Advanced Features (Parallel execution, Human-in-the-loop, Persistence, CrewAI vs LangGraph)"
+    ],
+    "reviews": [
+      {
+        "quote": "Incredibly well-structured and comprehensive dive into LangGraph",
+        "sentiment": "positive"
+      },
+      {
+        "quote": "Beautiful course. Like the training and I've just completed the LangChain am much better for it",
+        "sentiment": "positive"
+      },
+      {
+        "quote": "Covers wide array of advanced agent patterns and RAG architectures",
+        "sentiment": "positive"
+      },
+      {
+        "quote": "Eden has been doing a commendable job at trying to keep up, frequently modifying/updating the course content",
+        "sentiment": "positive"
+      },
+      {
+        "quote": "Struggled with this course without advanced LangChain knowledge - extremely rapid pace assumes very high existing expertise",
+        "sentiment": "mixed"
+      }
+    ],
+    "badges": [],
+    "course_id": 5938898
+  },
+  {
+    "url": "https://www.udemy.com/course/langchain/",
+    "title": "LangChain- Agentic AI Engineering with LangChain & LangGraph",
+    "headline": "Build AI Agents with LangChain and LangGraph RAG, Tools, MCP and Production-Ready Agentic AI Systems (Python)",
+    "instructor": {
+      "name": "Eden Marco",
+      "title": "GenAI Architect @ Google Cloud, LangChain Ambassador",
+      "bio": "Eden Marco is a GenAI Architect at Google Cloud, helping organizations design and deploy advanced generative AI and cloud-native solutions. He is a LangChain Ambassador actively contributing to the open-source community.",
+      "total_students_all_courses": "100K+",
+      "total_reviews_all_courses": "25K+"
+    },
+    "rating": 4.56,
+    "num_reviews": 48018,
+    "num_students": 166321,
+    "num_lectures": 195,
+    "total_hours": 18.2,
+    "total_hours_note": "~18h 12m (API reported 65422 seconds of video content)",
+    "price": "RON 84.99 (~$19 USD, varies by region)",
+    "level": "Intermediate to Advanced",
+    "last_updated": "2026-03-29",
+    "language": "English",
+    "category": "IT & Software",
+    "description": "Re-recorded in 2026 supporting LangChain Version 1.2+. The course teaches how to design and build AI agents and agentic AI systems using LangChain and LangGraph, covering production-ready AI agents, RAG systems, and advanced LLM applications. This is NOT a beginner course.",
+    "what_you_will_learn": [
+      "Design and build AI agents and agentic AI systems using LangChain and LangGraph",
+      "Production-ready AI agents, RAG systems, and advanced LLM applications",
+      "Prompt Engineering Theory: Chain of Thought, ReAct, Few Shot prompting",
+      "Understand how LangChain is built under the hood",
+      "Output Parsers, Chains (SequentialChain, LLMChain, RetrievalQA chain)",
+      "Agents and Custom Agents, Tools and Toolkits",
+      "Memory management and Vectorstores (Pinecone, FAISS)",
+      "DocumentLoaders and TextSplitters",
+      "MCP - Model Context Protocol with LangChain",
+      "Build a Documentation Helper chatbot (RAG over Python package docs)"
+    ],
+    "prerequisites": [
+      "Basic software engineering concepts",
+      "Familiar with git, Python, pipenv, environment variables, classes, testing and debugging",
+      "No Machine Learning experience needed",
+      "Familiarity with APIs"
+    ],
+    "curriculum_sections": [
+      "Introduction & Setup",
+      "Prompt Engineering Theory (Chain of Thought, ReAct, Few Shot)",
+      "LangChain Core (Output Parsers, Chains, Tools, Memory, Vectorstores)",
+      "Troubleshooting Section",
+      "[Optional] Ice Breaker Real World Generative AI Agent Application",
+      "Let's Talk About LLM Applications In Production",
+      "Introduction To LangGraph",
+      "Reflection Agent",
+      "Reflexion Agent",
+      "Agentic RAG",
+      "Intro to MCP - Model Context Protocol with LangChain",
+      "Useful Tools When Developing LLM Applications",
+      "LangChain Glossary",
+      "Bonus"
+    ],
+    "reviews": [
+      {
+        "quote": "Hands-down the most practical and up-to-date LangChain course after trying 4 different ones",
+        "rating": 4.7,
+        "sentiment": "positive"
+      },
+      {
+        "quote": "Eden Marco clearly uses LangChain in production, and it shows in how he structures the course. He doesn't just show you HOW to use LangChain — he explains WHEN and WHY to use each component",
+        "sentiment": "positive"
+      },
+      {
+        "quote": "Covers LangChain 0.3.0+ (the latest version — many courses are stuck on 0.1.x)",
+        "sentiment": "positive"
+      },
+      {
+        "quote": "The prompt engineering coverage was worth the price alone",
+        "sentiment": "positive"
+      },
+      {
+        "quote": "Great course that takes you from zero to hero in building AI agents with LangChain and LangGraph",
+        "sentiment": "positive"
+      }
+    ],
+    "badges": [],
+    "course_id": 5281528
+  },
+  {
+    "url": "https://www.udemy.com/course/the-complete-langchain-langgraph-langsmith-course/",
+    "title": "The Complete LangChain, LangGraph, & LangSmith Course (2026)",
+    "headline": "Modularize with LangChain, Build Agents with LangGraph, and Monitor with LangSmith",
+    "instructor": {
+      "name": "Fikayo Adepoju",
+      "title": "Serial Author with 10+ years building distributed apps",
+      "bio": "Fikayo Adepoju is a Full-stack developer, technical writer and tech content creator proficient in Web and Mobile technologies and DevOps with over 10 years experience developing scalable distributed applications. He has written over 40 articles for Twilio, CircleCI, Auth0 and The New Stack blogs.",
+      "other_courses": "The Complete HTMX Course (4.2 rating, 167 reviews)"
+    },
+    "rating": 4.67,
+    "num_reviews": 44,
+    "num_students": 373,
+    "num_lectures": 91,
+    "total_hours": 29.5,
+    "total_hours_note": "~29h 30m (API reported 106266 seconds of video content). Note: external sources cite 80 lectures / 25h 46m which may reflect an earlier version.",
+    "price": "RON 59.99 (~$13 USD, varies by region)",
+    "level": "Beginner",
+    "last_updated": "2026-02-28",
+    "language": "English",
+    "category": "IT & Software",
+    "description": "The most complete, up-to-date guide on the modern AI stack: LangChain, LangGraph, and LangSmith. Designed to take you from a beginner to a professional AI Engineer by mastering the three pillars of the LangChain ecosystem. Published January 2026.",
+    "what_you_will_learn": [
+      "Master LCEL Orchestration: Build highly efficient, composable AI pipelines using the LangChain Expression Language and Runnable interfaces",
+      "Develop Autonomous Agents: Use create_agent to build intelligent assistants that can reason and interact with external tools",
+      "Architect Stateful Graphs: Design non-linear AI workflows using LangGraph to handle complex branching and looping logic",
+      "Implement Robust Persistence: Use Checkpointers to save graph state, enabling agents to resume tasks and maintain memory",
+      "Enable Production Monitoring: Set up LangSmith to trace every step of your application's execution for rapid debugging and optimization",
+      "Evaluate AI Performance: Use LangSmith datasets and evaluation functions to measure and improve AI system quality"
+    ],
+    "prerequisites": [
+      "Basic Python Knowledge (familiarity with Python syntax, functions, and list comprehensions)",
+      "Understanding of API basics and API key usage",
+      "Problem-solving mindset (prior AI experience not required)"
+    ],
+    "curriculum_sections": [
+      "LangChain Fundamentals (LCEL, Runnable Chains, efficient async pipelines)",
+      "LangGraph (Agentic workflows, cyclic state machines, branching and looping logic)",
+      "Persistence (Checkpointers for saving graph state, resuming tasks)",
+      "LangSmith (Production monitoring, tracing, debugging complex reasoning paths)",
+      "Evaluation (LangSmith datasets and evaluation suites for AI performance)"
+    ],
+    "reviews": [
+      {
+        "quote": "Highest rated LangGraph course on Udemy for 3 months in a row",
+        "source": "Udemy instructor profile",
+        "sentiment": "positive"
+      },
+      {
+        "quote": "Explanations were super clear and easy to follow (referencing instructor's teaching style)",
+        "source": "Student review of instructor's other course",
+        "sentiment": "positive"
+      }
+    ],
+    "badges": ["Highest Rated (self-reported)"],
+    "course_id": 6993815
+  },
+  {
+    "url": "https://www.udemy.com/course/langgraph-for-beginners/",
+    "title": "LangGraph for beginners : Agentic Workflows in simple steps",
+    "headline": "Learn to Build Intelligent Agents, One Step at a Time",
+    "instructor": {
+      "name": "Bharath Thippireddy",
+      "title": "IT Architect and Best Selling Instructor",
+      "bio": "Bharath Thippireddy is an Entrepreneur, Software Architect, Actor and Public Speaker who has trained 850,000+ students across the planet. He is an Oracle Certified Developer, Web Component Developer, Business Component Developer, and Web Services Developer.",
+      "total_students_all_courses": "850,000+"
+    },
+    "rating": 4.49,
+    "num_reviews": 318,
+    "num_students": 2599,
+    "num_lectures": 67,
+    "total_hours": 3.1,
+    "total_hours_note": "~3h (API reported 11317 seconds of video content)",
+    "price": "RON 66.99 (~$15 USD, varies by region)",
+    "level": "Beginner",
+    "last_updated": "2026-03-24",
+    "language": "English",
+    "category": "IT & Software",
+    "description": "A beginner-friendly course that teaches LangGraph, an open-source library built on top of LangChain, designed for orchestrating multi-agent applications using a graph-based architecture. Originally published April 2025.",
+    "what_you_will_learn": [
+      "What LangGraph is and how it fits into the GenAI ecosystem",
+      "Build your first LangGraph workflow using a state machine",
+      "Validate and structure state using Pydantic models",
+      "Use async and streaming to build responsive applications",
+      "Implement conditional routing based on LLM output",
+      "Understand reducers and how they manage state transitions",
+      "Master tool calling with LangGraph's built-in ToolNode",
+      "Checkpointers: short-term (in-memory) and long-term (SQLite, Redis) memory storage",
+      "Build Agentic RAG workflows using tools and retrievers",
+      "Implement Human-in-the-Loop workflows using Interrupt and resume",
+      "Modularize complex graphs using subgraphs",
+      "Real-world business use cases: claim processing, customer support, document analysis"
+    ],
+    "prerequisites": [
+      "Basic Python programming knowledge",
+      "No advanced AI/ML experience required"
+    ],
+    "curriculum_sections": [
+      "Introduction to LangGraph",
+      "First LangGraph Workflow / State Machines",
+      "Pydantic State Validation",
+      "Async and Streaming",
+      "Conditional Routing",
+      "Reducers and State Transitions",
+      "Tool Calling with ToolNode",
+      "Checkpointers (In-memory, SQLite, Redis)",
+      "Agentic RAG Workflows",
+      "Human-in-the-Loop (Interrupt and Resume)",
+      "Subgraphs",
+      "Real-World Business Use Cases (Claim Processing, Customer Support, Document Analysis)"
+    ],
+    "reviews": [],
+    "badges": [],
+    "course_id": null
+  },
+  {
+    "url": "https://www.udemy.com/course/langgraph-with-ollama/",
+    "title": "Master LangGraph v1 and Ollama - Build Gen AI Agents",
+    "headline": "Gen AI, LangChain v1, MCP, MySQL, DeepSeek, GPT-OSS, Qwen3, LLAMA, LangGraph, Ollama, KGPTalkie",
+    "instructor": {
+      "name": "Laxmi Kant (KGP Talkie)",
+      "title": "Senior Data Science & AI Engineer, IIT Kharagpur Graduate",
+      "bio": "Laxmi Kant Tiwari is an IIT Kharagpur graduate and a Senior Data Science & AI Engineer with 10+ years of industry experience across startups and MNCs. Through KGP Talkie, his global teaching platform, Laxmi has trained 100,000+ students worldwide in Python, Machine Learning, Deep Learning, and cutting-edge Generative AI technologies. Many of his courses have become Best Sellers on Udemy.",
+      "total_students_all_courses": "100,000+"
+    },
+    "rating": 4.35,
+    "num_reviews": 474,
+    "num_students": 4711,
+    "num_lectures": 131,
+    "total_hours": 13.7,
+    "total_hours_note": "~13h 42m (API reported 49383 seconds of video content). Note: TutorialsPoint lists 76 lectures / 8 hours for an earlier version; current version was re-designed and re-recorded for 2026.",
+    "price": "RON 66.99 (~$15 USD, varies by region)",
+    "level": "Beginner",
+    "last_updated": "2026-03-28",
+    "language": "English",
+    "category": "IT & Software",
+    "description": "A complete and beginner-friendly course re-designed, re-recorded, and rebuilt from the ground up to support LangChain v1+, LangGraph v1+, latest frameworks, and modern agentic workflows. Build real AI agents using LangGraph, LangChain, Ollama, and open source LLMs like GPT-OSS, Qwen3 and Gemma3.",
+    "what_you_will_learn": [
+      "Install and integrate Ollama with LangChain v1",
+      "Run models like Qwen3, Gemma3, GPT-OSS, DeepSeek-R1, and build custom GGUF models",
+      "LangGraph v1 from scratch: states, nodes, reducers, nested nodes, conditional routing, full graph execution",
+      "Build complete AI agents with ReAct, tool calling, memory saver, streaming",
+      "Long-term memory, short-term memory, and agent state management",
+      "Design and deploy sentiment analyzers, tweet handlers, weather tools, calculator tools",
+      "Multi-step agent workflows",
+      "Implement agentic memory systems with SQLite + PostgreSQL persistence",
+      "Semantic memory search and retrieval pipelines",
+      "Create guardrails, interrupts, and human-in-the-loop approvals",
+      "Build advanced agents: Reflection Agent, Critique Agent, Research Agent, Model-Selection Agent",
+      "MCP (Model Context Protocol) integration",
+      "MySQL database integration for intelligent query execution",
+      "Agentic RAG for private datasets"
+    ],
+    "prerequisites": [
+      "Basic Python programming knowledge",
+      "Understanding of APIs",
+      "Foundational AI/ML concepts (optional)",
+      "SQL and relational database experience (optional)",
+      "Command line proficiency",
+      "Prior LangChain/LangGraph exposure (optional)"
+    ],
+    "curriculum_sections": [
+      "Introduction",
+      "Ollama Setup for Local LLM (model installation, benchmarking, uncensored models)",
+      "Getting Started with LangChain (API integration, LangSmith setup)",
+      "LangGraph Getting Started (foundational concepts)",
+      "Type Hinting and Data Validation (Pydantic)",
+      "Graph Definitions in LangGraph",
+      "Chatbot with LangGraph and Ollama",
+      "Agentic Text to MySQL Query Execution",
+      "Agentic RAG for Private Dataset",
+      "AI Agents with ReAct and Tool Calling",
+      "Memory Systems (SQLite, PostgreSQL, semantic search)",
+      "Advanced Agents (Reflection, Critique, Research, Model-Selection)",
+      "Guardrails and Human-in-the-Loop",
+      "MCP Integration",
+      "Resources"
+    ],
+    "reviews": [],
+    "badges": [],
+    "course_id": 6301565
+  }
+]

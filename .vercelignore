@@ -1,0 +1,12 @@
+.next
+.vercel
+backend/
+crates/
+data/*.mp3
+data/*.wav
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.chapters/
+data/*.jsonl
+data/lora_config.yaml

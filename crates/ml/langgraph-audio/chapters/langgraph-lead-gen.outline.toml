@@ -1,0 +1,359 @@
+# Outline for the 2-hour `/langgraph/lead-gen` audio guide.
+#
+# Each chapter is one DeepSeek v4 call (~1100 words by default). Source
+# references slice files in `apps/lead-gen/backend/` and prepend each block
+# with `# <path>:<start>-<end>` so the model can quote identifier names, line
+# numbers, and file paths verbatim. Path is resolved relative to the
+# workspace root (where `.env` lives). Line ranges are inclusive, 1-indexed,
+# and clamped to file length.
+
+slug = "langgraph-lead-gen"
+title = "LangGraph in Production: Lead-Gen Deep Dive"
+default_target_words = 1100
+
+[[chapters]]
+title = "Mental Model"
+target_words = 1300
+brief = """
+Open the guide by framing what makes lead-gen unusual: a single FastAPI surface in
+front of more than sixty specialized LangGraph state graphs, one shared Neon-hosted
+Async Postgres Saver checkpoint store, and one Langfuse tracing pipeline. Contrast
+the canonical three-node tutorial graph with the reality of dozens of composing
+graphs that fan out, fan in, and call each other across container boundaries.
+Introduce the four layers — atomic, pipeline, supervisor, remote — by name.
+Establish that the rest of the guide is a tour of the wiring, not LangGraph 101.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/core/app.py", lines = "1-48" },
+  { path = "apps/knowledge/content/langgraph-lead-gen.md", lines = "1-40" },
+]
+
+[[chapters]]
+title = "Three-Container Split"
+target_words = 1100
+brief = """
+Explain the deployment topology. The three containers are core, ml, and research.
+Core holds the FastAPI harness, the registry, and every graph that needs
+in-process Postgres checkpointing. The ml container runs JobBERT named-entity
+recognition and BGE M3 embeddings. The research container runs scholar fetchers,
+Common Crawl scrapers, and Playwright crawlers. Core reaches the other two
+through LangGraph's RemoteGraph adapter; nothing in ml or research can write
+to a checkpoint directly. Mention why the split exists — independent scaling,
+isolating heavy native deps off the core hot path, separate cold-start budgets.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/core/remote_graphs.py", lines = "1-60" },
+  { path = "apps/lead-gen/backend/README.md", lines = "1-90" },
+]
+
+[[chapters]]
+title = "The Graph Registry"
+target_words = 1200
+brief = """
+Walk through how all sixty-plus graphs are registered. Quote the `GraphSpec`
+dataclass: assistant_id, module path, compiled_attr, builder_attr, and the
+crucial resumable flag. Explain why most graphs set resumable to false —
+random Universally Unique Identifier threads, no garbage accumulating in the
+Neon checkpoints table — and why the research loop graph alone keeps a stable
+thread id so a cron job can resume it. Then explain how the single
+/runs/wait FastAPI endpoint dispatches by looking up the assistant_id in the
+registry and calling the compiled graph's ainvoke. End by noting that
+langgraph.json is generated from the registry, so the local `langgraph dev`
+server and the production harness see the exact same dispatch table.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/registry.py", lines = "1-90" },
+  { path = "apps/lead-gen/backend/core/app.py", lines = "1-50" },
+]
+
+[[chapters]]
+title = "State and Reducers"
+target_words = 1300
+brief = """
+Reducers are the most under-appreciated part of running a real LangGraph fleet,
+so spend time here. Read the `_merge_dict` reducer line by line and explain why
+LangGraph raises `INVALID_CONCURRENT_GRAPH_UPDATE` without it when two fan-out
+nodes both write to the same key. Then read `_merge_graph_meta` — the smarter
+reducer that does a shallow merge on top-level keys plus a key-wise merge on
+the nested telemetry dict so per-node telemetry from parallel Send workers
+never overwrites each other. Show the `Annotated[dict, _merge_dict]` syntax
+on a state field so the listener understands how reducers attach. Mention that
+this same shape recurs across every parallel fan-out graph in the fleet.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/state.py", lines = "1-60" },
+]
+
+[[chapters]]
+title = "Send-Based Fan-Out"
+target_words = 1400
+brief = """
+Walk through the canonical queue → Send → worker → collector pattern using
+the pipeline graph. Read the topology comment at the top of `pipeline_graph.py`
+aloud as a roadmap. Then explain how the `enrich_queue` node emits a list of
+Send items keyed by company identifier, how LangGraph schedules every
+`enrich_one` invocation concurrently, and how `enrich_collect` is a fixed
+collector node that the reducer fan-in lands at. Stress that the merge
+reducer on the `_enrich_results` field is what makes this safe — workers
+write disjoint keys, the reducer composes them, no locking. Mention the
+contacts_queue → contact_one → contact_collect mirror of the same pattern.
+Close by noting that the same shape powers `deep_competitor` and the
+`product_intel` supervisor's parallel pricing-and-gtm leg.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/pipeline_graph.py", lines = "1-60" },
+  { path = "apps/lead-gen/backend/leadgen_agent/state.py", lines = "1-60" },
+]
+
+[[chapters]]
+title = "Telemetry That Merges"
+target_words = 1200
+brief = """
+Every large language model call in lead-gen goes through
+`ainvoke_json_with_telemetry`, which returns a tuple of the parsed JavaScript
+Object Notation plus a telemetry dictionary. Read the function signature aloud
+and walk through what's in the telemetry dict — model name, input tokens,
+output tokens, total tokens, cost in United States dollars, latency in
+milliseconds. Then explain how nodes accumulate per-node telemetry under
+`state.graph_meta.telemetry.<node_name>` and how the `_merge_graph_meta`
+reducer (which the listener already met two chapters ago) folds parallel
+Send-worker telemetry without conflict. Mention the terminal `compute_totals`
+that rolls per-node numbers into total tokens and total cost. The listener
+should leave understanding that observability is wired through reducers, not
+through a side channel.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/llm.py", lines = "620-700" },
+  { path = "apps/lead-gen/backend/leadgen_agent/state.py", lines = "20-60" },
+]
+
+[[chapters]]
+title = "Supervisor Composition"
+target_words = 1200
+brief = """
+Introduce the `product_intel` supervisor as the canonical sequential
+composition: deep_icp first, then pricing and gtm in parallel, then
+deep_competitor, then a synthesizer that produces the final report. Each
+subgraph is a fully compiled state graph with its own checkpointer. The
+supervisor calls each through ainvoke and folds the subgraph's
+`graph_meta.telemetry` into the supervisor's telemetry under a namespaced
+key so the parent's `compute_totals` picks up every token and dollar from
+every leg. Read the `_fold_subgraph_telemetry` helper aloud so the listener
+sees how the namespace nesting works.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/product_intel_graph.py", lines = "1-150" },
+]
+
+[[chapters]]
+title = "Partial Failure Recovery"
+target_words = 1100
+brief = """
+Sequential composition matters less than the failure model that wraps it.
+Explain how the supervisor catches per-subgraph exceptions individually and
+records them in a `subgraph_errors` dictionary instead of letting one bad
+leg take down the report. Walk through `_merge_subgraph_errors` — disjoint
+keys so last-write-wins is safe — and explain why this lets pricing and gtm
+race without coordinating. Then describe the conditional edge at the
+synthesize node that routes to notify_complete versus notify_error based on
+whether `subgraph_errors` is non-empty. End with a line the listener can
+take home: production-grade orchestration is mostly partial-failure design.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/product_intel_graph.py", lines = "90-200" },
+]
+
+[[chapters]]
+title = "Remote Graph Adapters"
+target_words = 1300
+brief = """
+Walk through how core reaches ml and research. Quote the docstring at the
+top of `core/remote_graphs.py` that lists the eight cross-container
+boundaries. Explain that every adapter validates its input dictionary
+against a Pydantic Input contract before the Hypertext Transfer Protocol
+round-trip and validates the returned dictionary against an Output contract
+after the round-trip. Mention `ContractsVersionMismatch` as the exception
+thrown when the remote side responds with a schema_version the caller does
+not recognize. Stress that the adapter layer is the only place where cross
+container types are checked — once the contract clears, the rest of the
+graph can treat the remote call as just another node return.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/core/remote_graphs.py", lines = "1-100" },
+]
+
+[[chapters]]
+title = "Circuit Breakers and Timeouts"
+target_words = 1100
+brief = """
+Read the `DEFAULT_TIMEOUT` tuple aloud — connect, read, write, pool, in
+seconds — and explain the twenty-eight second read window: it gives the
+Cloudflare Worker wall clock a two-second margin before the upstream emits
+a five twenty-four, so the client raises a controlled `httpx.ReadTimeout`
+instead of getting a generic gateway error. Then walk through the per-host
+circuit breaker that opens after three consecutive failures and holds for
+sixty seconds. Mention that callers get a typed `RemoteUnavailable`
+exception instead of waiting on a dead socket. Close with the retry budget
+and the difference between idempotent and non-idempotent operations.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/core/remote_graphs.py", lines = "50-180" },
+]
+
+[[chapters]]
+title = "Human in the Loop"
+target_words = 1100
+brief = """
+Two graphs are gated by a human: `pipeline_graph` and `email_outreach`. Walk
+through `outreach_queue` in `pipeline_graph.py`: it builds a list of
+candidates, then calls LangGraph's `interrupt` function with a payload
+describing the stage and the queue. LangGraph checkpoints the thread to
+Neon and waits. The frontend polls thread status, surfaces the queue to a
+human, and POSTs a `Command(resume=<approval>)` payload to release it.
+Explain `auto_confirm` as a feature flag, not a separate graph — synthetic
+load tests and background dispatch paths short-circuit the gate but the
+production graph is identical. End with the contract rule: interrupts are
+forbidden in RemoteGraph-reachable graphs, allowed only in core.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/pipeline_graph.py", lines = "760-830" },
+]
+
+[[chapters]]
+title = "Connection Pool Engineering"
+target_words = 1100
+brief = """
+Lead-gen runs Async Postgres Saver against Neon, which fronts Postgres with
+PgBouncer at a roughly five-minute idle timeout. A naive pool drops
+connections after that timeout and the next graph call dies with an
+operational error. Read the pool construction aloud — minimum size one,
+maximum size eight, maximum idle one hundred eighty seconds to stay below
+Neon's cutoff, a check function that issues a lightweight select one
+before every checkout — and explain why each knob is set where it is. Then
+note that the whole fleet of sixty plus graphs shares this one pool. It is
+invisible until something flaps; then it is the only thing that matters.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/core/app.py", lines = "200-240" },
+]
+
+[[chapters]]
+title = "Lifespan and Shutdown"
+target_words = 1100
+brief = """
+The FastAPI `lifespan` context manager owns the entire harness lifecycle.
+On startup it opens the connection pool, calls the checkpointer's
+idempotent setup, compiles every graph, and stashes adapter handles on
+`app.state`. On shutdown it drains in-flight background tasks with a
+twenty-second deadline so any AsyncPostgresSaver writes commit before the
+checkpointer context exits, then closes the cached RemoteGraph clients
+through `aclose_all_adapters`. Stress that on Cloudflare Containers the
+SIGTERM signal becomes a lifespan-shutdown — without the explicit drain
+you would cancel pending graph runs mid-commit and silently lose work.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/core/app.py", lines = "120-160" },
+  { path = "apps/lead-gen/backend/core/app.py", lines = "260-330" },
+]
+
+[[chapters]]
+title = "Cost Accounting"
+target_words = 1100
+brief = """
+The cost dictionary `MODEL_PRICING` is the single source of truth for
+dollar accounting. Walk through what's in it — DeepSeek chat at twenty
+seven cents per million input tokens and one dollar ten per million output,
+DeepSeek reasoner at fifty five cents in and two dollars nineteen out,
+Claude Sonnet 4.6 with the additional cache-write and cache-read tiers.
+Explain how `ainvoke_json_with_telemetry` multiplies token counts by these
+rates to produce the cost-in-dollars field of the per-node telemetry
+dictionary. Then walk through a representative pipeline run — roughly two
+thousand input tokens and eight hundred output tokens per company at
+DeepSeek V4 Flash, well under one United States cent. Contrast with the
+heavier graphs like `deep_competitor` and `email_compose` that run on
+DeepSeek V4 Pro with thinking mode enabled, at ten to twenty cents per
+run depending on how much the model deliberates.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/llm.py", lines = "380-430" },
+  { path = "apps/lead-gen/backend/leadgen_agent/llm.py", lines = "620-700" },
+]
+
+[[chapters]]
+title = "Concurrency Knobs"
+target_words = 1000
+brief = """
+LangGraph itself does not cap the number of Sends, so unbounded fan-out is
+the default. Lead-gen gates the upstream Hypertext Transfer Protocol layer
+instead, with asyncio Semaphores tuned by environment variables. Read the
+`_POSITIONING_CONCURRENCY` and `_LEAD_GEN_CONCURRENCY` constants and the
+semaphores built from them. Explain why the strong-reference set on
+in-flight tasks exists — without it a garbage collection pass mid-dispatch
+can cancel a fire-and-forget run, a known C Python behavior. Note the
+`LANGFUSE_ENABLED` soft kill switch — even with valid keys the helper
+returns a null callback when false, so Continuous Integration and sandbox
+runs stay hermetic. End with the remote graph timeout knobs.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/core/app.py", lines = "895-930" },
+]
+
+[[chapters]]
+title = "Langfuse Integration"
+target_words = 1000
+brief = """
+Lead-gen plugs Langfuse in at two layers. The per-large-language-model-call
+layer is the telemetry helper from earlier chapters — the runnable
+configuration carries a Langfuse callback that attaches to every chat
+invocation, so traces appear in the Langfuse Application Programming
+Interface without per-graph code changes. The graph-level layer is the
+optional Langfuse callback passed into the graph ainvoke at the FastAPI
+entry point, which elevates Langfuse from tracing only the language model
+calls to tracing the entire data flow — state transitions, tool calls,
+fan-in and fan-out included. Explain that `get_langfuse_callback` is a
+singleton, returns None when the public key is unset, and is cheap to call
+on every node. Listeners should leave understanding both layers.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/llm.py", lines = "620-700" },
+]
+
+[[chapters]]
+title = "Observability and Tracing"
+target_words = 1000
+brief = """
+Logs and traces only correlate if every container speaks the same
+request-id contract. Walk through `observability.py` and the
+`x-request-id` middleware factory: every core entrypoint mints a new
+request id if none is present, propagates it on every outbound call to ml
+and research, and emits it on every log line. The single source of truth
+is one helper function imported by every HTTP binary in the three
+containers. Listeners should leave with the conviction that this layer is
+boring, deterministic, and worth doing on day one — chasing a missing
+trace across three containers without it is the kind of thing that turns
+a one-hour incident into a one-day incident.
+"""
+sources = [
+  { path = "apps/lead-gen/backend/leadgen_agent/observability.py", lines = "1-90" },
+]
+
+[[chapters]]
+title = "When This Pays Off"
+target_words = 1000
+brief = """
+Close the guide with applicability criteria, grounded in everything the
+listener just heard. The lead-gen design pays for itself under four
+conditions: you have many small graphs that share one persistence layer and
+one telemetry plane, your workloads fan out across companies or contacts
+and merge through reducer dictionaries, some steps live in another
+container behind a circuit breaker, and a human approves a subset of the
+work before money or messages move. Then list the anti-patterns: a single
+linear graph that runs in under a minute, or a workload that does not
+need shared state across runs, or a one-developer prototype that has not
+hit production yet. The right closing line is the lead-gen playbook
+applies when your agent fleet has to keep running while one of its arms
+is on fire.
+"""
+sources = [
+  { path = "apps/knowledge/content/langgraph-lead-gen.md", lines = "150-214" },
+]
