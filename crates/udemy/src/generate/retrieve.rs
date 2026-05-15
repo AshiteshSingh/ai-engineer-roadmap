@@ -99,6 +99,49 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn ground_with_vec_retrieves_courses_and_chapters() {
+        use crate::store::CourseStore;
+        use crate::types::Chapter;
+
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = CourseStore::connect(dir.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let courses = vec![course("a"), course("b")];
+        let cvecs = vec![vec![1.0, 0.0, 0.0, 0.0], vec![0.0, 1.0, 0.0, 0.0]];
+        store.add(&courses, &cvecs).await.unwrap();
+
+        let chapters = vec![
+            Chapter {
+                course_id: "a".into(),
+                course_title: "Course a".into(),
+                chapter_index: 0,
+                title: "Evaluation".into(),
+            },
+            Chapter {
+                course_id: "b".into(),
+                course_title: "Course b".into(),
+                chapter_index: 0,
+                title: "Vectors".into(),
+            },
+        ];
+        let chvecs = vec![vec![1.0, 0.0, 0.0, 0.0], vec![0.0, 1.0, 0.0, 0.0]];
+        store.add_chapters(&chapters, &chvecs).await.unwrap();
+
+        let g = ground_with_vec(&store, vec![0.95, 0.05, 0.0, 0.0], 2, 2)
+            .await
+            .unwrap();
+        assert_eq!(g.courses.len(), 2);
+        assert_eq!(g.courses[0].course.course_id, "a", "nearest course first");
+        assert!(g.chapters.iter().any(|c| c.chapter.title == "Evaluation"));
+        let block = format_grounding(&g);
+        assert!(block.starts_with("[UDEMY KNOWLEDGE GROUND TRUTH"));
+        assert!(block.contains("Course a"));
+        assert!(block.contains("§1 Evaluation"));
+    }
+
     #[test]
     fn empty_grounding_fallback() {
         let g = Grounding { courses: vec![], chapters: vec![] };
