@@ -15,3 +15,14 @@ data/*.chapters/
 # Audio binaries served from R2 — too large for Vercel's 100 MB file limit
 data/*.mp3
 data/*.wav
+
+# Node / Next.js build output
+/node_modules/
+/.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Rust build artifacts — Cargo target dirs (crates/*/target) and the
+# generated dependency files cargo emits. Easy to regenerate; never commit.
+target/
+*.d

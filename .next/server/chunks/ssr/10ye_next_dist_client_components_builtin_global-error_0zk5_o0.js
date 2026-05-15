@@ -1,3 +1,0 @@
-module.exports=[950222,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(907756);a.n(d("[project]/node_modules/.pnpm/next@16.2.6_@opentelemetry+api@1.9.0_@playwright+test@1.58.2_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},996796,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(907756);a.n(d("[project]/node_modules/.pnpm/next@16.2.6_@opentelemetry+api@1.9.0_@playwright+test@1.58.2_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/client/components/builtin/global-error.js"))},658871,a=>{"use strict";a.i(950222);var b=a.i(996796);a.n(b)},269935,a=>{a.n(a.i(658871))}];
-
-//# sourceMappingURL=10ye_next_dist_client_components_builtin_global-error_0zk5_o0.js.map

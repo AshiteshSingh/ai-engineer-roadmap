@@ -229,7 +229,7 @@ async fn cmd_crawl(
 ) -> Result<()> {
     let start = Instant::now();
     let mut stats = CrawlStats::default();
-    let client = Arc::new(UdemyClient::new(&CrawlConfig::default()));
+    let client = Arc::new(UdemyClient::new(&CrawlConfig::default())?);
 
     // ── Phase 1: BFS topic crawl ────────────────────────────────────────────
     eprintln!("Phase 1: Crawling topic pages...\n");
@@ -717,7 +717,7 @@ async fn cmd_add(
         anyhow::bail!("provide at least one course URL");
     }
 
-    let crawler = UdemyClient::new(&CrawlConfig::default());
+    let crawler = UdemyClient::new(&CrawlConfig::default())?;
     let http = reqwest::Client::new();
     let mut courses: Vec<Course> = Vec::new();
     let mut ext_courses: Vec<ExternalCourseJson> = Vec::new();

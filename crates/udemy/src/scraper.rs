@@ -14,6 +14,7 @@
 //! is kept for ad-hoc HTML debugging.
 
 use std::path::Path;
+use std::sync::LazyLock;
 
 use anyhow::{Context, Result};
 use scraper::{Html, Selector};
@@ -21,6 +22,43 @@ use serde::Deserialize;
 use tracing::{info, warn};
 
 use crate::types::Course;
+
+// Selectors with constant query strings are compiled once. (`extract_meta`
+// builds its selector from dynamic args, so it stays per-call.)
+static JSONLD_SEL: LazyLock<Selector> =
+    LazyLock::new(|| Selector::parse("script[type=\"application/ld+json\"]").unwrap());
+static H1_SEL: LazyLock<Selector> = LazyLock::new(|| Selector::parse("h1").unwrap());
+static OBJECTIVE_SPAN_SEL: LazyLock<Selector> =
+    LazyLock::new(|| Selector::parse("[data-purpose=\"objective\"] span").unwrap());
+static INSTRUCTOR_SELS: LazyLock<Vec<Selector>> = LazyLock::new(|| {
+    [
+        "a[data-purpose=\"instructor-url\"]",
+        ".instructor-links a",
+        "[class*=\"instructor\"] a",
+    ]
+    .iter()
+    .map(|s| Selector::parse(s).unwrap())
+    .collect()
+});
+static CATEGORY_SELS: LazyLock<Vec<Selector>> = LazyLock::new(|| {
+    [
+        "nav[aria-label=\"Breadcrumb\"] a",
+        "[data-purpose=\"breadcrumb\"] a",
+    ]
+    .iter()
+    .map(|s| Selector::parse(s).unwrap())
+    .collect()
+});
+static TOPIC_SELS: LazyLock<Vec<Selector>> = LazyLock::new(|| {
+    [
+        "[data-purpose=\"course-objectives\"] li",
+        "[class*=\"what-you-will-learn\"] li",
+        ".what-you-will-learn--objective-item li",
+    ]
+    .iter()
+    .map(|s| Selector::parse(s).unwrap())
+    .collect()
+});
 
 /// Load courses from a JSON file (output of `scripts/scrape-udemy.ts`).
 pub fn load_courses_json(path: &Path) -> Result<Vec<Course>> {
@@ -165,8 +203,7 @@ fn slug_from_url(url: &str) -> String {
 
 /// Extract the first JSON-LD block that looks like a Course.
 fn extract_jsonld_course(doc: &Html) -> Option<JsonLdCourse> {
-    let sel = Selector::parse("script[type=\"application/ld+json\"]").ok()?;
-    for el in doc.select(&sel) {
+    for el in doc.select(&JSONLD_SEL) {
         let text = el.text().collect::<String>();
         // Single Course object
         if let Ok(course) = serde_json::from_str::<JsonLdCourse>(&text) {
@@ -207,8 +244,7 @@ fn extract_meta(doc: &Html, name: &str) -> Option<String> {
 }
 
 fn extract_h1(doc: &Html) -> Option<String> {
-    let sel = Selector::parse("h1").ok()?;
-    doc.select(&sel)
+    doc.select(&H1_SEL)
         .next()
         .map(|el| el.text().collect::<String>().trim().to_string())
         .filter(|s| !s.is_empty())
@@ -234,24 +270,26 @@ fn extract_instructor_jsonld(jsonld: &Option<JsonLdCourse>) -> Option<String> {
 }
 
 fn extract_instructor_html(doc: &Html, body: &str) -> Option<String> {
-    for selector_str in [
-        "a[data-purpose=\"instructor-url\"]",
-        ".instructor-links a",
-        "[class*=\"instructor\"] a",
-    ] {
-        if let Ok(sel) = Selector::parse(selector_str) {
-            if let Some(el) = doc.select(&sel).next() {
-                let text = el.text().collect::<String>().trim().to_string();
-                if !text.is_empty() {
-                    return Some(text);
-                }
+    for sel in INSTRUCTOR_SELS.iter() {
+        if let Some(el) = doc.select(sel).next() {
+            let text = el.text().collect::<String>().trim().to_string();
+            if !text.is_empty() {
+                return Some(text);
             }
         }
     }
-    // "Created by ..."
+    // "Created by ..." — cut at the first '<' or after 80 chars, whichever
+    // comes first. `char_indices` keeps the slice on a UTF-8 boundary so a
+    // multibyte instructor name with no following '<' can't panic.
     if let Some(idx) = body.find("Created by") {
-        let after = &body[idx + 10..];
-        let end = after.find('<').unwrap_or(80).min(80);
+        let after = &body[idx + "Created by".len()..];
+        let mut end = after.len();
+        for (count, (byte_idx, ch)) in after.char_indices().enumerate() {
+            if ch == '<' || count >= 80 {
+                end = byte_idx;
+                break;
+            }
+        }
         let name = after[..end].trim().to_string();
         if !name.is_empty() {
             return Some(name);
@@ -341,44 +379,23 @@ fn extract_category(doc: &Html) -> Option<String> {
     if let Some(cat) = extract_meta(doc, "udemy_com:category") {
         return Some(cat);
     }
-    for selector_str in [
-        "nav[aria-label=\"Breadcrumb\"] a",
-        "[data-purpose=\"breadcrumb\"] a",
-    ] {
-        if let Ok(sel) = Selector::parse(selector_str) {
-            let links: Vec<String> = doc
-                .select(&sel)
-                .map(|el| el.text().collect::<String>().trim().to_string())
-                .filter(|s| !s.is_empty() && s != "Udemy")
-                .collect();
-            if let Some(last) = links.last() {
-                return Some(last.clone());
-            }
+    for sel in CATEGORY_SELS.iter() {
+        let links: Vec<String> = doc
+            .select(sel)
+            .map(|el| el.text().collect::<String>().trim().to_string())
+            .filter(|s| !s.is_empty() && s != "Udemy")
+            .collect();
+        if let Some(last) = links.last() {
+            return Some(last.clone());
         }
     }
     None
 }
 
 fn extract_topics(doc: &Html) -> Vec<String> {
-    for selector_str in [
-        "[data-purpose=\"course-objectives\"] li",
-        "[class*=\"what-you-will-learn\"] li",
-        ".what-you-will-learn--objective-item li",
-    ] {
-        if let Ok(sel) = Selector::parse(selector_str) {
-            let items: Vec<String> = doc
-                .select(&sel)
-                .map(|el| el.text().collect::<String>().trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect();
-            if !items.is_empty() {
-                return items;
-            }
-        }
-    }
-    if let Ok(sel) = Selector::parse("[data-purpose=\"objective\"] span") {
+    for sel in TOPIC_SELS.iter() {
         let items: Vec<String> = doc
-            .select(&sel)
+            .select(sel)
             .map(|el| el.text().collect::<String>().trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
@@ -386,6 +403,123 @@ fn extract_topics(doc: &Html) -> Vec<String> {
             return items;
         }
     }
+    let items: Vec<String> = doc
+        .select(&OBJECTIVE_SPAN_SEL)
+        .map(|el| el.text().collect::<String>().trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    if !items.is_empty() {
+        return items;
+    }
     warn!("Could not extract 'What you'll learn' topics");
     Vec::new()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn slug_from_url_handles_trailing_slash() {
+        assert_eq!(slug_from_url("https://www.udemy.com/course/foo-bar/"), "foo-bar");
+        assert_eq!(slug_from_url("https://www.udemy.com/course/foo-bar"), "foo-bar");
+        assert_eq!(slug_from_url(""), "unknown");
+    }
+
+    #[test]
+    fn extract_level_variants() {
+        assert_eq!(extract_level("This is an All Levels course"), "All Levels");
+        assert_eq!(extract_level("Beginner Level intro"), "Beginner");
+        assert_eq!(extract_level("Intermediate Level"), "Intermediate");
+        assert_eq!(extract_level("Advanced Level deep dive"), "Advanced");
+        assert_eq!(extract_level("nothing here"), "All Levels");
+    }
+
+    #[test]
+    fn extract_duration_parses_and_bounds() {
+        assert_eq!(extract_duration("has 12.5 total hours of content"), 12.5);
+        assert_eq!(extract_duration("3 hours of video lessons"), 3.0);
+        assert_eq!(extract_duration("no duration listed"), 0.0);
+        assert_eq!(extract_duration("999 total hours"), 0.0);
+    }
+
+    #[test]
+    fn extract_num_students_parses_thousands() {
+        assert_eq!(extract_num_students("1,234 students enrolled"), 1234);
+        assert_eq!(extract_num_students("no count here"), 0);
+    }
+
+    #[test]
+    fn extract_instructor_html_no_panic_on_multibyte_tail() {
+        let doc = Html::parse_document("<html><body></body></html>");
+        let body = format!("Created by {}", "\u{e9}".repeat(100));
+        let got = extract_instructor_html(&doc, &body);
+        assert!(got.is_some());
+        assert!(got.unwrap().starts_with('\u{e9}'));
+    }
+
+    #[test]
+    fn parse_course_html_extracts_from_jsonld_and_body() {
+        let html = r#"<!DOCTYPE html>
+<html><head>
+<meta property="og:title" content="OG Title">
+<script type="application/ld+json">
+{"@type":"Course","name":"Mastering Rust","description":"Learn Rust deeply.","image":"https://img/x.jpg","inLanguage":"English","aggregateRating":{"ratingValue":4.5,"reviewCount":1234},"instructor":{"name":"Jane Doe"}}
+</script>
+</head><body>
+<h1>Mastering Rust</h1>
+<p>This course has 12.5 total hours of content. 1,234 students enrolled. Beginner Level course.</p>
+<ul data-purpose="course-objectives">
+  <li>Understand ownership</li>
+  <li>Build CLIs</li>
+</ul>
+</body></html>"#;
+
+        let c = parse_course_html(html, "https://www.udemy.com/course/mastering-rust/")
+            .expect("parse");
+        assert_eq!(c.course_id, "mastering-rust");
+        assert_eq!(c.title, "Mastering Rust");
+        assert_eq!(c.description, "Learn Rust deeply.");
+        assert!((c.rating - 4.5).abs() < 1e-6);
+        assert_eq!(c.review_count, 1234);
+        assert_eq!(c.instructor, "Jane Doe");
+        assert_eq!(c.level, "Beginner");
+        assert!((c.duration_hours - 12.5).abs() < 1e-6);
+        assert_eq!(c.num_students, 1234);
+        assert_eq!(c.language, "English");
+        assert_eq!(c.image_url, "https://img/x.jpg");
+        let topics: Vec<String> = serde_json::from_str(&c.topics_json).unwrap();
+        assert_eq!(topics, vec!["Understand ownership", "Build CLIs"]);
+    }
+
+    #[test]
+    fn load_courses_json_round_trips() {
+        let course = Course {
+            course_id: "abc".to_string(),
+            title: "T".to_string(),
+            url: "https://www.udemy.com/course/abc/".to_string(),
+            description: "D".to_string(),
+            instructor: "I".to_string(),
+            level: "All Levels".to_string(),
+            rating: 4.2,
+            review_count: 7,
+            num_students: 42,
+            duration_hours: 1.5,
+            price: "Free".to_string(),
+            language: "English".to_string(),
+            category: "Dev".to_string(),
+            image_url: "img".to_string(),
+            topics_json: "[\"x\"]".to_string(),
+        };
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("courses.json");
+        std::fs::write(&path, serde_json::to_string(&vec![course.clone()]).unwrap())
+            .expect("write");
+
+        let loaded = load_courses_json(&path).expect("load");
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].course_id, course.course_id);
+        assert_eq!(loaded[0].rating, course.rating);
+        assert_eq!(loaded[0].topics_json, course.topics_json);
+    }
 }

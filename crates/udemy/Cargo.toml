@@ -29,3 +29,6 @@ reqwest      = { version = "0.12", features = ["json", "cookies", "gzip", "brotl
 regex        = "1"
 scraper      = "0.22"
 clap         = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3"

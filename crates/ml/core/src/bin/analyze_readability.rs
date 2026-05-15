@@ -1,12 +1,16 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-use knowledge_ml_core::{parser, readability};
+use knowledge_ml_core::{parser, readability, sqlite};
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
 #[command(name = "analyze-readability")]
 struct Args {
+    /// Canonical SQLite content store (preferred source).
+    #[arg(long, default_value = "../../data/knowledge.db")]
+    db: PathBuf,
+    /// Markdown directory, used as a fallback when `--db` is absent.
     #[arg(long, default_value = "../../content")]
     content: PathBuf,
     #[arg(long, default_value = "../data/readability.json")]
@@ -19,7 +23,17 @@ fn main() -> anyhow::Result<()> {
         .init();
     let args = Args::parse();
 
-    let lessons = parser::load_lessons(&args.content)?;
+    let lessons = if args.db.exists() {
+        tracing::info!("Loading lessons from SQLite: {}", args.db.display());
+        sqlite::load_lessons_from_sqlite(&args.db)?
+    } else {
+        tracing::info!(
+            "SQLite db not found at {}; falling back to markdown: {}",
+            args.db.display(),
+            args.content.display()
+        );
+        parser::load_lessons(&args.content)?
+    };
     tracing::info!("Loaded {} lessons", lessons.len());
 
     let results: Vec<readability::LessonReadability> =

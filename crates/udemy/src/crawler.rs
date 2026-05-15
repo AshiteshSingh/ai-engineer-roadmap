@@ -4,6 +4,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::{Context, Result};
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use tracing::{info, warn};
 
@@ -54,7 +55,7 @@ pub struct UdemyClient {
 }
 
 impl UdemyClient {
-    pub fn new(config: &CrawlConfig) -> Self {
+    pub fn new(config: &CrawlConfig) -> Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(
             header::USER_AGENT,
@@ -88,13 +89,13 @@ impl UdemyClient {
             .gzip(true)
             .brotli(true)
             .build()
-            .expect("failed to build reqwest client");
+            .context("failed to build reqwest client")?;
 
-        Self {
+        Ok(Self {
             client,
             max_retries: config.max_retries,
             base_delay: config.base_delay,
-        }
+        })
     }
 
     /// Fetch a page with retry on 429/503, Cloudflare detection.
@@ -205,9 +206,14 @@ mod tests {
 
     #[test]
     fn backoff_increases_exponentially() {
-        let client = UdemyClient::new(&CrawlConfig::default());
+        let client = UdemyClient::new(&CrawlConfig::default()).expect("client builds");
         assert_eq!(client.backoff(1), Duration::from_secs(2));
         assert_eq!(client.backoff(2), Duration::from_secs(4));
         assert_eq!(client.backoff(3), Duration::from_secs(8));
+    }
+
+    #[test]
+    fn new_builds_client_ok() {
+        assert!(UdemyClient::new(&CrawlConfig::default()).is_ok());
     }
 }

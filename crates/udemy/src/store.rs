@@ -85,12 +85,27 @@ impl CourseStore {
 
     /// Insert courses that already have embeddings computed.
     pub async fn add(&mut self, courses: &[Course], vectors: &[Vec<f32>]) -> Result<usize> {
-        assert_eq!(courses.len(), vectors.len());
+        if courses.len() != vectors.len() {
+            anyhow::bail!(
+                "courses.len()={} != vectors.len()={}",
+                courses.len(),
+                vectors.len()
+            );
+        }
         if courses.is_empty() {
             return Ok(0);
         }
 
         let dim = vectors[0].len();
+        if dim == 0 {
+            anyhow::bail!("embedding vectors have zero dimension");
+        }
+        if let Some(bad) = vectors.iter().position(|v| v.len() != dim) {
+            anyhow::bail!(
+                "vector {bad} has dim {} != expected {dim}",
+                vectors[bad].len()
+            );
+        }
         self.ensure_table(dim).await?;
 
         let n = courses.len();
@@ -261,5 +276,98 @@ fn course_from_batch(batch: &RecordBatch, i: usize) -> Course {
         category: get_str("category"),
         image_url: get_str("image_url"),
         topics_json: get_str("topics_json"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn course(id: &str) -> Course {
+        Course {
+            course_id: id.to_string(),
+            title: format!("Course {id}"),
+            url: format!("https://www.udemy.com/course/{id}/"),
+            description: "desc".to_string(),
+            instructor: "Jane Doe".to_string(),
+            level: "All Levels".to_string(),
+            rating: 4.5,
+            review_count: 100,
+            num_students: 1000,
+            duration_hours: 3.0,
+            price: "Free".to_string(),
+            language: "English".to_string(),
+            category: "Development".to_string(),
+            image_url: "img".to_string(),
+            topics_json: "[]".to_string(),
+        }
+    }
+
+    async fn store_in(dir: &std::path::Path) -> CourseStore {
+        CourseStore::connect(dir.to_str().expect("utf-8 tempdir path"))
+            .await
+            .expect("connect")
+    }
+
+    #[tokio::test]
+    async fn add_count_existing_ids_and_search() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut store = store_in(dir.path()).await;
+
+        let courses = vec![course("a"), course("b")];
+        let vectors = vec![vec![1.0, 0.0, 0.0, 0.0], vec![0.0, 1.0, 0.0, 0.0]];
+
+        let added = store.add(&courses, &vectors).await.expect("add");
+        assert_eq!(added, 2);
+        assert_eq!(store.count().await.expect("count"), 2);
+
+        let ids = store.existing_ids().await.expect("existing_ids");
+        assert!(ids.contains("a") && ids.contains("b"), "got {ids:?}");
+
+        let results = store
+            .search(vec![0.9, 0.1, 0.0, 0.0], 2)
+            .await
+            .expect("search");
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results[0].course.course_id, "a",
+            "nearest course should rank first"
+        );
+        assert!(
+            results[0].score >= results[1].score,
+            "results must be sorted by score desc"
+        );
+    }
+
+    #[tokio::test]
+    async fn add_empty_is_noop() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut store = store_in(dir.path()).await;
+        assert_eq!(store.add(&[], &[]).await.expect("add empty"), 0);
+        assert_eq!(store.count().await.expect("count"), 0);
+    }
+
+    #[tokio::test]
+    async fn add_length_mismatch_is_err() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut store = store_in(dir.path()).await;
+        let err = store
+            .add(&[course("a")], &[])
+            .await
+            .expect_err("length mismatch must error");
+        assert!(err.to_string().contains("!="), "got: {err}");
+    }
+
+    #[tokio::test]
+    async fn add_ragged_dims_is_err() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut store = store_in(dir.path()).await;
+        let courses = vec![course("a"), course("b")];
+        let vectors = vec![vec![1.0, 0.0, 0.0, 0.0], vec![1.0, 0.0, 0.0]];
+        let err = store
+            .add(&courses, &vectors)
+            .await
+            .expect_err("ragged dims must error");
+        assert!(err.to_string().contains("dim"), "got: {err}");
     }
 }

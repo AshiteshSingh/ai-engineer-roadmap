@@ -145,3 +145,9 @@ pub fn load_lessons(content_dir: &Path) -> anyhow::Result<Vec<Lesson>> {
     lessons.sort_by(|a, b| a.slug.cmp(&b.slug));
     Ok(lessons)
 }
+
+/// Public wrapper around the excerpt heuristic so other loaders (e.g. the
+/// SQLite loader) derive the embedding excerpt identically to the markdown loader.
+pub fn excerpt_from_markdown(content: &str, max_len: usize) -> String {
+    extract_excerpt(content, max_len)
+}

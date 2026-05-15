@@ -18,6 +18,14 @@ path = "src/bin/build_similarity.rs"
 name = "analyze-readability"
 path = "src/bin/analyze_readability.rs"
 
+[[bin]]
+name = "export-content"
+path = "src/bin/export_content.rs"
+
+[[bin]]
+name = "seed-content"
+path = "src/bin/seed_content.rs"
+
 [dependencies]
 candle = { path = "../../../../../crates/candle", default-features = false }
 
@@ -30,3 +38,4 @@ tracing    = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 walkdir    = "2"
 clap       = { version = "4", features = ["derive"] }
+rusqlite   = { version = "0.32", features = ["bundled"] }

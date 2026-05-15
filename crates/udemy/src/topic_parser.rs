@@ -1,9 +1,19 @@
 //! Parse Udemy topic listing pages to extract course URLs and related topics.
 
+use std::sync::LazyLock;
+
 use regex::Regex;
 use scraper::{Html, Selector};
 
 use crate::keywords::is_promo_slug;
+
+/// Compiled once: matches `/course/<slug>` paths.
+static COURSE_SLUG_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"/course/([a-z0-9][a-z0-9-]{2,80})").unwrap());
+
+/// Compiled once: matches `/topic/<slug>` paths.
+static TOPIC_SLUG_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"/topic/([a-z0-9][a-z0-9-]+)").unwrap());
 
 /// Result of parsing a topic listing page.
 #[derive(Debug, Default)]
@@ -85,16 +95,16 @@ pub fn is_cloudflare_blocked(html: &str) -> bool {
 
 /// Extract a course slug from a URL or path like `/course/my-slug/`.
 fn extract_course_slug(url_or_path: &str) -> Option<String> {
-    let re = Regex::new(r"/course/([a-z0-9][a-z0-9-]{2,80})").ok()?;
-    re.captures(url_or_path)
+    COURSE_SLUG_RE
+        .captures(url_or_path)
         .and_then(|c| c.get(1))
         .map(|m| m.as_str().to_string())
 }
 
 /// Extract a topic slug from a URL like `https://www.udemy.com/topic/my-topic/`.
 fn extract_topic_slug(url_or_path: &str) -> Option<String> {
-    let re = Regex::new(r"/topic/([a-z0-9][a-z0-9-]+)").ok()?;
-    re.captures(url_or_path)
+    TOPIC_SLUG_RE
+        .captures(url_or_path)
         .and_then(|c| c.get(1))
         .map(|m| m.as_str().to_string())
 }
@@ -105,11 +115,7 @@ fn extract_course_slugs_from_text(
     seen: &mut std::collections::HashSet<String>,
     out: &mut Vec<String>,
 ) {
-    let re = match Regex::new(r"/course/([a-z0-9][a-z0-9-]{2,80})") {
-        Ok(r) => r,
-        Err(_) => return,
-    };
-    for cap in re.captures_iter(text) {
+    for cap in COURSE_SLUG_RE.captures_iter(text) {
         if let Some(m) = cap.get(1) {
             let slug = m.as_str().to_string();
             if seen.insert(slug.clone()) {
@@ -189,5 +195,43 @@ mod tests {
         let result = parse_topic_page("<html><body></body></html>");
         assert!(result.course_urls.is_empty());
         assert!(result.related_topics.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod added_tests {
+    use super::*;
+
+    #[test]
+    fn related_topics_dedup_preserves_order() {
+        let html = r#"
+        <html><body>
+            <a href="/topic/machine-learning/">ML</a>
+            <a href="https://www.udemy.com/topic/machine-learning/">ML again</a>
+            <a href="/topic/llm/">LLM</a>
+        </body></html>
+        "#;
+        let result = parse_topic_page(html);
+        assert_eq!(
+            result.related_topics,
+            vec!["machine-learning".to_string(), "llm".to_string()]
+        );
+    }
+
+    #[test]
+    fn lazylock_regex_is_stable_across_calls() {
+        assert_eq!(
+            extract_course_slug("/course/abc-def/"),
+            extract_course_slug("/course/abc-def/")
+        );
+        assert_eq!(
+            extract_course_slug("/course/abc-def/"),
+            Some("abc-def".to_string())
+        );
+        let html = r#"<a href="/course/stable-slug/">x</a>"#;
+        let first = parse_topic_page(html);
+        let second = parse_topic_page(html);
+        assert_eq!(first.course_urls, second.course_urls);
+        assert!(first.course_urls.iter().any(|u| u.contains("stable-slug")));
     }
 }
