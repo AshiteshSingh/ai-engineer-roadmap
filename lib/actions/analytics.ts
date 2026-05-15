@@ -1,8 +1,8 @@
 "use server";
 
 import { sql } from "drizzle-orm";
-import { contentDb as db } from "@/src/db/content";
-import { analyticsEvents } from "@/src/db/content-schema";
+import { db } from "@/src/db";
+import { analyticsEvents } from "@/src/db/schema";
 
 export async function trackAnalyticsEvent(
   eventName: string,
@@ -11,7 +11,7 @@ export async function trackAnalyticsEvent(
   properties?: Record<string, unknown>,
 ) {
   try {
-    // Resolve lesson ID inline to avoid a separate round-trip.
+    // Per-user/event write data lives in Neon (not the static JSON).
     await db.insert(analyticsEvents).values({
       eventCategory: "reading",
       eventName,

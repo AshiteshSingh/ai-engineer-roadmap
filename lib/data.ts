@@ -22,45 +22,40 @@ export interface SearchResult {
   lessonTitle: string | null;
 }
 
-const dataSource = process.env.NEXT_PUBLIC_DATA_SOURCE;
-const USE_DB = dataSource === "neon" || dataSource === "sqlite";
+// Static lesson content is served from JSON exported by the Rust
+// `export-content` binary (SQLite is the single source of truth; only Rust
+// reads it). The markdown parser in ./articles is the resilience fallback
+// when the JSON export is missing (e.g. before `npm run content:build`).
 
 export async function getCategoryMeta(category: string): Promise<CategoryMeta> {
-  if (USE_DB) {
-    try {
-      const { getCategoryMetaFromDb } = await import("./db/queries");
-      const meta = await getCategoryMetaFromDb(category);
-      if (meta) return meta;
-    } catch {
-      // DB unavailable — fall through to static lookup
-    }
+  try {
+    const { getCategoryMetaFromJson } = await import("./content-json");
+    const meta = getCategoryMetaFromJson(category);
+    if (meta) return meta;
+  } catch {
+    // JSON export unavailable — fall through to static lookup
   }
-  // Fallback to static lookup
   const { getCategoryMeta: staticMeta } = await import("./articles");
   return staticMeta(category);
 }
 
 export async function getCategoryCount(): Promise<number> {
-  if (USE_DB) {
-    try {
-      const { getCategoryCountFromDb } = await import("./db/queries");
-      return await getCategoryCountFromDb();
-    } catch {
-      // DB unavailable — fall through
-    }
+  try {
+    const { getCategoryCountFromJson } = await import("./content-json");
+    return getCategoryCountFromJson();
+  } catch {
+    // JSON export unavailable — fall through
   }
   const { CATEGORIES } = await import("./articles");
   return CATEGORIES.length;
 }
 
 export async function getAllLessons(): Promise<Lesson[]> {
-  if (USE_DB) {
-    try {
-      const { getAllLessonsFromDb } = await import("./db/queries");
-      return await getAllLessonsFromDb();
-    } catch {
-      // DB unavailable — fall through
-    }
+  try {
+    const { getAllLessonsFromJson } = await import("./content-json");
+    return getAllLessonsFromJson();
+  } catch {
+    // JSON export unavailable — fall through
   }
   const { getAllLessons: fs } = await import("./articles");
   return fs();
@@ -69,57 +64,56 @@ export async function getAllLessons(): Promise<Lesson[]> {
 export async function getLessonBySlug(
   slug: string,
 ): Promise<LessonWithContent | null> {
-  if (USE_DB) {
-    try {
-      const { getLessonBySlugFromDb } = await import("./db/queries");
-      return await getLessonBySlugFromDb(slug);
-    } catch {
-      // DB unavailable — fall through
-    }
+  try {
+    const { getLessonBySlugFromJson } = await import("./content-json");
+    const lesson = getLessonBySlugFromJson(slug);
+    if (lesson) return lesson;
+  } catch {
+    // JSON export unavailable — fall through
   }
   const { getLessonBySlug: fs } = await import("./articles");
   return fs(slug);
 }
 
 export async function getGroupedLessons(): Promise<GroupedLessons[]> {
-  if (USE_DB) {
-    try {
-      const { getGroupedLessonsFromDb } = await import("./db/queries");
-      return await getGroupedLessonsFromDb();
-    } catch {
-      // DB unavailable — fall through
-    }
+  try {
+    const { getGroupedLessonsFromJson } = await import("./content-json");
+    const grouped = getGroupedLessonsFromJson();
+    if (grouped.length > 0) return grouped;
+  } catch {
+    // JSON export unavailable — fall through
   }
   const { getGroupedLessons: fs } = await import("./articles");
   return fs();
 }
 
 export async function getTotalWordCount(): Promise<number> {
-  if (USE_DB) {
-    try {
-      const { getTotalWordCountFromDb } = await import("./db/queries");
-      return await getTotalWordCountFromDb();
-    } catch {
-      // DB unavailable — fall through
-    }
+  try {
+    const { getTotalWordCountFromJson } = await import("./content-json");
+    return getTotalWordCountFromJson();
+  } catch {
+    // JSON export unavailable — fall through
   }
   const { getTotalWordCount: fs } = await import("./articles");
   return fs();
 }
 
-export async function getRelatedLessons(
-  slug: string,
-): Promise<Lesson[]> {
-  if (USE_DB) {
-    try {
-      const { getRelatedLessonsFromDb } = await import("./db/queries");
-      return await getRelatedLessonsFromDb(slug);
-    } catch {
-      // DB unavailable — fall through
-    }
-  }
-  // FS fallback: filter by same category
+export async function getRelatedLessons(slug: string): Promise<Lesson[]> {
   const all = await getAllLessons();
+  // Vector similarity from the Rust artifact crates/ml/data/similarity-matrix.json.
+  try {
+    const { getSimilarLessons } = await import("./ml-client");
+    const similar = getSimilarLessons(slug, 4);
+    if (similar.length > 0) {
+      const bySlug = new Map(all.map((l) => [l.slug, l]));
+      const related = similar
+        .map((s) => bySlug.get(s.slug))
+        .filter((l): l is Lesson => Boolean(l));
+      if (related.length > 0) return related;
+    }
+  } catch {
+    // No similarity matrix — fall through to same-category
+  }
   const current = all.find((p) => p.slug === slug);
   if (!current) return [];
   return all
@@ -130,15 +124,12 @@ export async function getRelatedLessons(
 export async function getCoursesForLesson(
   slug: string,
 ): Promise<import("./db/queries").ExternalCourse[]> {
-  if (USE_DB) {
-    try {
-      const { getCoursesForLessonFromDb } = await import("./db/queries");
-      return await getCoursesForLessonFromDb(slug);
-    } catch {
-      // DB unavailable — fall through
-    }
+  try {
+    const { getCoursesForLessonFromDb } = await import("./db/queries");
+    return await getCoursesForLessonFromDb(slug);
+  } catch {
+    return [];
   }
-  return [];
 }
 
 // The audiobook spine: all lessons in roadmap order minus the Appendix.
