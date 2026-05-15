@@ -180,6 +180,21 @@ async fn ask(
     ))
 }
 
+/// Reject a slug that is not a simple kebab token, so the `{slug}.md` write
+/// can never escape `content_dir` (path traversal) or yield odd filenames.
+fn validate_slug(slug: &str) -> Result<()> {
+    if slug.is_empty()
+        || !slug
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    {
+        anyhow::bail!(
+            "invalid --slug {slug:?}: expected a non-empty kebab slug [a-z0-9-] (no '/', '.', spaces, uppercase)"
+        );
+    }
+    Ok(())
+}
+
 /// Fail fast on a bad output directory *before* spending any LLM tokens
 /// (skipped when `no_write`, where the directory is never touched).
 fn ensure_writable_dir(dir: &std::path::Path, no_write: bool) -> Result<()> {
@@ -198,6 +213,7 @@ fn ensure_writable_dir(dir: &std::path::Path, no_write: bool) -> Result<()> {
 /// Run the full pipeline. Requires a reachable embed-server, `DEEPSEEK_API_KEY`
 /// in the environment, and a populated LanceDB at `cfg.db_path`.
 pub async fn generate_article(cfg: GenerateConfig) -> Result<GenerateOutcome> {
+    validate_slug(&cfg.slug)?;
     ensure_writable_dir(&cfg.content_dir, cfg.no_write)?;
     let http = reqwest::Client::new();
     embed::health(&http, &cfg.embed_url).await?;
@@ -370,6 +386,18 @@ mod tests {
         assert_eq!(after_revise(&bad, 1, 2), Route::Revise);
         assert_eq!(after_revise(&bad, 2, 2), Route::Finalize);
         assert_eq!(after_revise(&ok, 2, 2), Route::Finalize);
+    }
+
+    #[test]
+    fn validate_slug_rejects_traversal_and_junk() {
+        assert!(validate_slug("agent-memory-systems").is_ok());
+        assert!(validate_slug("rag2").is_ok());
+        assert!(validate_slug("").is_err());
+        assert!(validate_slug("../etc/passwd").is_err());
+        assert!(validate_slug("a/b").is_err());
+        assert!(validate_slug("Has Space").is_err());
+        assert!(validate_slug("Upper").is_err());
+        assert!(validate_slug("dot.name").is_err());
     }
 
     #[test]
