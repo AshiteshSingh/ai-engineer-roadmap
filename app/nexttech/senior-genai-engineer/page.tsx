@@ -2,10 +2,29 @@ import Link from "next/link";
 import { Container, Heading, Text, Box, Flex, Card, Badge, Separator } from "@radix-ui/themes";
 import { ExternalLinkIcon, ArrowLeftIcon } from "@radix-ui/react-icons";
 import { MarkdownProse } from "@/components/markdown-prose";
-import { contentDb } from "@/src/db/content";
-import { publicJobs } from "@/src/db/content-schema";
-import { eq } from "drizzle-orm";
+import fs from "fs";
+import path from "path";
+import { resolveContentDir } from "@/lib/content-json";
 import { notFound } from "next/navigation";
+
+interface PublicJob {
+  slug: string;
+  company: string;
+  position: string;
+  location: string | null;
+  url: string | null;
+  description: string;
+}
+
+function getJob(slug: string): PublicJob | null {
+  try {
+    const file = path.join(resolveContentDir(), "jobs.json");
+    const jobs: PublicJob[] = JSON.parse(fs.readFileSync(file, "utf-8"));
+    return jobs.find((j) => j.slug === slug) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export const metadata = {
   title: "Senior GenAI Engineer / LLM Developer — Nexttech",
@@ -14,11 +33,7 @@ export const metadata = {
 };
 
 export default function NexttechJobPage() {
-  const jobData = contentDb
-    .select()
-    .from(publicJobs)
-    .where(eq(publicJobs.slug, "senior-genai-engineer"))
-    .get();
+  const jobData = getJob("senior-genai-engineer");
 
   if (!jobData) notFound();
   return (

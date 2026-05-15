@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm run seed:sqlite && pnpm run seed:courses && pnpm run build",
   "devCommand": "pnpm run dev",
-  "installCommand": "cd ../.. && pnpm install --no-frozen-lockfile",
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": "nextjs",
   "ignoreCommand": "npx turbo-ignore",
   "functions": {

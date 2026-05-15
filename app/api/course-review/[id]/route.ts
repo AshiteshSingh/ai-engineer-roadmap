@@ -1,5 +1,5 @@
-import { contentDb as db } from "@/src/db/content";
-import { courseReviews, externalCourses } from "@/src/db/content-schema";
+import { db } from "@/src/db";
+import { courseReviews, externalCourses } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(

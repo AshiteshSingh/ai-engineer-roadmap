@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { contentDb } from "@/src/db/content";
-import { chatMessages } from "@/src/db/content-schema";
+import { db } from "@/src/db";
+import { chatMessages } from "@/src/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { searchContent } from "@/lib/actions/search";
 import { deepSearch } from "@/lib/actions/deep-search";
@@ -19,13 +19,12 @@ export async function POST(req: NextRequest) {
   }
 
   const [history, ftsResults, hybridResults] = await Promise.all([
-    contentDb
+    db
       .select({ role: chatMessages.role, content: chatMessages.content })
       .from(chatMessages)
       .where(eq(chatMessages.threadId, threadId))
       .orderBy(asc(chatMessages.createdAt))
-      .limit(50)
-      .all(),
+      .limit(50),
     searchContent(message).catch(() => []),
     deepSearch(message).catch(() => []),
   ]);
@@ -68,13 +67,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  contentDb
+  await db
     .insert(chatMessages)
     .values([
       { threadId, role: "user", content: message },
       { threadId, role: "assistant", content: assistantContent },
-    ])
-    .run();
+    ]);
 
   return NextResponse.json({
     response: assistantContent,
