@@ -20,14 +20,25 @@ destination triggers a Cloudflare verification email you must click).
 Token: `CLOUDFLARE_EMAIL_API_TOKEN` (scopes: Account → Email Routing
 Addresses:Edit; Zone → Zone:Edit, DNS:Edit, Email Routing Rules:Edit).
 
-## Outbound — Email Sending (beta) ⚠️ NEEDS ONBOARDING
+## Outbound — Email Sending (beta) ✅ DONE
 
 `POST /accounts/{id}/email/sending/send`, flat body `{to,from,subject,html,text}`.
-Not yet usable: no DKIM/DMARC/cf-bounce records, and the routing token gets
-`404 Unable to authenticate request` on the Sending API.
 
-Onboarding is **dashboard-only** in the beta (Cloudflare generates the DKIM
-key, so it cannot be scripted):
+**Live & verified 2026-05-16:** `pnpm email:test --to nicolai.vadim@gmail.com`
+→ HTTP 200, delivered. Sends from `AI Engineer Roadmap
+<contact@ai-engineer-roadmap.xyz>` (`EMAIL_FROM` default).
+
+What made it work (the routing token alone returned
+`401 Authentication error 10000`):
+
+1. **Domain onboarded** via dashboard — DKIM / DMARC / cf-bounce records are
+   now present on the zone (confirmed by `pnpm email:status`).
+2. **`CLOUDFLARE_EMAIL_SENDING_API_TOKEN`** set to an API token carrying the
+   **Email Sending** permission (kept separate from the routing token, which
+   does not carry Sending scope).
+
+How it was set up (one-time; reproducible for other domains — onboarding is
+**dashboard-only** in the beta because Cloudflare generates the DKIM key):
 
 1. Dashboard → **Compute → Email Service → Email Sending**
 2. **Enable Email Sending** → **Onboard Domain** → `ai-engineer-roadmap.xyz`
@@ -39,8 +50,16 @@ key, so it cannot be scripted):
 4. Mint an API token with the **Email Sending** permission and set
    `CLOUDFLARE_EMAIL_SENDING_API_TOKEN` in `.env.local`
    (the routing token does **not** carry Sending scope — keep them separate).
-5. `pnpm email:status` → all green, then
-   `pnpm email:test --to you@example.com`
+5. `pnpm email:test --to you@example.com` → HTTP 200.
+
+> **Caveat — `pnpm email:status` outbound check is a false negative.**
+> It still prints `⚠️ Sending API reachable with send token (HTTP 404)`
+> because it probes `GET /accounts/{id}/email/sending/domains`, which 404s on
+> this account/token even though `POST …/email/sending/send` works. DKIM /
+> DMARC / cf-bounce all show ✅; the **authoritative** readiness check is a
+> successful `pnpm email:test`, not the domains probe.
+> TODO (optional): change the script's outbound gate from the `domains` GET
+> to a dry/real send so the report matches reality.
 
 ## Using it in code
 
