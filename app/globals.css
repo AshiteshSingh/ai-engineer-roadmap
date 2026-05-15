@@ -98,6 +98,171 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ================================================================
+   === YC PRIMITIVES ===  (owned by T1 / design-system)
+   Reusable building blocks consumed by every homepage section.
+   Sections must use these classes + --ds-* tokens, never redefine.
+   ================================================================ */
+
+/* Section shell + vertical rhythm */
+.yc-section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5);
+}
+.yc-section--tight { padding-top: var(--space-6); padding-bottom: var(--space-6); }
+
+/* Eyebrow / kicker */
+.yc-eyebrow {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-muted);
+  margin: 0 0 var(--space-3);
+}
+
+/* Headings */
+.yc-heading {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ds-ink);
+  margin: 0 0 var(--space-3);
+}
+.yc-heading--xl {
+  font-size: var(--text-3xl);
+  letter-spacing: -0.03em;
+}
+.yc-subhead {
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--ds-text);
+  margin: 0;
+}
+.yc-accent { color: var(--ds-accent-text); }
+
+/* Buttons */
+.yc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 18px;
+  border-radius: var(--ds-radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background var(--ds-dur) var(--ds-ease),
+    border-color var(--ds-dur) var(--ds-ease),
+    color var(--ds-dur) var(--ds-ease),
+    transform var(--ds-dur-fast) var(--ds-ease);
+}
+.yc-btn:active { transform: translateY(1px); }
+.yc-btn--primary {
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
+.yc-btn--primary:hover { background: var(--ds-accent-hover); }
+.yc-btn--secondary {
+  background: transparent;
+  color: var(--ds-ink);
+  border-color: var(--ds-border);
+}
+.yc-btn--secondary:hover {
+  border-color: var(--ds-border-strong);
+  background: var(--ds-surface-hover);
+}
+.yc-btn--ghost {
+  background: transparent;
+  color: var(--ds-text);
+}
+.yc-btn--ghost:hover { color: var(--ds-ink); background: var(--ds-surface-hover); }
+
+/* Card — flat light surface, hairline border, NO glass / NO glow */
+.yc-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-1);
+}
+.yc-card--interactive {
+  transition: border-color var(--ds-dur) var(--ds-ease),
+    box-shadow var(--ds-dur) var(--ds-ease),
+    transform var(--ds-dur-fast) var(--ds-ease);
+}
+.yc-card--interactive:hover,
+.yc-card--interactive:focus-visible {
+  border-color: var(--ds-accent-border);
+  box-shadow: var(--ds-shadow-2);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+/* Tags / pills */
+.yc-tag,
+.yc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--ds-text);
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border-subtle);
+}
+.yc-tag { padding: 2px 8px; border-radius: var(--ds-radius-sm); }
+.yc-pill { padding: 6px 14px; border-radius: var(--ds-radius-pill); cursor: pointer; }
+.yc-pill:hover { border-color: var(--ds-border-strong); }
+.yc-pill--active,
+.yc-pill[aria-pressed="true"] {
+  background: var(--ds-accent-bg);
+  border-color: var(--ds-accent-border);
+  color: var(--ds-accent-text);
+}
+
+/* Stat */
+.yc-stat { display: flex; flex-direction: column; gap: 4px; }
+.yc-stat-value {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--ds-ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.yc-stat-label {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-muted);
+}
+
+/* Hairline divider */
+.yc-divider {
+  height: 1px;
+  background: var(--ds-border-subtle);
+  border: 0;
+}
+
+/* Cross-route legacy badge pills → adopt DS tokens with zero JSX edits */
+.badge-pill,
+.badge-pill--accent {
+  background: var(--ds-accent-bg);
+  border: 1px solid var(--ds-accent-border);
+  color: var(--ds-accent-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yc-btn, .yc-card--interactive { transition: none; }
+  .yc-card--interactive:hover, .yc-card--interactive:focus-visible,
+  .yc-btn:active { transform: none; }
+}
+/* === END YC PRIMITIVES === */
+
 /* ---------- custom scrollbar ---------- */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

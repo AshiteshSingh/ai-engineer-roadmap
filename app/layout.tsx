@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Theme } from "@radix-ui/themes";
-import { PostHogProvider, PostHogPageView } from "@posthog/next";
 import { Analytics } from "@vercel/analytics/next";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
@@ -18,12 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`}>
-        <PostHogProvider clientOptions={{ api_host: '/ingest' }} bootstrapFlags>
-          <PostHogPageView />
-          <Theme appearance="light" accentColor="indigo" grayColor="slate" radius="small" panelBackground="solid">
-            {children}
-          </Theme>
-        </PostHogProvider>
+        <Theme appearance="light" accentColor="indigo" grayColor="slate" radius="small" panelBackground="solid">
+          {children}
+        </Theme>
         <Analytics />
       </body>
     </html>
