@@ -1896,6 +1896,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "deepseek-loop"
+version = "0.5.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "deepsize"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2987,6 +3001,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tower-service",
+ "webpki-roots 1.0.6",
 ]
 
 [[package]]
@@ -5406,6 +5421,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-streams",
  "web-sys",
+ "webpki-roots 1.0.6",
 ]
 
 [[package]]
@@ -6691,6 +6707,7 @@ dependencies = [
  "arrow-schema",
  "candle",
  "clap",
+ "deepseek-loop",
  "futures",
  "lancedb",
  "regex",

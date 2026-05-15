@@ -1,0 +1,2403 @@
+{
+  "generated_at_unix": 1778884445,
+  "thresholds": {
+    "minWords": 1500,
+    "minCode": 2,
+    "minXyflow": 5,
+    "relationMinCrossrefs": 3,
+    "relationTopK": 5,
+    "relationTopKHits": 2
+  },
+  "warnings": [],
+  "summary": {
+    "total": 113,
+    "skipped": 5,
+    "pass": 2,
+    "fail": 106
+  },
+  "skipped": [
+    "ai-on-cloudflare-workers",
+    "workers-ai-models",
+    "vectorize-rag",
+    "langgraph-d1-checkpointing",
+    "langmem-vectorize-memory"
+  ],
+  "lessons": [
+    {
+      "slug": "acid-properties",
+      "file": "content/acid-properties.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /postgresql-joins (referenced from /postgresql-joins's Related/Prerequisite section)",
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /dynamodb-data-services, /solid-principles, /postgresql-joins, /online-evaluation"
+      ],
+      "metrics": {
+        "wordCount": 2013,
+        "codeBlocks": 9,
+        "crossRefs": 4,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "advanced-rag",
+      "file": "content/advanced-rag.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /search-recommendations (referenced from /search-recommendations's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 5121,
+        "codeBlocks": 8,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "adversarial-prompting",
+      "file": "content/adversarial-prompting.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4916,
+        "codeBlocks": 7,
+        "crossRefs": 7,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "agent-architectures",
+      "file": "content/agent-architectures.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4867,
+        "codeBlocks": 11,
+        "crossRefs": 17,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "agent-debugging",
+      "file": "content/agent-debugging.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 8480,
+        "codeBlocks": 19,
+        "crossRefs": 10,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "agent-evaluation",
+      "file": "content/agent-evaluation.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /agent-debugging, /tool-use, /benchmark-design, /human-evaluation"
+      ],
+      "metrics": {
+        "wordCount": 5693,
+        "codeBlocks": 26,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "agent-harnesses",
+      "file": "content/agent-harnesses.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 8757,
+        "codeBlocks": 25,
+        "crossRefs": 12,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "agent-memory",
+      "file": "content/agent-memory.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /memory, /memory-architectures, /code-agents, /agent-debugging, /continual-learning"
+      ],
+      "metrics": {
+        "wordCount": 4881,
+        "codeBlocks": 23,
+        "crossRefs": 6,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "agent-orchestration",
+      "file": "content/agent-orchestration.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 7501,
+        "codeBlocks": 26,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "agent-sdks",
+      "file": "content/agent-sdks.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 7938,
+        "codeBlocks": 37,
+        "crossRefs": 13,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "ai-engineer-roadmap",
+      "file": "content/ai-engineer-roadmap.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 6046,
+        "codeBlocks": 3,
+        "crossRefs": 268,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "ai-for-code",
+      "file": "content/ai-for-code.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /ai-engineer-roadmap, /benchmark-design, /rlhf-preference, /agent-evaluation"
+      ],
+      "metrics": {
+        "wordCount": 4995,
+        "codeBlocks": 10,
+        "crossRefs": 5,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "ai-gateway",
+      "file": "content/ai-gateway.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /production-patterns (referenced from /production-patterns's Related/Prerequisite section)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /llm-serving, /aws-api-gateway-networking, /agent-debugging, /function-calling, /edge-deployment"
+      ],
+      "metrics": {
+        "wordCount": 5263,
+        "codeBlocks": 26,
+        "crossRefs": 3,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "ai-governance",
+      "file": "content/ai-governance.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /scaling-laws, /constitutional-ai, /benchmark-design, /eval-fundamentals"
+      ],
+      "metrics": {
+        "wordCount": 5222,
+        "codeBlocks": 9,
+        "crossRefs": 12,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "audio-speech-ai",
+      "file": "content/audio-speech-ai.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /conversational-ai, /scaling-laws, /aws-ai-ml-services, /model-architectures, /llm-serving"
+      ],
+      "metrics": {
+        "wordCount": 4359,
+        "codeBlocks": 15,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws",
+      "file": "content/aws.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 5119,
+        "codeBlocks": 5,
+        "crossRefs": 21,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-ai-ml-services",
+      "file": "content/aws-ai-ml-services.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /audio-speech-ai, /aws-storage-s3, /llm-serving, /aws, /distillation-compression"
+      ],
+      "metrics": {
+        "wordCount": 8588,
+        "codeBlocks": 30,
+        "crossRefs": 43,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-api-gateway-networking",
+      "file": "content/aws-api-gateway-networking.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /ai-gateway, /aws-lambda-serverless, /aws-iam-security, /dynamodb-data-services, /aws-compute-containers"
+      ],
+      "metrics": {
+        "wordCount": 7650,
+        "codeBlocks": 28,
+        "crossRefs": 6,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-architecture",
+      "file": "content/aws-architecture.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-cloudfront-route53 (referenced from /aws-cloudfront-route53's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-developer-tools (referenced from /aws-developer-tools's Related/Prerequisite section)",
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /microservices, /production-patterns, /aws-ai-ml-services, /aws-storage-s3"
+      ],
+      "metrics": {
+        "wordCount": 9690,
+        "codeBlocks": 3,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-cicd-devops",
+      "file": "content/aws-cicd-devops.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /ci-cd, /ci-cd-ai, /aws-compute-containers, /kubernetes, /aws"
+      ],
+      "metrics": {
+        "wordCount": 8535,
+        "codeBlocks": 50,
+        "crossRefs": 5,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-cloudfront-route53",
+      "file": "content/aws-cloudfront-route53.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 5963,
+        "codeBlocks": 8,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-compute-containers",
+      "file": "content/aws-compute-containers.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-developer-tools (referenced from /aws-developer-tools's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-observability (referenced from /aws-observability's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 7862,
+        "codeBlocks": 17,
+        "crossRefs": 13,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-cost-optimization",
+      "file": "content/aws-cost-optimization.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-cloudfront-route53 (referenced from /aws-cloudfront-route53's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-data-analytics (referenced from /aws-data-analytics's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-developer-tools (referenced from /aws-developer-tools's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 8405,
+        "codeBlocks": 3,
+        "crossRefs": 20,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-data-analytics",
+      "file": "content/aws-data-analytics.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 7448,
+        "codeBlocks": 15,
+        "crossRefs": 22,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-databases-rds",
+      "file": "content/aws-databases-rds.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /postgresql-joins (referenced from /postgresql-joins's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 7093,
+        "codeBlocks": 12,
+        "crossRefs": 17,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-developer-tools",
+      "file": "content/aws-developer-tools.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 5413,
+        "codeBlocks": 24,
+        "crossRefs": 7,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-iam-security",
+      "file": "content/aws-iam-security.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-cloudfront-route53 (referenced from /aws-cloudfront-route53's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-data-analytics (referenced from /aws-data-analytics's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-developer-tools (referenced from /aws-developer-tools's Related/Prerequisite section)",
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /aws-api-gateway-networking, /aws-ai-ml-services, /aws-architecture, /aws-compute-containers"
+      ],
+      "metrics": {
+        "wordCount": 7145,
+        "codeBlocks": 19,
+        "crossRefs": 5,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-lambda-serverless",
+      "file": "content/aws-lambda-serverless.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-cloudfront-route53 (referenced from /aws-cloudfront-route53's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-data-analytics (referenced from /aws-data-analytics's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-developer-tools (referenced from /aws-developer-tools's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-observability (referenced from /aws-observability's Related/Prerequisite section)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /aws-compute-containers, /dynamodb-data-services, /aws, /aws-api-gateway-networking, /kubernetes"
+      ],
+      "metrics": {
+        "wordCount": 6633,
+        "codeBlocks": 27,
+        "crossRefs": 3,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-messaging-events",
+      "file": "content/aws-messaging-events.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-data-analytics (referenced from /aws-data-analytics's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-developer-tools (referenced from /aws-developer-tools's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 6469,
+        "codeBlocks": 12,
+        "crossRefs": 16,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-observability",
+      "file": "content/aws-observability.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-data-analytics (referenced from /aws-data-analytics's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 6916,
+        "codeBlocks": 11,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-security-services",
+      "file": "content/aws-security-services.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-cloudfront-route53 (referenced from /aws-cloudfront-route53's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 5683,
+        "codeBlocks": 5,
+        "crossRefs": 9,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-step-functions",
+      "file": "content/aws-step-functions.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)"
+      ],
+      "metrics": {
+        "wordCount": 4893,
+        "codeBlocks": 21,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-storage-s3",
+      "file": "content/aws-storage-s3.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /aws, /aws-ai-ml-services, /dynamodb-data-services, /aws-compute-containers, /aws-architecture"
+      ],
+      "metrics": {
+        "wordCount": 7102,
+        "codeBlocks": 9,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "aws-vpc-networking",
+      "file": "content/aws-vpc-networking.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /aws-data-analytics (referenced from /aws-data-analytics's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /aws-observability (referenced from /aws-observability's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 6187,
+        "codeBlocks": 12,
+        "crossRefs": 9,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "azure",
+      "file": "content/azure.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /aws, /gcp, /kubernetes, /aws-lambda-serverless, /aws-storage-s3"
+      ],
+      "metrics": {
+        "wordCount": 2290,
+        "codeBlocks": 5,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "benchmark-design",
+      "file": "content/benchmark-design.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /human-evaluation, /bias-fairness, /agent-evaluation, /rlhf-preference"
+      ],
+      "metrics": {
+        "wordCount": 4113,
+        "codeBlocks": 5,
+        "crossRefs": 4,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "bias-fairness",
+      "file": "content/bias-fairness.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /benchmark-design, /distillation-compression, /scaling-laws, /llm-serving"
+      ],
+      "metrics": {
+        "wordCount": 3873,
+        "codeBlocks": 11,
+        "crossRefs": 6,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "chunking-strategies",
+      "file": "content/chunking-strategies.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /rag-evaluation, /rag, /advanced-rag, /distillation-compression"
+      ],
+      "metrics": {
+        "wordCount": 4543,
+        "codeBlocks": 15,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "ci-cd",
+      "file": "content/ci-cd.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /aws-cicd-devops, /ci-cd-ai, /ai-for-code, /agent-sdks, /prompt-optimization"
+      ],
+      "metrics": {
+        "wordCount": 2009,
+        "codeBlocks": 5,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "ci-cd-ai",
+      "file": "content/ci-cd-ai.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /production-patterns (referenced from /production-patterns's Related/Prerequisite section)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /ci-cd, /production-patterns, /ai-for-code, /context-engineering, /agent-sdks"
+      ],
+      "metrics": {
+        "wordCount": 5140,
+        "codeBlocks": 22,
+        "crossRefs": 10,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "code-agents",
+      "file": "content/code-agents.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4758,
+        "codeBlocks": 20,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "constitutional-ai",
+      "file": "content/constitutional-ai.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4813,
+        "codeBlocks": 5,
+        "crossRefs": 6,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "context-compression",
+      "file": "content/context-compression.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 7566,
+        "codeBlocks": 18,
+        "crossRefs": 16,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "context-engineering",
+      "file": "content/context-engineering.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /ai-engineer-roadmap, /dynamic-context-assembly, /structured-output, /ci-cd-ai"
+      ],
+      "metrics": {
+        "wordCount": 3215,
+        "codeBlocks": 14,
+        "crossRefs": 34,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "context-window-management",
+      "file": "content/context-window-management.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /context-compression, /llm-serving, /distillation-compression, /memory-architectures"
+      ],
+      "metrics": {
+        "wordCount": 7467,
+        "codeBlocks": 27,
+        "crossRefs": 16,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "continual-learning",
+      "file": "content/continual-learning.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /agent-memory, /memory, /few-shot-chain-of-thought, /memory-architectures, /interpretability"
+      ],
+      "metrics": {
+        "wordCount": 4766,
+        "codeBlocks": 8,
+        "crossRefs": 6,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "conversational-ai",
+      "file": "content/conversational-ai.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-optimization, /agent-evaluation, /prompt-engineering-fundamentals, /system-prompts"
+      ],
+      "metrics": {
+        "wordCount": 5320,
+        "codeBlocks": 27,
+        "crossRefs": 4,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "cost-optimization",
+      "file": "content/cost-optimization.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /ci-cd-ai (referenced from /ci-cd-ai's Related/Prerequisite section)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /inference-optimization, /distillation-compression, /llm-serving, /context-compression, /model-architectures"
+      ],
+      "metrics": {
+        "wordCount": 4824,
+        "codeBlocks": 17,
+        "crossRefs": 7,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "dataset-curation",
+      "file": "content/dataset-curation.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /pretraining-data, /deepeval-synthesizer, /benchmark-design, /fine-tuning-fundamentals, /chunking-strategies"
+      ],
+      "metrics": {
+        "wordCount": 4685,
+        "codeBlocks": 18,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "deepeval-synthesizer",
+      "file": "content/deepeval-synthesizer.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /rag-evaluation, /eval-fundamentals, /eval-frameworks-comparison, /llm-as-judge, /llm-serving"
+      ],
+      "metrics": {
+        "wordCount": 4091,
+        "codeBlocks": 19,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "distillation-compression",
+      "file": "content/distillation-compression.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4839,
+        "codeBlocks": 18,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "docker",
+      "file": "content/docker.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /kubernetes, /gcp, /aws-compute-containers, /nodejs, /azure"
+      ],
+      "metrics": {
+        "wordCount": 2214,
+        "codeBlocks": 7,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "dynamic-context-assembly",
+      "file": "content/dynamic-context-assembly.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /function-calling, /memory-architectures, /eval-fundamentals, /llm-serving"
+      ],
+      "metrics": {
+        "wordCount": 7479,
+        "codeBlocks": 24,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "dynamodb-data-services",
+      "file": "content/dynamodb-data-services.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /aws-lambda-serverless, /aws-storage-s3, /aws-ai-ml-services, /aws-compute-containers, /aws-api-gateway-networking"
+      ],
+      "metrics": {
+        "wordCount": 7014,
+        "codeBlocks": 20,
+        "crossRefs": 5,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "edge-deployment",
+      "file": "content/edge-deployment.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /llm-serving, /scaling-load-balancing, /memory-architectures, /ai-gateway"
+      ],
+      "metrics": {
+        "wordCount": 5035,
+        "codeBlocks": 20,
+        "crossRefs": 5,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "embedding-models",
+      "file": "content/embedding-models.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /search-recommendations (referenced from /search-recommendations's Related/Prerequisite section)",
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /embeddings, /search-recommendations, /fine-tuning-fundamentals, /distillation-compression"
+      ],
+      "metrics": {
+        "wordCount": 4264,
+        "codeBlocks": 7,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "embeddings",
+      "file": "content/embeddings.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /embedding-models, /vector-databases, /chunking-strategies, /interpretability, /distillation-compression"
+      ],
+      "metrics": {
+        "wordCount": 2411,
+        "codeBlocks": 4,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "eval-frameworks-comparison",
+      "file": "content/eval-frameworks-comparison.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few code examples: 0 (min 2)",
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /eval-fundamentals, /llm-as-judge, /deepeval-synthesizer, /human-evaluation, /model-architectures"
+      ],
+      "metrics": {
+        "wordCount": 2261,
+        "codeBlocks": 0,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "eval-fundamentals",
+      "file": "content/eval-fundamentals.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /production-patterns (referenced from /production-patterns's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 5729,
+        "codeBlocks": 15,
+        "crossRefs": 10,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "few-shot-chain-of-thought",
+      "file": "content/few-shot-chain-of-thought.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /adversarial-prompting, /inference-optimization, /llm-serving, /eval-fundamentals"
+      ],
+      "metrics": {
+        "wordCount": 4398,
+        "codeBlocks": 5,
+        "crossRefs": 4,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "fine-tuning-fundamentals",
+      "file": "content/fine-tuning-fundamentals.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /pretraining-data, /distillation-compression, /eval-fundamentals, /benchmark-design"
+      ],
+      "metrics": {
+        "wordCount": 4285,
+        "codeBlocks": 16,
+        "crossRefs": 9,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "foreign-keys",
+      "file": "content/foreign-keys.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 3757,
+        "codeBlocks": 28,
+        "crossRefs": 6,
+        "xyflowBlocks": 14
+      }
+    },
+    {
+      "slug": "function-calling",
+      "file": "content/function-calling.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /system-prompts (referenced from /system-prompts's Related/Prerequisite section)",
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /tool-use, /dynamic-context-assembly, /code-agents, /memory-architectures"
+      ],
+      "metrics": {
+        "wordCount": 4176,
+        "codeBlocks": 26,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "gcp",
+      "file": "content/gcp.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /azure, /kubernetes, /aws, /docker, /aws-compute-containers"
+      ],
+      "metrics": {
+        "wordCount": 2254,
+        "codeBlocks": 4,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "guardrails-filtering",
+      "file": "content/guardrails-filtering.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /ai-governance (referenced from /ai-governance's Related/Prerequisite section)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /system-prompts, /structured-output, /agent-harnesses, /retrieval-strategies, /llm-serving"
+      ],
+      "metrics": {
+        "wordCount": 4570,
+        "codeBlocks": 22,
+        "crossRefs": 9,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "hallucination-mitigation",
+      "file": "content/hallucination-mitigation.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /memory-architectures, /agent-evaluation, /eval-fundamentals, /bias-fairness, /agent-memory"
+      ],
+      "metrics": {
+        "wordCount": 4460,
+        "codeBlocks": 13,
+        "crossRefs": 6,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "human-evaluation",
+      "file": "content/human-evaluation.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /eval-fundamentals, /llm-as-judge, /benchmark-design, /agent-evaluation, /rlhf-preference"
+      ],
+      "metrics": {
+        "wordCount": 4284,
+        "codeBlocks": 6,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "inference-optimization",
+      "file": "content/inference-optimization.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4785,
+        "codeBlocks": 8,
+        "crossRefs": 10,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "interpretability",
+      "file": "content/interpretability.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /structured-output, /benchmark-design, /vector-databases, /distillation-compression, /agent-evaluation"
+      ],
+      "metrics": {
+        "wordCount": 5114,
+        "codeBlocks": 14,
+        "crossRefs": 3,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "kubernetes",
+      "file": "content/kubernetes.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /docker, /aws-compute-containers, /gcp, /microservices, /azure"
+      ],
+      "metrics": {
+        "wordCount": 2272,
+        "codeBlocks": 5,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "langgraph",
+      "file": "content/langgraph.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 3508,
+        "codeBlocks": 33,
+        "crossRefs": 21,
+        "xyflowBlocks": 10
+      }
+    },
+    {
+      "slug": "langgraph-lead-gen",
+      "file": "content/langgraph-lead-gen.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few code examples: 0 (min 2)",
+        "Missing cross-references: 0 (min 1)",
+        "Missing # title on first line",
+        "Fewer than 3 ## sections",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)"
+      ],
+      "metrics": {
+        "wordCount": 18941,
+        "codeBlocks": 0,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "langgraph-red-teaming",
+      "file": "content/langgraph-red-teaming.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 5110,
+        "codeBlocks": 26,
+        "crossRefs": 3,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "llamaindex",
+      "file": "content/llamaindex.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /search-recommendations, /eval-fundamentals, /model-architectures, /llm-serving, /eval-frameworks-comparison"
+      ],
+      "metrics": {
+        "wordCount": 2279,
+        "codeBlocks": 3,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "llm-as-judge",
+      "file": "content/llm-as-judge.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 6913,
+        "codeBlocks": 20,
+        "crossRefs": 19,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "llm-serving",
+      "file": "content/llm-serving.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4597,
+        "codeBlocks": 16,
+        "crossRefs": 9,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "lora-adapters",
+      "file": "content/lora-adapters.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4250,
+        "codeBlocks": 11,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "memory",
+      "file": "content/memory.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too short: 942 words (min 1500)",
+        "Too few code examples: 1 (min 2)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 942,
+        "codeBlocks": 1,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "memory-architectures",
+      "file": "content/memory-architectures.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /memory, /dynamic-context-assembly, /function-calling, /vision-language-models"
+      ],
+      "metrics": {
+        "wordCount": 7612,
+        "codeBlocks": 15,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "microservices",
+      "file": "content/microservices.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /kubernetes, /aws-architecture, /aws, /aws-cicd-devops, /multi-agent-systems"
+      ],
+      "metrics": {
+        "wordCount": 2131,
+        "codeBlocks": 5,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "model-architectures",
+      "file": "content/model-architectures.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /search-recommendations, /llm-serving, /deepeval-synthesizer, /vision-language-models"
+      ],
+      "metrics": {
+        "wordCount": 4762,
+        "codeBlocks": 7,
+        "crossRefs": 7,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "multi-agent-systems",
+      "file": "content/multi-agent-systems.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4117,
+        "codeBlocks": 21,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "nodejs",
+      "file": "content/nodejs.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /function-calling, /dynamodb-data-services, /aws-lambda-serverless, /aws-compute-containers, /docker"
+      ],
+      "metrics": {
+        "wordCount": 2374,
+        "codeBlocks": 5,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "observability",
+      "file": "content/observability.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: add reciprocal link back to /ai-governance (referenced from /ai-governance's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /ci-cd-ai (referenced from /ci-cd-ai's Related/Prerequisite section)",
+        "Relations: add reciprocal link back to /production-patterns (referenced from /production-patterns's Related/Prerequisite section)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /agent-debugging, /llm-serving, /eval-fundamentals, /guardrails-filtering, /structured-output"
+      ],
+      "metrics": {
+        "wordCount": 4564,
+        "codeBlocks": 19,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "online-evaluation",
+      "file": "content/online-evaluation.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4004,
+        "codeBlocks": 5,
+        "crossRefs": 10,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "postgresql-joins",
+      "file": "content/postgresql-joins.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 2571,
+        "codeBlocks": 33,
+        "crossRefs": 5,
+        "xyflowBlocks": 10
+      }
+    },
+    {
+      "slug": "pretraining-data",
+      "file": "content/pretraining-data.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /dataset-curation, /fine-tuning-fundamentals, /eval-fundamentals, /distillation-compression, /context-engineering"
+      ],
+      "metrics": {
+        "wordCount": 4562,
+        "codeBlocks": 8,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "production-patterns",
+      "file": "content/production-patterns.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /ai-engineer-roadmap, /multi-agent-systems, /context-engineering"
+      ],
+      "metrics": {
+        "wordCount": 5312,
+        "codeBlocks": 26,
+        "crossRefs": 11,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "prompt-caching",
+      "file": "content/prompt-caching.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 8115,
+        "codeBlocks": 28,
+        "crossRefs": 16,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "prompt-engineering-fundamentals",
+      "file": "content/prompt-engineering-fundamentals.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4444,
+        "codeBlocks": 5,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "prompt-optimization",
+      "file": "content/prompt-optimization.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /system-prompts, /prompt-caching, /structured-output, /rlhf-preference"
+      ],
+      "metrics": {
+        "wordCount": 5222,
+        "codeBlocks": 19,
+        "crossRefs": 9,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "public-speaking",
+      "file": "content/public-speaking.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few code examples: 0 (min 2)",
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /structured-output, /production-patterns, /context-engineering, /ai-engineer-roadmap"
+      ],
+      "metrics": {
+        "wordCount": 2010,
+        "codeBlocks": 0,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "rag",
+      "file": "content/rag.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too short: 747 words (min 1500)",
+        "Too few code examples: 1 (min 2)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 747,
+        "codeBlocks": 1,
+        "crossRefs": 12,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "rag-evaluation",
+      "file": "content/rag-evaluation.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 5707,
+        "codeBlocks": 17,
+        "crossRefs": 7,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "red-teaming",
+      "file": "content/red-teaming.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /ai-governance (referenced from /ai-governance's Related/Prerequisite section)",
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /langgraph-red-teaming, /ci-cd-ai, /agent-debugging, /bias-fairness"
+      ],
+      "metrics": {
+        "wordCount": 4964,
+        "codeBlocks": 11,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "retrieval-strategies",
+      "file": "content/retrieval-strategies.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 4895,
+        "codeBlocks": 17,
+        "crossRefs": 10,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "rlhf-preference",
+      "file": "content/rlhf-preference.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /benchmark-design, /inference-optimization, /ai-for-code, /distillation-compression, /human-evaluation"
+      ],
+      "metrics": {
+        "wordCount": 3872,
+        "codeBlocks": 4,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "scaling-laws",
+      "file": "content/scaling-laws.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /bias-fairness, /scaling-load-balancing, /audio-speech-ai, /ai-governance"
+      ],
+      "metrics": {
+        "wordCount": 3994,
+        "codeBlocks": 3,
+        "crossRefs": 7,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "scaling-load-balancing",
+      "file": "content/scaling-load-balancing.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /edge-deployment, /scaling-laws, /model-architectures, /distillation-compression"
+      ],
+      "metrics": {
+        "wordCount": 3509,
+        "codeBlocks": 9,
+        "crossRefs": 4,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "search-recommendations",
+      "file": "content/search-recommendations.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /eval-fundamentals, /llamaindex, /model-architectures, /llm-serving"
+      ],
+      "metrics": {
+        "wordCount": 5150,
+        "codeBlocks": 21,
+        "crossRefs": 9,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "solid-principles",
+      "file": "content/solid-principles.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /aws-architecture, /ai-for-code, /system-prompts, /function-calling"
+      ],
+      "metrics": {
+        "wordCount": 2225,
+        "codeBlocks": 12,
+        "crossRefs": 3,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "structured-output",
+      "file": "content/structured-output.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /distillation-compression, /llm-serving, /memory-architectures, /context-engineering"
+      ],
+      "metrics": {
+        "wordCount": 4991,
+        "codeBlocks": 17,
+        "crossRefs": 6,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "system-prompts",
+      "file": "content/system-prompts.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 5023,
+        "codeBlocks": 5,
+        "crossRefs": 10,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "tokenization",
+      "file": "content/tokenization.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /llm-serving, /structured-output, /eval-fundamentals, /distillation-compression, /prompt-engineering-fundamentals"
+      ],
+      "metrics": {
+        "wordCount": 3919,
+        "codeBlocks": 6,
+        "crossRefs": 5,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "tool-use",
+      "file": "content/tool-use.md",
+      "structure_ok": false,
+      "relation_ok": true,
+      "ok": false,
+      "structure_issues": [
+        "Too short: 830 words (min 1500)",
+        "Too few code examples: 1 (min 2)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [],
+      "metrics": {
+        "wordCount": 830,
+        "codeBlocks": 1,
+        "crossRefs": 13,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "transformer-architecture",
+      "file": "content/transformer-architecture.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /vision-language-models, /agent-architectures, /memory-architectures, /audio-speech-ai"
+      ],
+      "metrics": {
+        "wordCount": 3947,
+        "codeBlocks": 4,
+        "crossRefs": 8,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "vector-databases",
+      "file": "content/vector-databases.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: add reciprocal link back to /search-recommendations (referenced from /search-recommendations's Related/Prerequisite section)"
+      ],
+      "metrics": {
+        "wordCount": 5092,
+        "codeBlocks": 14,
+        "crossRefs": 9,
+        "xyflowBlocks": 0
+      }
+    },
+    {
+      "slug": "vision-language-models",
+      "file": "content/vision-language-models.md",
+      "structure_ok": false,
+      "relation_ok": false,
+      "ok": false,
+      "structure_issues": [
+        "Missing cross-references: 0 (min 1)",
+        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
+        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
+        "Missing `## Runtime Internals` deep-dive section."
+      ],
+      "relation_issues": [
+        "Relations: only 0 cross-refs (min 3 for a connected lesson)",
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /memory-architectures, /model-architectures, /search-recommendations, /context-engineering, /structured-output"
+      ],
+      "metrics": {
+        "wordCount": 4531,
+        "codeBlocks": 7,
+        "crossRefs": 0,
+        "xyflowBlocks": 0
+      }
+    }
+  ],
+  "worklist": [
+    "observability",
+    "aws-lambda-serverless",
+    "langgraph-lead-gen",
+    "aws-iam-security",
+    "eval-frameworks-comparison",
+    "public-speaking",
+    "audio-speech-ai",
+    "aws-architecture",
+    "aws-cost-optimization",
+    "azure",
+    "ci-cd",
+    "dataset-curation",
+    "deepeval-synthesizer",
+    "docker",
+    "embeddings",
+    "gcp",
+    "human-evaluation",
+    "kubernetes",
+    "llamaindex",
+    "microservices",
+    "nodejs",
+    "pretraining-data",
+    "rlhf-preference",
+    "vision-language-models",
+    "acid-properties",
+    "ai-gateway",
+    "aws-compute-containers",
+    "aws-messaging-events",
+    "aws-step-functions",
+    "aws-vpc-networking",
+    "ci-cd-ai",
+    "cost-optimization",
+    "embedding-models",
+    "function-calling",
+    "guardrails-filtering",
+    "memory",
+    "rag",
+    "red-teaming",
+    "tool-use",
+    "advanced-rag",
+    "agent-evaluation",
+    "agent-memory",
+    "ai-for-code",
+    "ai-governance",
+    "aws-ai-ml-services",
+    "aws-api-gateway-networking",
+    "aws-cicd-devops",
+    "aws-databases-rds",
+    "aws-observability",
+    "aws-security-services",
+    "aws-storage-s3",
+    "benchmark-design",
+    "bias-fairness",
+    "chunking-strategies",
+    "context-engineering",
+    "context-window-management",
+    "continual-learning",
+    "conversational-ai",
+    "dynamic-context-assembly",
+    "dynamodb-data-services",
+    "edge-deployment",
+    "eval-fundamentals",
+    "few-shot-chain-of-thought",
+    "fine-tuning-fundamentals",
+    "hallucination-mitigation",
+    "interpretability",
+    "memory-architectures",
+    "model-architectures",
+    "production-patterns",
+    "prompt-optimization",
+    "scaling-laws",
+    "scaling-load-balancing",
+    "search-recommendations",
+    "solid-principles",
+    "structured-output",
+    "tokenization",
+    "transformer-architecture",
+    "vector-databases",
+    "adversarial-prompting",
+    "agent-architectures",
+    "agent-debugging",
+    "agent-harnesses",
+    "agent-orchestration",
+    "agent-sdks",
+    "ai-engineer-roadmap",
+    "aws",
+    "aws-cloudfront-route53",
+    "aws-data-analytics",
+    "aws-developer-tools",
+    "code-agents",
+    "constitutional-ai",
+    "context-compression",
+    "distillation-compression",
+    "inference-optimization",
+    "langgraph-red-teaming",
+    "llm-as-judge",
+    "llm-serving",
+    "lora-adapters",
+    "multi-agent-systems",
+    "online-evaluation",
+    "prompt-caching",
+    "prompt-engineering-fundamentals",
+    "rag-evaluation",
+    "retrieval-strategies",
+    "system-prompts",
+    "foreign-keys"
+  ]
+}

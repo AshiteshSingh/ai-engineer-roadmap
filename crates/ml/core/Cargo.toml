@@ -26,6 +26,10 @@ path = "src/bin/export_content.rs"
 name = "seed-content"
 path = "src/bin/seed_content.rs"
 
+[[bin]]
+name = "content-gate"
+path = "src/bin/content_gate.rs"
+
 [dependencies]
 candle = { path = "../../../../../crates/candle", default-features = false }
 
