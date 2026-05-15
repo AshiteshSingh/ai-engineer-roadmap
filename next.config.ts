@@ -3,9 +3,8 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
-  serverExternalPackages: ["better-sqlite3"],
   outputFileTracingIncludes: {
-    "/*": ["./data/knowledge.db"],
+    "/*": ["./data/content/**"],
     "/langgraph/lead-gen": ["./data/langgraph-lead-gen.script.md"],
   },
   async redirects() {
