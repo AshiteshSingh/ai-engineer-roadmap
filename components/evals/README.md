@@ -1,8 +1,8 @@
-# `components/evals/` — redesigned evals hub (`/evals/v2`)
+# `components/evals/` — redesigned evals hub (`/evals`)
 
-A self-contained, **zero-global-CSS** rebuild of the Phase 5 evals page, staged
-at the preview route `/evals/v2`. The original `app/evals/page.tsx` is
-unchanged until this is promoted.
+A self-contained, **zero-global-CSS** rebuild of the Phase 5 evals page.
+Promoted: `app/evals/page.tsx` renders this composition; the `/evals/v2`
+preview route has been removed.
 
 ## Modules
 
@@ -16,7 +16,7 @@ unchanged until this is promoted.
 | `filter.ts` | Pure `filterAndSortLessons` / `computeFacets` / `computeProgressBySlug` | pure |
 | `EvalsBrowser.tsx` | Stateful container: owns filter state, wires Controls → Grid | `"use client"` |
 
-`app/evals/v2/page.tsx` (server) fetches `getGroupedLessons()`, finds
+`app/evals/page.tsx` (server) fetches `getGroupedLessons()`, finds
 `phase-5-evals`, and binds the category gradient from `meta.gradient` onto a
 wrapper as `--cat-from` / `--cat-to` (inline, data-driven — no `.cat-*` class).
 
@@ -30,8 +30,8 @@ wrapper as `--cat-from` / `--cat-to` (inline, data-driven — no `.cat-*` class)
   lets real per-user progress be wired later without touching presentational
   components.
 
-## Promotion (user-gated)
+## Status
 
-When approved, make `app/evals/page.tsx` render the same composition as
-`app/evals/v2/page.tsx` (or redirect `/evals` → `/evals/v2`), then optionally
-remove `app/evals/v2/`. This is the only change to `app/evals/page.tsx`.
+Promoted. `app/evals/page.tsx` is the only consumer; it composes
+`Topbar` + `EvalsHero` + `EvalsBrowser` + `Footer` and passes the Phase 5
+lessons in. The presentational components stay route-agnostic and reusable.
