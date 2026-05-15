@@ -308,6 +308,7 @@ async fn main() -> Result<()> {
 
 // ── crawl ──────────────────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 async fn cmd_crawl(
     output: PathBuf,
     topic_concurrency: usize,
@@ -1008,10 +1009,7 @@ async fn cmd_search(query: String, db: String, top: usize, embed_url: String) ->
     }
 
     println!("\nQuery: \"{query}\"\n");
-    println!(
-        "{:<4} {:<6} {:<45} {:<6} {}",
-        "Rank", "Score", "Title", "Rating", "Instructor"
-    );
+    println!("Rank Score  Title                                         Rating Instructor");
     println!("{}", "-".repeat(90));
 
     for (i, r) in results.iter().enumerate() {
@@ -1142,6 +1140,24 @@ async fn cmd_chapters_search(
 
 // ── generate ───────────────────────────────────────────────────────────────────
 
+/// Parse one `.env` line: skips blanks/`#` comments, tolerates a leading
+/// `export `, strips surrounding single/double quotes. Returns `None` for
+/// lines without a non-empty key.
+fn parse_env_line(line: &str) -> Option<(String, String)> {
+    let line = line.trim();
+    if line.is_empty() || line.starts_with('#') {
+        return None;
+    }
+    let line = line.strip_prefix("export ").unwrap_or(line).trim_start();
+    let (k, v) = line.split_once('=')?;
+    let k = k.trim();
+    if k.is_empty() {
+        return None;
+    }
+    let v = v.trim().trim_matches('"').trim_matches('\'');
+    Some((k.to_string(), v.to_string()))
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn cmd_generate(
     slug: String,
@@ -1163,15 +1179,9 @@ async fn cmd_generate(
         let text = std::fs::read_to_string(ef)
             .with_context(|| format!("reading env file {}", ef.display()))?;
         for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            if let Some((k, v)) = line.split_once('=') {
-                let k = k.trim();
-                let v = v.trim().trim_matches('"').trim_matches('\'');
-                if std::env::var(k).is_err() {
-                    std::env::set_var(k, v);
+            if let Some((k, v)) = parse_env_line(line) {
+                if std::env::var(&k).is_err() {
+                    std::env::set_var(&k, v);
                 }
             }
         }
@@ -1213,4 +1223,29 @@ async fn cmd_generate(
         }
     }
     std::process::exit(if outcome.quality.ok { 0 } else { 1 });
+}
+
+
+#[cfg(test)]
+mod env_tests {
+    use super::parse_env_line;
+
+    #[test]
+    fn parse_env_line_handles_export_quotes_and_junk() {
+        assert_eq!(parse_env_line("KEY=val"), Some(("KEY".into(), "val".into())));
+        assert_eq!(
+            parse_env_line("export DEEPSEEK_API_KEY=sk-123"),
+            Some(("DEEPSEEK_API_KEY".into(), "sk-123".into()))
+        );
+        assert_eq!(
+            parse_env_line("  Q = \"spaced value\" "),
+            Some(("Q".into(), "spaced value".into()))
+        );
+        assert_eq!(parse_env_line("X='single'"), Some(("X".into(), "single".into())));
+        assert_eq!(parse_env_line(""), None);
+        assert_eq!(parse_env_line("   "), None);
+        assert_eq!(parse_env_line("# comment"), None);
+        assert_eq!(parse_env_line("noequals"), None);
+        assert_eq!(parse_env_line("=novalue"), None);
+    }
 }

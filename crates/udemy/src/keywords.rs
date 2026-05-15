@@ -848,9 +848,7 @@ pub fn match_slugs(text: &str) -> Vec<(String, f32)> {
     for (slug, keywords) in SLUG_KEYWORDS {
         let hits = keywords.iter().filter(|kw| lower.contains(*kw)).count();
         if hits > 0 {
-            let score = (hits as f32 / keywords.len() as f32 * 1.5)
-                .min(1.0)
-                .max(0.3);
+            let score = (hits as f32 / keywords.len() as f32 * 1.5).clamp(0.3, 1.0);
             let rounded = (score * 100.0).round() / 100.0;
             matches.push((slug.to_string(), rounded));
         }

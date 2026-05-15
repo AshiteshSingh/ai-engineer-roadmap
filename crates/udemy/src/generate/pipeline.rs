@@ -128,6 +128,22 @@ fn pick_style_sample(content_dir: &Path, current_slug: &str) -> String {
     }
 }
 
+/// Extract the assistant text from a chat response, rejecting an
+/// empty/whitespace body so a degenerate LLM reply fails fast and loud
+/// instead of silently producing a broken article that burns a revise cycle.
+fn extract_content(resp: deepseek::ChatResponse) -> Result<String> {
+    let choice = resp
+        .choices
+        .into_iter()
+        .next()
+        .context("no choices in DeepSeek response")?;
+    let content = choice.message.content.as_str().to_string();
+    if content.trim().is_empty() {
+        anyhow::bail!("DeepSeek returned empty content");
+    }
+    Ok(content)
+}
+
 async fn ask(
     client: &DeepSeekClient<ReqwestClient>,
     model: &DeepSeekModel,
@@ -144,14 +160,7 @@ async fn ask(
             tokio::time::sleep(std::time::Duration::from_secs(d)).await;
         }
         match client.chat(&req).await {
-            Ok(resp) => {
-                let choice = resp
-                    .choices
-                    .into_iter()
-                    .next()
-                    .context("no choices in DeepSeek response")?;
-                return Ok(choice.message.content.as_str().to_string());
-            }
+            Ok(resp) => return extract_content(resp),
             Err(e) => {
                 let msg = e.to_string();
                 let retryable = msg.contains("API error (5")
@@ -171,9 +180,25 @@ async fn ask(
     ))
 }
 
+/// Fail fast on a bad output directory *before* spending any LLM tokens
+/// (skipped when `no_write`, where the directory is never touched).
+fn ensure_writable_dir(dir: &std::path::Path, no_write: bool) -> Result<()> {
+    if no_write {
+        return Ok(());
+    }
+    if !dir.is_dir() {
+        anyhow::bail!(
+            "content_dir does not exist or is not a directory: {} (create it, or pass --content-dir / --no-write)",
+            dir.display()
+        );
+    }
+    Ok(())
+}
+
 /// Run the full pipeline. Requires a reachable embed-server, `DEEPSEEK_API_KEY`
 /// in the environment, and a populated LanceDB at `cfg.db_path`.
 pub async fn generate_article(cfg: GenerateConfig) -> Result<GenerateOutcome> {
+    ensure_writable_dir(&cfg.content_dir, cfg.no_write)?;
     let http = reqwest::Client::new();
     embed::health(&http, &cfg.embed_url).await?;
     let client = client_from_env()?;
@@ -302,6 +327,28 @@ mod tests {
     use crate::generate::quality::check_quality;
 
     #[test]
+    fn extract_content_rejects_empty_and_no_choices() {
+        use deepseek::{assistant_msg, ChatResponse, Choice};
+        let mk = |c: &str| ChatResponse {
+            id: "x".into(),
+            choices: vec![Choice {
+                index: 0,
+                message: assistant_msg(c),
+                finish_reason: None,
+            }],
+            usage: None,
+        };
+        assert_eq!(extract_content(mk("hello world")).unwrap(), "hello world");
+        assert!(extract_content(mk("   \n  ")).is_err());
+        assert!(extract_content(ChatResponse {
+            id: "x".into(),
+            choices: vec![],
+            usage: None,
+        })
+        .is_err());
+    }
+
+    #[test]
     fn humanize_and_link_title() {
         assert_eq!(humanize_slug("agent-memory-systems"), "Agent Memory Systems");
         assert_eq!(humanize_slug("rag_pipeline"), "Rag Pipeline");
@@ -323,6 +370,16 @@ mod tests {
         assert_eq!(after_revise(&bad, 1, 2), Route::Revise);
         assert_eq!(after_revise(&bad, 2, 2), Route::Finalize);
         assert_eq!(after_revise(&ok, 2, 2), Route::Finalize);
+    }
+
+    #[test]
+    fn ensure_writable_dir_checks() {
+        let d = tempfile::tempdir().unwrap();
+        assert!(ensure_writable_dir(d.path(), false).is_ok());
+        let missing = d.path().join("nope");
+        assert!(ensure_writable_dir(&missing, false).is_err());
+        // skipped entirely when no_write
+        assert!(ensure_writable_dir(&missing, true).is_ok());
     }
 
     #[test]

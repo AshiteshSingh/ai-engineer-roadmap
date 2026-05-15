@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getGroupedLessons } from "@/lib/data";
 import { Topbar } from "@/components/topbar";
 import { Hero } from "@/components/hero";
-import { LearningPath } from "@/components/learning-path";
 import { Search } from "@/components/search";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
@@ -24,10 +23,6 @@ export default async function HomePage() {
       <Topbar lessonCount={total} />
 
       <Hero lessonCount={total} domainCount={catCount} wordCount={wordCount} readingHours={readingHours} />
-
-      <ScrollReveal>
-        <LearningPath groups={groups} />
-      </ScrollReveal>
 
       <ScrollReveal delay={60}>
         <section className="roadmap-flow" aria-label="AI Engineer roadmap flow">
