@@ -6431,6 +6431,122 @@
 /* <<< HP-TEAM-9 <<< */
 
 /* >>> HP-TEAM-10 COHESION / CROSS-SECTION RECONCILIATION (last-sourced; wins) — DO NOT EDIT outside this fence >>> */
+/* ================================================================
+   HP-TEAM-10 — COHESION / CROSS-SECTION RECONCILIATION
+   Sourced last → wins at equal specificity. No markup rewrites.
+   ================================================================ */
+
+/* ---- LEVER 1: ONE SECTION VERTICAL RHYTHM ---- */
+.lp {
+  padding-top: var(--space-section-y);
+  padding-bottom: var(--space-section-y);
+}
+.roadmap-flow {
+  margin-top: var(--space-section-y);
+  margin-bottom: var(--space-section-y);
+}
+.hp-research {
+  padding-top: var(--space-section-y);
+  padding-bottom: var(--space-7);
+}
+.cmd-search {
+  padding-top: var(--space-section-y);
+}
+.ftr {
+  padding-top: var(--space-section-y);
+}
+
+/* ---- LEVER 5: INTENTIONAL BACKGROUND ALTERNATION ---- */
+.roadmap-flow,
+.hp-research {
+  background: var(--ds-surface-sub);
+}
+.roadmap-flow {
+  border-top: 1px solid var(--ds-border-subtle);
+}
+.hp-research {
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+/* ---- LEVER 2: ONE CARD ELEVATION TIER ---- */
+.hx-panel {
+  box-shadow: var(--ds-shadow-2);
+}
+
+/* ---- LEVER 3a: ONE SECTION EYEBROW ---- */
+.lp-eyebrow,
+.hp-research-eyebrow,
+.ftr-eyebrow {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ds-accent-text);
+  margin-bottom: var(--space-2);
+}
+.hx-kicker {
+  letter-spacing: 0.18em;
+}
+
+/* ---- LEVER 3b: ONLY THE HERO OWNS HERO-TITLE SIZE ---- */
+.ftr-headline {
+  font-size: var(--section-title-size, var(--text-2xl));
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ---- LEVER 4: ONE ACCENT FOCAL HIERARCHY ---- */
+.hp-research-card--featured {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+}
+.hp-research-card--featured .hp-research-glow {
+  opacity: 0.22;
+}
+.hp-research-card--featured:hover {
+  border-color: var(--ds-accent-border);
+}
+.hp-research-card--featured:hover .hp-research-glow {
+  opacity: 0.4;
+}
+.ftr-headline-accent {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--ds-accent-text);
+}
+
+/* ---- RESPONSIVE: keep the unified rhythm on small screens ---- */
+@media (max-width: 768px) {
+  .lp,
+  .hp-research {
+    padding-top: var(--space-7);
+    padding-bottom: var(--space-7);
+  }
+  .roadmap-flow {
+    margin-top: var(--space-7);
+    margin-bottom: var(--space-7);
+  }
+  .cmd-search,
+  .ftr {
+    padding-top: var(--space-7);
+  }
+}
+@media (max-width: 480px) {
+  .lp,
+  .hp-research {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-6);
+  }
+  .roadmap-flow {
+    margin-top: var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+  .cmd-search,
+  .ftr {
+    padding-top: var(--space-6);
+  }
+}
 /* <<< HP-TEAM-10 <<< */
 
 /* ===== END HOMEPAGE REDESIGN REGIONS ===== */

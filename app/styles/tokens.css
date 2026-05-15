@@ -20,6 +20,8 @@
   --text-3xl: clamp(26px, 4.2vw + 14px, 44px);
   /* Fluid hero title (max == prior fixed .hero-title 3rem) */
   --hero-title-size: clamp(1.75rem, 5.5vw + 0.5rem, 3rem);
+  /* Section heading (h2) — distinct from the singular hero h1 size */
+  --section-title-size: var(--text-2xl);
 
   /* Spacing scale — 8px base (fixed; used for internal component spacing) */
   --space-1: 4px;
@@ -36,6 +38,10 @@
   --space-section-x: clamp(16px, 5vw, 24px);   /* max == --space-5 */
   --space-section-y: clamp(40px, 8vw, 64px);   /* max == --space-8 */
   --space-gutter: clamp(12px, 4vw, 16px);      /* max == --space-4 */
+
+  /* Cohesion: one shared between-section rhythm + one raised-card tier */
+  --space-section-gap: var(--space-section-y);
+  --ds-shadow-raised: var(--ds-shadow-2);
 
   /* ============================================================
      DS SEMANTIC TOKEN LAYER (dark-only + indigo)
