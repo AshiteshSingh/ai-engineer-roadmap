@@ -91,12 +91,18 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [x] components/mermaid-flow/index.tsx — NO-OP (ux3-14 silent-idle; orchestrator-verified): only inline style is `style={{ height: result.height }}` (runtime mermaid-render height — dynamic, must stay inline); global `.mermaid-flow-container` + library SVG. Nothing static co-locatable. Do not re-pick.
 - [x] components/mermaid-flow/nodes.tsx — NO-OP (ux2-15 silent-idle; orchestrator-verified): 3 inline styles, none cosmetic-static — `border/bg/color: var(--${accent}-N)` (DYNAMIC runtime token name), `style={{ height: data.height }}` (DYNAMIC), `style={{ width:1, height:1 }}` (FUNCTIONAL React-Flow handle-anchor, not polish). Nothing design-system-polishable. Do not re-pick.
 - [x] components/xyflow-direct/index.tsx — NO-OP (ux3-15 silent-idle; orchestrator-verified): only inline style is dynamic CSS-var passthrough `style={{ "--graph-h": `${result.height}px` }}` (runtime); global `.mermaid-flow-container` + library `.react-flow*`. Nothing static co-locatable. Do not re-pick.
-- [ ] components/problems/problem-workspace.tsx
+- [x] components/problems/problem-workspace.tsx — DONE (ux1-16, 78df658, orchestrator value-verified): value-EXACT `borderRadius:8`→`--ds-radius-md`(8px), `padding:8`→`--space-2`(8px), `borderRadius:6`→`--ds-radius`(6px); `fontSize:12` kept literal (no exact --text-*); border/gray-a5/gray-a2 kept raw; functional flex/minHeight:320/overflow left inline. No-global gate clean. **← TIER-A COMPLETE.**
 
 ## Tier B — page UX polish (after Tier A)
 
 - [ ] app/**/page.tsx (32 routes) — spacing rhythm / hierarchy / hover-focus
   / reduced-motion / responsive, token-only, one route per item.
+  **NOTE/RECOMMENDATION:** all 32 routes were already DS-migrated by the
+  original 5-min `design-system-loop` (tokens + `components/ui/*` +
+  co-located modules, deployed). Tier-B here is only a soft refinement
+  pass. Tier-A's last ~10 batches were ~100% NO-OP (substantive work long
+  since landed on main). Recommend WIND-DOWN rather than grinding 32
+  low-yield route probes — surfaced to user 2026-05-16.
 
 ## Status
 
@@ -110,6 +116,12 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 
 ## Tick log
 
+- **tick (DONE + Tier-A COMPLETE):** ux1-16 problems/problem-workspace
+  DONE `78df658` — orchestrator value-verified all 3 swaps EXACT
+  (`--ds-radius-md`=8, `--space-2`=8, `--ds-radius`=6), no-global clean.
+  Real polish commit (first non-NO-OP in many ticks). **TIER-A COMPLETE.**
+  PR-merging lane→main (proven gh path). Only Tier-B remains (32
+  already-DS-migrated routes) — recommending WIND-DOWN to user.
 - **tick (reconcile):** ux1-15 roadmap-graph/nodes / ux2-15
   mermaid-flow/nodes / ux3-15 xyflow-direct/index → all NO-OP (silent-idle;
   orchestrator-verified: 0-inline / dynamic-only / functional-only — no
