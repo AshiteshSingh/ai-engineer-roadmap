@@ -19,6 +19,7 @@ import {
   type MasteryMap,
 } from "@/components/memorize/MemorizeDashboard";
 import "@/components/memorize/css-memorize.css";
+import styles from "./page.module.css";
 
 function CategoryMemorizeInner() {
   const params = useParams<{ categorySlug: string }>();
@@ -126,8 +127,8 @@ function CategoryMemorizeInner() {
 
   if (loading) {
     return (
-      <Box px={{ initial: "2", md: "3" }} py="4" style={{ height: "100vh" }}>
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 300 }} />
+      <Box px={{ initial: "2", md: "3" }} py="4" className={styles.screen}>
+        <Skeleton height="32px" mb="6" className={styles.skelTitle} />
         <Skeleton height="400px" />
       </Box>
     );
@@ -135,7 +136,7 @@ function CategoryMemorizeInner() {
 
   if (error) {
     return (
-      <Box px={{ initial: "2", md: "3" }} py="4" style={{ height: "100vh" }}>
+      <Box px={{ initial: "2", md: "3" }} py="4" className={styles.screen}>
         <Heading size="5" mb="3">Error</Heading>
         <Text color="gray">{error}</Text>
       </Box>
@@ -146,11 +147,11 @@ function CategoryMemorizeInner() {
 
   if (totalItems === 0) {
     return (
-      <Box px={{ initial: "2", md: "3" }} py="4" style={{ height: "100vh" }}>
+      <Box px={{ initial: "2", md: "3" }} py="4" className={styles.screen}>
         <Flex align="center" gap="2" mb="4">
           <Link
             href="/memorize"
-            style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--gray-11)", textDecoration: "none" }}
+            className={styles.backLink}
           >
             <ArrowLeftIcon />
             <Text size="2">All Categories</Text>
@@ -158,7 +159,7 @@ function CategoryMemorizeInner() {
           <Text size="2" color="gray">/</Text>
           <Heading size="4">{categoryName}</Heading>
         </Flex>
-        <Box p="6" style={{ textAlign: "center", background: "var(--gray-2)", borderRadius: "var(--radius-3)" }}>
+        <Box className={styles.empty}>
           <Text size="3" color="gray">
             No concepts extracted for this category yet.
           </Text>
@@ -168,12 +169,12 @@ function CategoryMemorizeInner() {
   }
 
   return (
-    <Box px={{ initial: "2", md: "3" }} py={{ initial: "2", md: "3" }} style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "auto" }}>
+    <Box px={{ initial: "2", md: "3" }} py={{ initial: "2", md: "3" }} className={styles.screenCol}>
       <Flex justify="between" align="center" mb="3" wrap="wrap" gap="2">
         <Flex align="center" gap="2">
           <Link
             href="/memorize"
-            style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--gray-11)", textDecoration: "none" }}
+            className={styles.backLink}
           >
             <ArrowLeftIcon />
             <Text size="2">All Categories</Text>
@@ -201,8 +202,8 @@ export default function CategoryMemorizePage() {
   return (
     <Suspense
       fallback={
-        <Box px={{ initial: "2", md: "3" }} py="4" style={{ height: "100vh" }}>
-          <Skeleton height="32px" mb="6" style={{ maxWidth: 300 }} />
+        <Box px={{ initial: "2", md: "3" }} py="4" className={styles.screen}>
+          <Skeleton height="32px" mb="6" className={styles.skelTitle} />
           <Skeleton height="400px" />
         </Box>
       }

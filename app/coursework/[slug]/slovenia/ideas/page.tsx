@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Container,
   Heading,
   Text,
   Box,
@@ -15,6 +14,8 @@ import {
 import { ArrowLeftIcon, StarIcon } from "@radix-ui/react-icons";
 import NextLink from "next/link";
 import { useParams } from "next/navigation";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 
 const CONCEPT_OPTIONS = [
   { title: "Slovenia — Țara Dragonilor", note: "Dragonul Ljubljanei e simbol ușor de recunoscut, iubit de copii." },
@@ -162,7 +163,7 @@ export default function SloveniaIdeasPage() {
   const slug = params?.slug ?? "bogdan";
 
   return (
-    <Container size="3" py="8" className="cw-container">
+    <Section className="cw-container">
       <Flex align="center" gap="2" mb="4">
         <RadixLink asChild color="gray" size="2">
           <NextLink href={`/coursework/${slug}/slovenia`}>
@@ -176,9 +177,9 @@ export default function SloveniaIdeasPage() {
       <Flex align="center" gap="3" mb="2">
         <Text size="9">🇸🇮</Text>
         <Box>
-          <Heading size="8" mb="1">
+          <DSHeading as="h1" size="xl">
             Ghid complet de pregătire
-          </Heading>
+          </DSHeading>
           <Text size="2" color="gray">
             Standul Slovenia — Ziua Europei, 7 mai 2026
           </Text>
@@ -226,10 +227,10 @@ export default function SloveniaIdeasPage() {
         <Flex direction="column" gap="2">
           {ESSENTIAL_FACTS.map((f) => (
             <Flex key={f.label} gap="2" align="start">
-              <Text size="2" weight="bold" style={{ minWidth: 140 }}>
+              <Text size="2" weight="bold" className={styles.label}>
                 {f.label}:
               </Text>
-              <Text size="2" style={{ flex: 1 }}>
+              <Text size="2" className={styles.grow}>
                 {f.value}
               </Text>
             </Flex>
@@ -246,7 +247,7 @@ export default function SloveniaIdeasPage() {
           Idei vizuale:
         </Text>
         <Flex direction="column" gap="1" mb="3" asChild>
-          <ol style={{ paddingLeft: 20, margin: 0 }}>
+          <ol className={styles.list}>
             {STAMP_IDEAS.map((s) => (
               <li key={s}>
                 <Text size="2">{s}</Text>
@@ -258,7 +259,7 @@ export default function SloveniaIdeasPage() {
           Cum o realizați practic (de la simplu la artizanal):
         </Text>
         <Flex direction="column" gap="1" mb="2" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {STAMP_HOW_TO.map((s) => (
               <li key={s}>
                 <Text size="2" color="gray">
@@ -282,7 +283,7 @@ export default function SloveniaIdeasPage() {
           Un poster mare (A2 sau mai mare) cu:
         </Text>
         <Flex direction="column" gap="1" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {POSTER_ITEMS.map((s) => (
               <li key={s}>
                 <Text size="2">{s}</Text>
@@ -298,7 +299,7 @@ export default function SloveniaIdeasPage() {
           5. Decor și exponate 3D
         </Heading>
         <Flex direction="column" gap="1" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {DECOR_ITEMS.map((s) => (
               <li key={s}>
                 <Text size="2">{s}</Text>
@@ -314,7 +315,7 @@ export default function SloveniaIdeasPage() {
           6. Degustare (din comerț, pentru siguranță)
         </Heading>
         <Flex direction="column" gap="1" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {TASTING_ITEMS.map((s) => (
               <li key={s}>
                 <Text size="2">{s}</Text>
@@ -330,7 +331,7 @@ export default function SloveniaIdeasPage() {
           7. Audiție muzicală (fundal discret)
         </Heading>
         <Flex direction="column" gap="1" mb="2" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {MUSIC_ITEMS.map((s) => (
               <li key={s}>
                 <Text size="2">{s}</Text>
@@ -349,7 +350,7 @@ export default function SloveniaIdeasPage() {
           8. Costume și dans
         </Heading>
         <Flex direction="column" gap="1" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {COSTUMES_ITEMS.map((s) => (
               <li key={s}>
                 <Text size="2">{s}</Text>
@@ -365,7 +366,7 @@ export default function SloveniaIdeasPage() {
           9. Activități interactive la stand
         </Heading>
         <Flex direction="column" gap="1" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {INTERACTIVE_ITEMS.map((s) => (
               <li key={s}>
                 <Text size="2">{s}</Text>
@@ -385,12 +386,12 @@ export default function SloveniaIdeasPage() {
         </Text>
         <Flex direction="column" gap="3">
           {PRESENTATION_PAIRS.map((p) => (
-            <Box key={p.pair} style={{ background: "var(--gray-2)", padding: 12, borderRadius: 8 }}>
+            <Box key={p.pair} className={styles.pairBox}>
               <Text size="2" weight="bold" as="div">
                 {p.pair} — {p.theme}
               </Text>
               <Flex direction="column" gap="1" mt="2" asChild>
-                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                <ul className={styles.list}>
                   {p.bullets.map((b) => (
                     <li key={b}>
                       <Text size="2">{b}</Text>
@@ -410,15 +411,7 @@ export default function SloveniaIdeasPage() {
         </Heading>
         <Flex gap="2" wrap="wrap">
           {SLOVENIAN_WORDS.map((w) => (
-            <Box
-              key={w.word}
-              style={{
-                background: "var(--teal-2)",
-                padding: "8px 12px",
-                borderRadius: 8,
-                minWidth: 140,
-              }}
-            >
+            <Box key={w.word} className={styles.wordBox}>
               <Text size="2" weight="bold" as="div">
                 {w.word}
               </Text>
@@ -441,7 +434,7 @@ export default function SloveniaIdeasPage() {
         <Flex direction="column" gap="2" mb="3">
           {FAMILY_ASSIGNMENTS.map((f) => (
             <Flex key={f.family} gap="2" align="start">
-              <Badge size="1" color="teal" variant="soft" style={{ minWidth: 80 }}>
+              <Badge size="1" color="teal" variant="soft" className={styles.badge80}>
                 {f.family}
               </Badge>
               <Text size="2">{f.role}</Text>
@@ -449,7 +442,7 @@ export default function SloveniaIdeasPage() {
           ))}
         </Flex>
         <Flex direction="column" gap="1" mb="3" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             <li>
               <Text size="2">
                 <strong>Întâlnire pregătitoare:</strong> ideal un weekend (25–26 aprilie sau 2–3 mai). Online pentru coordonare, live doar pentru repetiția prezentării.
@@ -472,7 +465,7 @@ export default function SloveniaIdeasPage() {
           Checklist ziua Z (7 mai, 13:30):
         </Text>
         <Flex direction="column" gap="1" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {DAY_Z_CHECKLIST.map((s) => (
               <li key={s}>
                 <Text size="2" color="gray">
@@ -490,7 +483,7 @@ export default function SloveniaIdeasPage() {
           13. Elemente „WOW” de diferențiere
         </Heading>
         <Flex direction="column" gap="1" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {WOW_ITEMS.map((s) => (
               <li key={s}>
                 <Text size="2">{s}</Text>
@@ -499,6 +492,6 @@ export default function SloveniaIdeasPage() {
           </ul>
         </Flex>
       </Card>
-    </Container>
+    </Section>
   );
 }

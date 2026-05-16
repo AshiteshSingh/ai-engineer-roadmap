@@ -2,7 +2,6 @@
 
 import { Suspense, useState, useEffect, useCallback } from "react";
 import {
-  Container,
   Heading,
   Button,
   Flex,
@@ -20,6 +19,8 @@ import remarkGfm from "remark-gfm";
 import { useSession } from "@/lib/auth-client";
 import { ApplicationHeader } from "@/components/app-detail/ApplicationHeader";
 import type { AppData } from "@/components/app-detail/types";
+import { Section } from "@/components/ui";
+import styles from "./page.module.css";
 
 function InterviewersPageInner() {
   const params = useParams<{ id: string }>();
@@ -104,29 +105,29 @@ function InterviewersPageInner() {
 
   if (loading) {
     return (
-      <Container size="3" p="8">
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 200 }} />
+      <Section>
+        <Skeleton height="32px" mb="6" className={styles.skel} />
         <Skeleton height="400px" />
-      </Container>
+      </Section>
     );
   }
 
   if (error) {
     return (
-      <Container size="3" p="8">
+      <Section>
         <Card>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5">Error Loading Application</Heading>
             <Text color="gray">{error}</Text>
           </Flex>
         </Card>
-      </Container>
+      </Section>
     );
   }
 
   if (!app) {
     return (
-      <Container size="3" p="8">
+      <Section>
         <Card>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5">Application Not Found</Heading>
@@ -138,12 +139,12 @@ function InterviewersPageInner() {
             </Button>
           </Flex>
         </Card>
-      </Container>
+      </Section>
     );
   }
 
   return (
-    <Container size="3" p={{ initial: "4", md: "8" }}>
+    <Section>
       <ApplicationHeader
         app={app}
         isAdmin={isAdmin}
@@ -152,7 +153,7 @@ function InterviewersPageInner() {
       />
 
       <Tabs.Root value="interviewers" onValueChange={handleTabChange}>
-        <Tabs.List style={{ borderBottom: "1px solid var(--gray-6)" }}>
+        <Tabs.List className={styles.tabsList}>
           <Tabs.Trigger value="description">
             <Flex direction="column" align="center" gap="0">
               <Text>Job Description</Text>
@@ -193,12 +194,7 @@ function InterviewersPageInner() {
 
         <Box pt="4">
           <Tabs.Content value="interviewers">
-            <Card
-              style={{
-                borderLeft: "3px solid var(--cyan-6)",
-                borderRadius: 0,
-              }}
-            >
+            <Card className={styles.panel}>
               <Flex justify="between" align="center" mb="4">
                 <Heading size="4">Interviewers</Heading>
                 {isAdmin && !editing && (
@@ -224,11 +220,7 @@ function InterviewersPageInner() {
                     onChange={(e) => setDraft(e.target.value)}
                     placeholder={`## Jane Smith\n**Role:** Engineering Manager\n**LinkedIn:** https://linkedin.com/in/...\n**Background:** 10 years at Criteo, leads the AI team...\n\n## John Doe\n**Role:** Senior Developer\n...`}
                     rows={16}
-                    style={{
-                      fontFamily: "var(--font-mono, monospace)",
-                      fontSize: "var(--font-size-1)",
-                      lineHeight: 1.7,
-                    }}
+                    className={styles.codeArea}
                   />
                   <Flex gap="2" mt="3" justify="end">
                     <Button
@@ -396,7 +388,7 @@ function InterviewersPageInner() {
           </Tabs.Content>
         </Box>
       </Tabs.Root>
-    </Container>
+    </Section>
   );
 }
 
@@ -404,10 +396,10 @@ export default function InterviewersPage() {
   return (
     <Suspense
       fallback={
-        <Container size="3" p="8">
-          <Skeleton height="32px" mb="6" style={{ maxWidth: 200 }} />
+        <Section>
+          <Skeleton height="32px" mb="6" className={styles.skel} />
           <Skeleton height="400px" />
-        </Container>
+        </Section>
       }
     >
       <InterviewersPageInner />

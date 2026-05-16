@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Container, Heading, Text, Box, Flex, Card, Badge, Separator } from "@radix-ui/themes";
+import { Text, Box, Flex, Card, Badge, Separator } from "@radix-ui/themes";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 import { ExternalLinkIcon, ArrowLeftIcon } from "@radix-ui/react-icons";
 import { MarkdownProse } from "@/components/markdown-prose";
 import fs from "fs";
@@ -37,19 +39,19 @@ export default function NexttechJobPage() {
 
   if (!jobData) notFound();
   return (
-    <Container size="3" p={{ initial: "4", md: "8" }}>
+    <Section>
       {/* Back link */}
       <Flex mb="5" align="center" gap="2">
         <ArrowLeftIcon />
         <Text size="2" asChild>
-          <Link href="/" style={{ color: "var(--gray-11)", textDecoration: "none" }}>
+          <Link href="/" className={styles.backLink}>
             Back to Knowledge Base
           </Link>
         </Text>
       </Flex>
 
       {/* Header card */}
-      <Card mb="6" style={{ borderLeft: "4px solid var(--teal-9)" }}>
+      <Card mb="6" className={styles.headerCard}>
         <Flex direction="column" gap="3" p="2">
           <Flex align="center" gap="3" wrap="wrap">
             <Badge size="2" color="teal" variant="solid">
@@ -60,9 +62,9 @@ export default function NexttechJobPage() {
             </Badge>
           </Flex>
 
-          <Heading size="7" style={{ lineHeight: 1.2 }}>
+          <DSHeading as="h1" size="xl">
             {jobData.position}
-          </Heading>
+          </DSHeading>
 
           <Flex align="center" gap="2">
             <Text size="2" asChild>
@@ -70,13 +72,7 @@ export default function NexttechJobPage() {
                 href={jobData.url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  color: "var(--teal-11)",
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
+                className={styles.applyLink}
               >
                 Apply on TalentLyft <ExternalLinkIcon />
               </a>
@@ -88,7 +84,7 @@ export default function NexttechJobPage() {
       <Separator size="4" mb="6" />
 
       {/* Job description rendered as markdown */}
-      <Box className="deep-dive-content" style={{ lineHeight: 1.8 }}>
+      <Box className={`deep-dive-content ${styles.prose}`}>
         <MarkdownProse content={jobData.description} />
       </Box>
 
@@ -100,18 +96,12 @@ export default function NexttechJobPage() {
             href={jobData.url ?? "#"}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              color: "var(--teal-11)",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
+            className={styles.applyLink}
           >
             Apply for this position <ExternalLinkIcon />
           </a>
         </Text>
       </Flex>
-    </Container>
+    </Section>
   );
 }

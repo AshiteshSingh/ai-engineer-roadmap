@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { Container, Flex, Section, Text } from "@radix-ui/themes";
+import { Flex, Text } from "@radix-ui/themes";
+import { Section } from "@/components/ui";
+import styles from "./page.module.css";
 import { Topbar } from "@/components/topbar";
 import { db } from "@/src/db";
 import { problems } from "@/src/db/schema";
@@ -30,15 +32,14 @@ export default async function ProblemPage({ params }: { params: Promise<{ slug: 
   return (
     <>
       <Topbar />
-      <Section size="2">
-        <Container size="4">
+      <Section>
           <Flex justify="between" align="center" mb="3">
-            <Link href="/problems" style={{ color: "var(--gray-11)", textDecoration: "none", fontSize: 14 }}>
+            <Link href="/problems" className={styles.backLink}>
               ← All problems
             </Link>
             {!session && (
               <Text size="2" color="gray">
-                <Link href="/login" style={{ color: "var(--teal-11)" }}>Sign in</Link> to save submissions
+                <Link href="/login" className={styles.signin}>Sign in</Link> to save submissions
               </Text>
             )}
           </Flex>
@@ -53,7 +54,6 @@ export default async function ProblemPage({ params }: { params: Promise<{ slug: 
             testCases={problem.testCases as TestCase[]}
             isAuthenticated={!!session}
           />
-        </Container>
       </Section>
     </>
   );

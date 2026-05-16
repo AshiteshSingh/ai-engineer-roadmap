@@ -1,0 +1,23 @@
+/* Co-located styles for app/coursework/[slug]/slovenia/page.tsx — no global CSS.
+   `cw-container` global kept; teal is the intentional route accent. */
+.grow0 {
+  flex: 1;
+  min-width: 0;
+}
+.grow {
+  flex: 1;
+}
+.tealCard {
+  border-color: var(--teal-7);
+}
+.linkCard {
+  border-color: var(--teal-7);
+  cursor: pointer;
+}
+.list {
+  padding-left: 20px;
+  margin: 0;
+}
+.emoji {
+  font-size: 32px;
+}

@@ -11,6 +11,8 @@ import { TechStackTab } from "@/components/app-detail/TechStackTab";
 import { CompanyTab } from "@/components/app-detail/CompanyTab";
 import { InterviewPrepTab } from "@/components/app-detail/InterviewPrepTab";
 import type { AppData } from "@/components/app-detail/types";
+import { Section } from "@/components/ui";
+import styles from "./page.module.css";
 
 const TAB_VALUES = ["description", "tech", "company", "prep", "interviewers", "notes", "debrief"] as const;
 type TabValue = (typeof TAB_VALUES)[number];
@@ -88,16 +90,16 @@ function ApplicationDetailInner() {
 
   if (loading) {
     return (
-      <Container size="3" p="8">
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 200 }} />
+      <Section>
+        <Skeleton height="32px" mb="6" className={styles.skel} />
         <Skeleton height="400px" />
-      </Container>
+      </Section>
     );
   }
 
   if (error) {
     return (
-      <Container size="3" p="8">
+      <Section>
         <Card>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5">Error Loading Application</Heading>
@@ -105,13 +107,13 @@ function ApplicationDetailInner() {
             <Button onClick={() => window.location.reload()}>Retry</Button>
           </Flex>
         </Card>
-      </Container>
+      </Section>
     );
   }
 
   if (!app) {
     return (
-      <Container size="3" p="8">
+      <Section>
         <Card>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5">Application Not Found</Heading>
@@ -121,7 +123,7 @@ function ApplicationDetailInner() {
             </Button>
           </Flex>
         </Card>
-      </Container>
+      </Section>
     );
   }
 
@@ -194,10 +196,10 @@ function ApplicationDetailInner() {
 export default function ApplicationDetailPage() {
   return (
     <Suspense fallback={
-      <Container size="3" p="8">
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 200 }} />
+      <Section>
+        <Skeleton height="32px" mb="6" className={styles.skel} />
         <Skeleton height="400px" />
-      </Container>
+      </Section>
     }>
       <ApplicationDetailInner />
     </Suspense>

@@ -1,0 +1,38 @@
+/* Co-located styles for app/memorize/page.tsx.
+   Replaces ad-hoc inline style objects with DS tokens — no global CSS. */
+.sub {
+  color: var(--ds-text-muted);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+.empty {
+  text-align: center;
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--ds-radius);
+  padding: var(--space-6);
+}
+.skelTitle {
+  max-width: 300px;
+}
+.cardLink {
+  text-decoration: none;
+  color: inherit;
+}
+.card {
+  min-height: 130px;
+  position: relative;
+  overflow: hidden;
+}
+.progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: var(--pct, 0%);
+  background: var(--bar, var(--ds-accent));
+  transition: width var(--ds-dur-slow, 0.3s) var(--ds-ease, ease);
+}

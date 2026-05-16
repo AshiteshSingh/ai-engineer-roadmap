@@ -21,6 +21,7 @@ import {
 } from "@/components/memorize/MemorizeDashboard";
 import type { MemorizeCategory } from "@/lib/memorize-types";
 import "@/components/app-detail/memorize/css-memorize.css";
+import styles from "./page.module.css";
 
 interface AppData {
   slug: string;
@@ -133,8 +134,8 @@ function MemorizePageInner() {
 
   if (loading) {
     return (
-      <Box px={{ initial: "2", md: "3" }} py="4" style={{ height: "100vh" }}>
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 300 }} />
+      <Box px={{ initial: "2", md: "3" }} py="4" className={styles.screen}>
+        <Skeleton height="32px" mb="6" className={styles.skelTitle} />
         <Skeleton height="400px" />
       </Box>
     );
@@ -142,7 +143,7 @@ function MemorizePageInner() {
 
   if (error || !app) {
     return (
-      <Box px={{ initial: "2", md: "3" }} py="4" style={{ height: "100vh" }}>
+      <Box px={{ initial: "2", md: "3" }} py="4" className={styles.screen}>
         <Heading size="5" mb="3">
           {error ? "Error" : "Not Found"}
         </Heading>
@@ -156,11 +157,11 @@ function MemorizePageInner() {
   // Not generated yet — show generation prompt
   if (!generated) {
     return (
-      <Box px={{ initial: "2", md: "3" }} py={{ initial: "2", md: "3" }} style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      <Box px={{ initial: "2", md: "3" }} py={{ initial: "2", md: "3" }} className={styles.screenColNoScroll}>
         <Flex align="center" gap="2" mb="5">
           <Link
             href={`/applications/${app.slug}/prep`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--gray-11)", textDecoration: "none" }}
+            className={styles.backLink}
           >
             <ArrowLeftIcon />
             <Text size="2">Study Plan</Text>
@@ -169,10 +170,10 @@ function MemorizePageInner() {
           <Heading size="4">Memorize</Heading>
         </Flex>
 
-        <Flex direction="column" align="center" justify="center" style={{ flex: 1 }}>
-          <Card style={{ maxWidth: 480, width: "100%", padding: 32 }}>
+        <Flex direction="column" align="center" justify="center" className={styles.fillCol}>
+          <Card className={styles.genCard}>
             <Flex direction="column" align="center" gap="4">
-              <RocketIcon width={32} height={32} style={{ color: "var(--violet-9)" }} />
+              <RocketIcon width={32} height={32} className={styles.rocket} />
               <Heading size="5" align="center">Generate Flashcards</Heading>
               <Text size="2" color="gray" align="center">
                 Create spaced-repetition flashcards from the tech stack in your {app.position} application at {app.company}.
@@ -187,7 +188,7 @@ function MemorizePageInner() {
                 color="violet"
                 disabled={generating || !app.aiTechStack}
                 onClick={handleGenerate}
-                style={{ width: "100%" }}
+                className={styles.fullBtn}
               >
                 {generating ? (
                   <Flex align="center" gap="2">
@@ -206,19 +207,13 @@ function MemorizePageInner() {
   }
 
   return (
-    <Box px={{ initial: "2", md: "3" }} py={{ initial: "2", md: "3" }} style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "auto" }}>
+    <Box px={{ initial: "2", md: "3" }} py={{ initial: "2", md: "3" }} className={styles.screenCol}>
       {/* Compact header */}
       <Flex justify="between" align="center" mb="3" wrap="wrap" gap="2">
         <Flex align="center" gap="2">
           <Link
             href={`/applications/${app.slug}/prep`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              color: "var(--gray-11)",
-              textDecoration: "none",
-            }}
+            className={styles.backLink}
           >
             <ArrowLeftIcon />
             <Text size="2">Study Plan</Text>
@@ -258,8 +253,8 @@ export default function MemorizePage() {
   return (
     <Suspense
       fallback={
-        <Box px={{ initial: "2", md: "3" }} py="4" style={{ height: "100vh" }}>
-          <Skeleton height="32px" mb="6" style={{ maxWidth: 300 }} />
+        <Box px={{ initial: "2", md: "3" }} py="4" className={styles.screen}>
+          <Skeleton height="32px" mb="6" className={styles.skelTitle} />
           <Skeleton height="400px" />
         </Box>
       }

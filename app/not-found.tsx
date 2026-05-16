@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Topbar } from "@/components/topbar";
 import { getAllLessons, getGroupedLessons } from "@/lib/data";
 import { Footer } from "@/components/footer";
+import styles from "./not-found.module.css";
 
 export default async function NotFound() {
   const [allLessons, groups] = await Promise.all([
@@ -22,7 +23,7 @@ export default async function NotFound() {
           Explore the existing lessons or browse by category below.
         </p>
 
-        <Link href="/#lessons" className="hero-cta" style={{ marginBottom: 32 }}>
+        <Link href="/#lessons" className={`hero-cta ${styles.cta}`}>
           Browse all lessons
         </Link>
 

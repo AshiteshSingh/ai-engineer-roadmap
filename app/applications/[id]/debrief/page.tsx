@@ -1,13 +1,15 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback } from "react";
-import { Container, Heading, Button, Flex, Text, Box, Card, Skeleton, Tabs } from "@radix-ui/themes";
+import { Heading, Button, Flex, Text, Box, Card, Skeleton, Tabs } from "@radix-ui/themes";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { ApplicationHeader } from "@/components/app-detail/ApplicationHeader";
 import { DebriefTab } from "@/components/app-detail/DebriefTab";
 import type { AppData } from "@/components/app-detail/types";
+import { Section } from "@/components/ui";
+import styles from "./page.module.css";
 
 function DebriefPageInner() {
   const params = useParams<{ id: string }>();
@@ -63,29 +65,29 @@ function DebriefPageInner() {
 
   if (loading) {
     return (
-      <Container size="3" p="8">
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 200 }} />
+      <Section>
+        <Skeleton height="32px" mb="6" className={styles.skel} />
         <Skeleton height="400px" />
-      </Container>
+      </Section>
     );
   }
 
   if (error) {
     return (
-      <Container size="3" p="8">
+      <Section>
         <Card>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5">Error Loading Application</Heading>
             <Text color="gray">{error}</Text>
           </Flex>
         </Card>
-      </Container>
+      </Section>
     );
   }
 
   if (!app) {
     return (
-      <Container size="3" p="8">
+      <Section>
         <Card>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5">Application Not Found</Heading>
@@ -95,16 +97,16 @@ function DebriefPageInner() {
             </Button>
           </Flex>
         </Card>
-      </Container>
+      </Section>
     );
   }
 
   return (
-    <Container size="3" p={{ initial: "4", md: "8" }}>
+    <Section>
       <ApplicationHeader app={app} isAdmin={isAdmin} onUpdate={setApp} onSlugChange={(s) => router.replace(`/applications/${s}/debrief`)} />
 
       <Tabs.Root value="debrief" onValueChange={handleTabChange}>
-        <Tabs.List style={{ borderBottom: "1px solid var(--gray-6)" }}>
+        <Tabs.List className={styles.tabsList}>
           <Tabs.Trigger value="description">
             <Flex direction="column" align="center" gap="0">
               <Text>Job Description</Text>
@@ -149,17 +151,17 @@ function DebriefPageInner() {
           </Tabs.Content>
         </Box>
       </Tabs.Root>
-    </Container>
+    </Section>
   );
 }
 
 export default function DebriefPage() {
   return (
     <Suspense fallback={
-      <Container size="3" p="8">
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 200 }} />
+      <Section>
+        <Skeleton height="32px" mb="6" className={styles.skel} />
         <Skeleton height="400px" />
-      </Container>
+      </Section>
     }>
       <DebriefPageInner />
     </Suspense>

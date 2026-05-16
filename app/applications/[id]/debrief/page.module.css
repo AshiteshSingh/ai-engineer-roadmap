@@ -1,0 +1,7 @@
+/* Co-located styles for app/applications/[id]/debrief/page.tsx — no global CSS. */
+.skel {
+  max-width: 200px;
+}
+.tabsList {
+  border-bottom: 1px solid var(--ds-border);
+}
