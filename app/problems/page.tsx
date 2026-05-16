@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Badge, Box, Card, Container, Flex, Heading, Section, Text } from "@radix-ui/themes";
+import { Badge, Box, Card, Flex, Text } from "@radix-ui/themes";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 import { headers } from "next/headers";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Topbar } from "@/components/topbar";
@@ -52,10 +54,9 @@ export default async function ProblemsPage() {
   return (
     <>
       <Topbar />
-      <Section size="3">
-        <Container size="3">
+      <Section>
           <Flex direction="column" gap="2" mb="5">
-            <Heading size="8">Coding Problems</Heading>
+            <DSHeading as="h1" size="xl">Coding Problems</DSHeading>
             <Text color="gray" size="3">
               Practice JavaScript & TypeScript in-browser. Tests run sandboxed in a Web Worker — no server round-trip.
             </Text>
@@ -73,14 +74,14 @@ export default async function ProblemsPage() {
 
           <Flex direction="column" gap="2">
             {rows.map((p) => (
-              <Link key={p.id} href={`/problems/${p.slug}`} style={{ textDecoration: "none", color: "inherit" }}>
+              <Link key={p.id} href={`/problems/${p.slug}`} className={styles.link}>
                 <Card variant="surface">
                   <Flex align="center" justify="between" gap="3" p="2" wrap="wrap">
                     <Flex align="center" gap="3">
                       {solvedSet.has(p.id) ? (
                         <Badge color="teal" variant="solid">✓</Badge>
                       ) : (
-                        <Box style={{ width: 22 }} />
+                        <Box className={styles.spacer22} />
                       )}
                       <Text size="4" weight="medium">{p.title}</Text>
                     </Flex>
@@ -97,7 +98,6 @@ export default async function ProblemsPage() {
               </Link>
             ))}
           </Flex>
-        </Container>
       </Section>
     </>
   );
