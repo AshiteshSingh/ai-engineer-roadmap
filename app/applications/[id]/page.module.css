@@ -1,0 +1,5 @@
+/* Co-located styles for app/applications/[id]/page.tsx — no global CSS.
+   Main detail container stays full-bleed Radix (.app-detail global). */
+.skel {
+  max-width: 200px;
+}
