@@ -116,17 +116,12 @@
 }
 
 /* ================================================================
-   READING PROGRESS BAR
+   READING PROGRESS BAR — migrated to
+   components/reading-progress.module.css (behavior-preserving move,
+   identical values; consumed by <ReadingProgress/>). Topbar/footer/
+   scroll-to-top migrations from this PR were superseded by main's
+   homepage redesign and are intentionally not applied.
    ================================================================ */
-.reading-progress {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 2px;
-  background: var(--ds-accent);
-  z-index: 100;
-  transition: width 0.1s linear;
-}
 
 /* ================================================================
    HERO SECTION  (YC light — no blobs / glow / grid / gradient text)

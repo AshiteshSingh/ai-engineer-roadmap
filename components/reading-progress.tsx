@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import s from "./reading-progress.module.css";
 
 export function ReadingProgress() {
   const [width, setWidth] = useState(0);
@@ -24,5 +25,5 @@ export function ReadingProgress() {
     };
   }, []);
 
-  return <div className="reading-progress" style={{ width: `${width}%` }} />;
+  return <div className={s.readingProgress} style={{ width: `${width}%` }} />;
 }
