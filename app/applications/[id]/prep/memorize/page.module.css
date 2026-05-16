@@ -1,0 +1,41 @@
+/* Co-located styles for app/applications/[id]/prep/memorize/page.tsx.
+   Full-height app-shell layout: not a centered Section page. No global CSS.
+   480/32 kept as literals (no clean DS token); violet accent intentional. */
+.screen {
+  height: 100vh;
+}
+.screenColNoScroll {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.screenCol {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ds-text);
+  text-decoration: none;
+}
+.skelTitle {
+  max-width: 300px;
+}
+.fillCol {
+  flex: 1;
+}
+.genCard {
+  max-width: 480px;
+  width: 100%;
+  padding: 32px;
+}
+.rocket {
+  color: var(--violet-9);
+}
+.fullBtn {
+  width: 100%;
+}
