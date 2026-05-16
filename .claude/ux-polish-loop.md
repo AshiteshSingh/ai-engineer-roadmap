@@ -62,7 +62,7 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [x] components/audio-player.tsx — DONE on main (globals migration).
 - [x] components/markdown-prose.tsx — NO-OP (ux2-12): no commit produced; markdown prose styled by global `.prose`/`.markdown-*` stylesheet, no co-locatable static inline styling, no a11y gap. Do not re-pick.
 - [x] components/search.tsx — NO-OP (ux3-12 definitive): zero inline `style=`; 100% global classes (cmd-bar/cmd-search/cmd-suggest/cmd-filter/search-result-card, globals.css ~L1201–5024) that are runtime-toggled/JS-queried (forbidden to migrate); a11y already complete (aria-label/role/aria-pressed/aria-live/keyboard nav). Do not re-pick.
-- [ ] components/category-grid.tsx
+- [x] components/category-grid.tsx — NO-OP (ux1-13 definitive): 100% global `.cat-*`/`.bento-grid` classes (globals.css, reference-only); zero inline `style=`; only dynamic cursor-tracking `--cat-mx` (runtime, not co-locatable); `.cat-card` JS-queried by scroll-animations; a11y + reduced-motion already complete. Do not re-pick.
 - [x] components/paper-card.tsx — DONE (4d19617, gate-clean) → on main.
 - [x] components/external-courses.tsx — NO-OP (ux2-4): 100% shared global contract classes; only dynamic verdict color; colors already Radix tokens. Do not re-pick.
 - [x] components/langgraph-extra.tsx — DONE (9d984b0, gate-clean) → on main.
@@ -74,7 +74,7 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [x] components/app-detail/InterviewPrepTab.tsx — DONE (51427ac, value-verified exact) → main.
 - [x] components/app-detail/JobDescriptionTab.tsx — DONE (d55d42d) + value-fixes (38251ad, 990febf): 3 drifts caught+fixed; now gate-clean AND value-exact → main.
 - [x] components/app-detail/NotesPanel.tsx — DONE (5a87b91, value-verified) → main.
-- [ ] components/app-detail/NotesTab.tsx
+- [x] components/app-detail/NotesTab.tsx — NO-OP (ux3-13 silent-idle; orchestrator-verified): pure config pass-through wrapper around `<NotesPanel>` (which is already DONE 5a87b91) — zero markup/className/inline styling of its own (identical to DebriefTab). Do not re-pick.
 - [x] components/app-detail/TechStackTab.tsx — DONE (c1efb69, 0 token swaps) → main.
 - [ ] components/app-detail/StudyRoadmap.tsx
 - [x] components/memorize/* — **TIER COMPLETE (all 14 accounted).** DONE: MemorizeDashboard (ef4c48e), FlashcardDeck (3dcb286, --space-4=16px exact), ProgressBar (16d4388, 0 swaps), FillInTheBlank (d7328f5, 0 swaps), PropertyExplorer (b7bf0c4, --space-3=12px exact), **DueForReview (af32a1b — value-EXACT: `padding:"4px 0"`→`var(--space-1) 0`, --space-1=4px exact; flex/minWidth literal; global due-review-* kept literal)**, **ModeTip (af32a1b — value-safe: only `.fill{flex:1}`/`.citation{font-style:italic}`, 0 tokens; global mode-tip/mode-tip-dismiss kept literal)**, **PreSessionCheckIn (2247d5f — value-EXACT: `marginBottom:16`→`var(--space-4)`, --space-4=16px exact; display:block literal; global session-checkin-* kept literal)**, **LearningScienceSidebar (873298b — value-EXACT: `marginBottom:12`→`--space-3`(12px), `marginTop:4`→`--space-1`(4px); kept literal w/ comments: font-size:20px, line-height:1.5, display:block, flex:1; global science-* kept literal)**, **PostSessionSummary (873298b — value-EXACT: `marginBottom:12`→`--space-3`(12px); display:block literal; global session-summary-* kept literal)**. NO-OP: TimedDrill (ux2-8), VisualMatcher (ux2-9), **LearningInsights (ux2-10: produced nothing — pure global-class component, no co-locatable styling; do not re-pick)**.
@@ -102,6 +102,12 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 
 ## Tick log
 
+- **tick (reconcile):** ux1-13 category-grid → NO-OP (100% global,
+  JS-queried, a11y complete). ux3-13 NotesTab silent-idled → orchestrator
+  verified it's a pure `<NotesPanel>` config pass-through (NotesPanel
+  already DONE) → NO-OP. Lane stayed aligned (`f67341d`) — realignment
+  holding, clean FF, no recovery. Spawned ux1-14 StudyRoadmap / ux2-14
+  roadmap-graph/index / ux3-14 mermaid-flow/index (in flight).
 - **tick (reconcile + LANE REALIGN):** ux2-12 markdown-prose, ux2-13
   page-analytics, ux3-12 search → all NO-OP (no commits; global-class /
   side-effect, a11y complete). KEY FIX: `origin/ux-polish` was stuck at
