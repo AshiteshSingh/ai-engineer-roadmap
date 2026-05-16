@@ -1098,70 +1098,6 @@
 }
 
 /* ================================================================
-   TOC SIDEBAR (enhanced)
-   ================================================================ */
-.toc-sidebar {
-  position: sticky;
-  top: calc(var(--yc-topbar-height) + 12px);
-  max-height: calc(100vh - var(--yc-topbar-height) - 32px);
-  overflow-y: auto;
-  padding: 12px 0;
-  border-left: none;
-}
-.toc-sidebar::-webkit-scrollbar { width: 3px; }
-.toc-sidebar::-webkit-scrollbar-thumb { background: var(--gray-5); border-radius: 2px; }
-.toc-sidebar-title {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--gray-8);
-  padding: 0 12px 10px;
-}
-.toc-sidebar nav { position: relative; }
-.toc-sidebar nav::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: linear-gradient(180deg, var(--cat-from), var(--cat-to), transparent);
-  opacity: 0.3;
-  border-radius: 1px;
-}
-.toc-sidebar nav a {
-  display: block;
-  font-size: 12px;
-  color: var(--gray-9);
-  text-decoration: none;
-  padding: 4px 12px;
-  border-left: 2px solid transparent;
-  margin-left: -2px;
-  transition: all 0.15s ease;
-  line-height: 1.4;
-  border-radius: 0 4px 4px 0;
-  position: relative;
-}
-.toc-sidebar nav a:hover {
-  color: var(--gray-12);
-  border-left-color: var(--gray-7);
-  background: rgba(255, 255, 255, 0.03);
-}
-.toc-sidebar nav a.toc-active {
-  color: var(--accent-11);
-  border-left-color: var(--accent-9);
-  background: var(--accent-2);
-}
-.toc-sidebar nav a.toc-h3 { padding-left: 24px; font-size: 11px; color: var(--gray-8); }
-.toc-sidebar nav a.toc-h3:hover { color: var(--gray-11); }
-.toc-sidebar nav a.toc-h3.toc-active {
-  color: var(--accent-11);
-  border-left-color: var(--accent-9);
-  background: var(--accent-2);
-}
-
-/* ================================================================
    SOURCES SECTION
    ================================================================ */
 .sources-section { margin-top: 3em; padding-top: 2em; }
@@ -1267,64 +1203,6 @@
 .scroll-to-top:hover {
   background: rgba(255, 255, 255, 0.12);
   transform: translateY(-2px);
-}
-
-/* ================================================================
-   MOBILE TOC DRAWER
-   ================================================================ */
-.toc-mobile-trigger {
-  display: none;
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 8px 20px;
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: var(--gray-11);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  z-index: 40;
-  letter-spacing: 0.03em;
-  transition: all 0.2s ease;
-}
-.toc-mobile-trigger:hover { background: rgba(255, 255, 255, 0.12); }
-.toc-mobile-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 60;
-}
-.toc-mobile-backdrop--open { display: block; }
-.toc-mobile-drawer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-height: 70vh;
-  background: var(--gray-2);
-  border-top: 1px solid var(--gray-4);
-  border-radius: 16px 16px 0 0;
-  padding: 20px 16px 32px;
-  z-index: 70;
-  overflow-y: auto;
-  transform: translateY(100%);
-  transition: transform 0.3s ease;
-}
-.toc-mobile-drawer--open { transform: translateY(0); }
-.toc-mobile-drawer-handle {
-  width: 40px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--gray-5);
-  margin: 0 auto 16px;
 }
 
 /* ================================================================
@@ -1814,8 +1692,6 @@
     grid-template-columns: 1fr;
     padding: 16px 16px 64px;
   }
-  .toc-sidebar { display: none; }
-  .toc-mobile-trigger { display: flex; }
 
   .article-banner { padding: 16px 16px 24px; }
   .article-banner-title { font-size: 1.5rem; }
