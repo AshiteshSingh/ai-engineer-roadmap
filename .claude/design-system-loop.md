@@ -52,7 +52,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/self-evaluation/page.tsx
 - [x] app/[slug]/page.tsx
 - [x] app/resume/[slug]/page.tsx
-- [ ] app/resume/[slug]/[variant]/page.tsx
+- [x] app/resume/[slug]/[variant]/page.tsx
 - [ ] app/(auth)/login/page.tsx
 - [ ] app/(auth)/signup/page.tsx
 - [ ] app/not-found.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/resume/[slug]/[variant]/page.tsx — NO CHANGES (identical to /resume/[slug]): shared pre-existing `../resume.css`, zero inline styles/raw vars/Radix; full-bleed PDF viewer. Ledger-only tick.
 - app/resume/[slug]/page.tsx — NO CHANGES: styled entirely via pre-existing co-located `./resume.css` (same category as css-memorize.css — leave as-is, don't migrate per scope). Zero inline styles/raw vars/Radix; full-bleed PDF-viewer toolbar (not Section-able). Ledger-only tick.
 - app/[slug]/page.tsx — NO CHANGES: canonical lesson/content article template (same layout /aws & /langgraph mirror); shared components + global `article-*`/`badge-pill`/`cat-*`; zero inline styles/raw vars/Radix containers. Ledger-only tick.
 - app/self-evaluation/page.tsx — NO CHANGES (identical to /kv-quant): global `se-*` layout + shared Topbar/PaperCard; zero inline styles/raw vars/Radix containers. Ledger-only tick.
