@@ -55,13 +55,14 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/resume/[slug]/[variant]/page.tsx
 - [x] app/(auth)/login/page.tsx
 - [x] app/(auth)/signup/page.tsx
-- [ ] app/not-found.tsx
+- [x] app/not-found.tsx
 
 ## Tick log
 
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/not-found.tsx — FINAL PAGE. Mostly pre-existing global `not-found-*`/`hero-cta`/`cat-*` (left as-is); only static inline `marginBottom:32` → `not-found.module.css` `.cta` (kept `hero-cta` global). Hit a CSS-comment bug: `*/` inside a glob in the comment closed it early → fixed comment, rebuilt green (66fed16). ALL 33 PAGES DONE.
 - app/(auth)/signup/page.tsx — identical to login: 2 static inline (minHeight:100vh, width:400) → `page.module.css` (.screen/.card); not Section, Radix centered Heading kept. Build green (a59ca55).
 - app/(auth)/login/page.tsx — full-viewport centered auth card (intentionally NOT Section); 2 static inline (minHeight:100vh, width:400) → `page.module.css` (.screen/.card). Radix centered form Heading kept (no clean primitive map). No raw vars. Build green (14f9ff9).
 - app/resume/[slug]/[variant]/page.tsx — NO CHANGES (identical to /resume/[slug]): shared pre-existing `../resume.css`, zero inline styles/raw vars/Radix; full-bleed PDF viewer. Ledger-only tick.
