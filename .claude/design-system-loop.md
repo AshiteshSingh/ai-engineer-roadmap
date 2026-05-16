@@ -50,7 +50,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/langgraph/lead-gen/sd/page.tsx
 - [x] app/nexttech/senior-genai-engineer/page.tsx
 - [x] app/self-evaluation/page.tsx
-- [ ] app/[slug]/page.tsx
+- [x] app/[slug]/page.tsx
 - [ ] app/resume/[slug]/page.tsx
 - [ ] app/resume/[slug]/[variant]/page.tsx
 - [ ] app/(auth)/login/page.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/[slug]/page.tsx — NO CHANGES: canonical lesson/content article template (same layout /aws & /langgraph mirror); shared components + global `article-*`/`badge-pill`/`cat-*`; zero inline styles/raw vars/Radix containers. Ledger-only tick.
 - app/self-evaluation/page.tsx — NO CHANGES (identical to /kv-quant): global `se-*` layout + shared Topbar/PaperCard; zero inline styles/raw vars/Radix containers. Ledger-only tick.
 - app/nexttech/senior-genai-engineer/page.tsx — `Container size=3` → `<Section>`; job title → ui `<Heading as=h1 size=xl>`; raw `--gray-11`→`--ds-text`, 5 static inline objects (backLink/headerCard/applyLink×2/prose) → `page.module.css`; teal accent + `deep-dive-content` global kept. Build green (9c1d0dd).
 - app/langgraph/lead-gen/sd/page.tsx — NO CHANGES (same as /langgraph/lead-gen): article layout via shared components + global `article-*`/`badge-pill`/`cat-*`; zero inline styles/raw vars. Ledger-only tick.
