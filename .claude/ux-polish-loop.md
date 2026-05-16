@@ -54,7 +54,7 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [x] components/reading-progress.tsx — DONE on main (#12 t1 migration).
 - [x] components/scroll-to-top.tsx — NO-OP (ux1-4 definitive): pure global-class shell; styling forbidden globals; focus-visible/reduced-motion already global by codebase convention. Do not re-pick.
 - [x] components/scroll-reveal.tsx — NO-OP (ux2-3): only dynamic `--sr-delay`; all styling JS-toggled global classes; reduced-motion guard already present. Do not re-pick.
-- [ ] components/scroll-animations.tsx
+- [x] components/scroll-animations.tsx — NO-OP (ux1-12): JS-observer; only toggles global `.cat-card`/`.hero-stat-number` classes (JS-queried, must stay literal); no co-locatable static styling. Do not re-pick.
 - [x] components/article-nav.tsx — DONE on main (globals migration).
 - [x] components/related-lessons.tsx — DONE on main (globals migration).
 - [x] components/toc.tsx — DONE on main (globals migration).
@@ -77,7 +77,7 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [ ] components/app-detail/NotesTab.tsx
 - [x] components/app-detail/TechStackTab.tsx — DONE (c1efb69, 0 token swaps) → main.
 - [ ] components/app-detail/StudyRoadmap.tsx
-- [~] components/memorize/* — DONE: MemorizeDashboard (ef4c48e), FlashcardDeck (3dcb286, --space-4=16px exact), ProgressBar (16d4388, 0 swaps), FillInTheBlank (d7328f5, 0 swaps), PropertyExplorer (b7bf0c4, --space-3=12px exact), **DueForReview (af32a1b — value-EXACT: `padding:"4px 0"`→`var(--space-1) 0`, --space-1=4px exact; flex/minWidth literal; global due-review-* kept literal)**, **ModeTip (af32a1b — value-safe: only `.fill{flex:1}`/`.citation{font-style:italic}`, 0 tokens; global mode-tip/mode-tip-dismiss kept literal)**, **PreSessionCheckIn (2247d5f — value-EXACT: `marginBottom:16`→`var(--space-4)`, --space-4=16px exact; display:block literal; global session-checkin-* kept literal)**. NO-OP: TimedDrill (ux2-8), VisualMatcher (ux2-9), **LearningInsights (ux2-10: produced nothing — pure global-class component, no co-locatable styling; do not re-pick)**. OPEN: PostSessionSummary, LearningScienceSidebar (ux2-11/ux3-11 in flight).
+- [x] components/memorize/* — **TIER COMPLETE (all 14 accounted).** DONE: MemorizeDashboard (ef4c48e), FlashcardDeck (3dcb286, --space-4=16px exact), ProgressBar (16d4388, 0 swaps), FillInTheBlank (d7328f5, 0 swaps), PropertyExplorer (b7bf0c4, --space-3=12px exact), **DueForReview (af32a1b — value-EXACT: `padding:"4px 0"`→`var(--space-1) 0`, --space-1=4px exact; flex/minWidth literal; global due-review-* kept literal)**, **ModeTip (af32a1b — value-safe: only `.fill{flex:1}`/`.citation{font-style:italic}`, 0 tokens; global mode-tip/mode-tip-dismiss kept literal)**, **PreSessionCheckIn (2247d5f — value-EXACT: `marginBottom:16`→`var(--space-4)`, --space-4=16px exact; display:block literal; global session-checkin-* kept literal)**, **LearningScienceSidebar (873298b — value-EXACT: `marginBottom:12`→`--space-3`(12px), `marginTop:4`→`--space-1`(4px); kept literal w/ comments: font-size:20px, line-height:1.5, display:block, flex:1; global science-* kept literal)**, **PostSessionSummary (873298b — value-EXACT: `marginBottom:12`→`--space-3`(12px); display:block literal; global session-summary-* kept literal)**. NO-OP: TimedDrill (ux2-8), VisualMatcher (ux2-9), **LearningInsights (ux2-10: produced nothing — pure global-class component, no co-locatable styling; do not re-pick)**.
 - [ ] components/roadmap-graph/index.tsx
 - [ ] components/roadmap-graph/nodes.tsx
 - [ ] components/mermaid-flow/index.tsx
@@ -94,14 +94,26 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 
 | Agent | Current item | Status |
 |-------|--------------|--------|
-| ux1-12 | components/scroll-animations.tsx | spawning |
-| ux2-12 | components/markdown-prose.tsx | spawning |
-| ux3-12 | components/search.tsx | spawning |
-| ux2-11 | memorize/PostSessionSummary | in flight (no commit yet) |
-| ux3-11 | memorize/LearningScienceSidebar | in flight (no commit yet) |
+| ux1-13 | components/category-grid.tsx | spawning |
+| ux2-13 | components/page-analytics.tsx | spawning |
+| ux3-13 | components/app-detail/NotesTab.tsx | spawning |
+| ux2-12 | components/markdown-prose.tsx | in flight (no commit yet) |
+| ux3-12 | components/search.tsx | in flight (no commit yet) |
 
 ## Tick log
 
+- **tick (direct-to-main):** LearningScienceSidebar + PostSessionSummary
+  DONE on main `873298b` (both value-EXACT `marginBottom:12`→`--space-3`
+  12px; LSS also `marginTop:4`→`--space-1` 4px; literals 20px/1.5 kept w/
+  comments; no-global gate=0). ux2-11 sent no DONE but its `d14d448`
+  PostSessionSummary commit was clean+value-exact (orchestrator-verified).
+  scroll-animations = **NO-OP** (ux1-12, JS-observer, absent on lane).
+  **memorize/* tier COMPLETE (14/14).** Recovery: agents' commits were on
+  origin/ux-polish (stale granular tail) — snapshot
+  `ux-polish-salvage-20260516-1242`, verified net delta = LSS+PSS 4 files,
+  reset to origin/main, re-apply, gate, FF-push. ux2-12/ux3-12
+  (markdown-prose/search) still in flight — not re-spawned. Spawned 3
+  non-colliding: category-grid, page-analytics, app-detail/NotesTab.
 - **tick (direct-to-main):** PreSessionCheckIn DONE on main `2247d5f`
   (value-EXACT `marginBottom:16`→`--space-4`=16px; no-global gate=0).
   Same stale-granular-vs-squashed conflict on rebase → proven recovery
