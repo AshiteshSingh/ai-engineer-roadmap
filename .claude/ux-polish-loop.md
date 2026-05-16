@@ -87,10 +87,10 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [x] components/app-detail/StudyRoadmap.tsx — NO-OP (ux1-14 silent-idle; orchestrator-verified): only inline style is `style={{ height }}` (runtime-computed React-Flow container height — dynamic, must stay inline); all visual chrome via global `.roadmap-container`. Nothing static co-locatable. Do not re-pick.
 - [x] components/memorize/* — **TIER COMPLETE (all 14 accounted).** DONE: MemorizeDashboard (ef4c48e), FlashcardDeck (3dcb286, --space-4=16px exact), ProgressBar (16d4388, 0 swaps), FillInTheBlank (d7328f5, 0 swaps), PropertyExplorer (b7bf0c4, --space-3=12px exact), **DueForReview (af32a1b — value-EXACT: `padding:"4px 0"`→`var(--space-1) 0`, --space-1=4px exact; flex/minWidth literal; global due-review-* kept literal)**, **ModeTip (af32a1b — value-safe: only `.fill{flex:1}`/`.citation{font-style:italic}`, 0 tokens; global mode-tip/mode-tip-dismiss kept literal)**, **PreSessionCheckIn (2247d5f — value-EXACT: `marginBottom:16`→`var(--space-4)`, --space-4=16px exact; display:block literal; global session-checkin-* kept literal)**, **LearningScienceSidebar (873298b — value-EXACT: `marginBottom:12`→`--space-3`(12px), `marginTop:4`→`--space-1`(4px); kept literal w/ comments: font-size:20px, line-height:1.5, display:block, flex:1; global science-* kept literal)**, **PostSessionSummary (873298b — value-EXACT: `marginBottom:12`→`--space-3`(12px); display:block literal; global session-summary-* kept literal)**. NO-OP: TimedDrill (ux2-8), VisualMatcher (ux2-9), **LearningInsights (ux2-10: produced nothing — pure global-class component, no co-locatable styling; do not re-pick)**.
 - [x] components/roadmap-graph/index.tsx — NO-OP (ux2-14 silent-idle; orchestrator-verified): only inline style is dynamic CSS-var passthrough `style={{ "--graph-h": `${graphH}px` }}` (runtime value — sanctioned dynamic pattern); chrome via global `.mermaid-flow-container` + library `.react-flow*`. Nothing static co-locatable. Do not re-pick.
-- [ ] components/roadmap-graph/nodes.tsx
+- [x] components/roadmap-graph/nodes.tsx — NO-OP (ux1-15 silent-idle; orchestrator-verified): ZERO inline `style=`; 100% global/library-class styled (React-Flow node renderer). Nothing co-locatable. Do not re-pick.
 - [x] components/mermaid-flow/index.tsx — NO-OP (ux3-14 silent-idle; orchestrator-verified): only inline style is `style={{ height: result.height }}` (runtime mermaid-render height — dynamic, must stay inline); global `.mermaid-flow-container` + library SVG. Nothing static co-locatable. Do not re-pick.
-- [ ] components/mermaid-flow/nodes.tsx
-- [ ] components/xyflow-direct/index.tsx
+- [x] components/mermaid-flow/nodes.tsx — NO-OP (ux2-15 silent-idle; orchestrator-verified): 3 inline styles, none cosmetic-static — `border/bg/color: var(--${accent}-N)` (DYNAMIC runtime token name), `style={{ height: data.height }}` (DYNAMIC), `style={{ width:1, height:1 }}` (FUNCTIONAL React-Flow handle-anchor, not polish). Nothing design-system-polishable. Do not re-pick.
+- [x] components/xyflow-direct/index.tsx — NO-OP (ux3-15 silent-idle; orchestrator-verified): only inline style is dynamic CSS-var passthrough `style={{ "--graph-h": `${result.height}px` }}` (runtime); global `.mermaid-flow-container` + library `.react-flow*`. Nothing static co-locatable. Do not re-pick.
 - [ ] components/problems/problem-workspace.tsx
 
 ## Tier B — page UX polish (after Tier A)
@@ -110,6 +110,14 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 
 ## Tick log
 
+- **tick (reconcile):** ux1-15 roadmap-graph/nodes / ux2-15
+  mermaid-flow/nodes / ux3-15 xyflow-direct/index → all NO-OP (silent-idle;
+  orchestrator-verified: 0-inline / dynamic-only / functional-only — no
+  cosmetic static styling). **Tier-A now down to 1 item:
+  problems/problem-workspace.** Lane accumulate-clean (`5506424`). Spawned
+  ux1-16 problems/problem-workspace (last Tier-A); Tier-B = 32 already
+  DS-migrated routes (soft refinement bucket — assess wind-down once
+  Tier-A closes).
 - **GUARD + MERGE (user: "fix all conflicts and merge"):** safety guard
   began blocking `git push origin ux-polish:main` mid-session. No
   conflicts existed — `main` was a clean ancestor, lane only 1 ledger
