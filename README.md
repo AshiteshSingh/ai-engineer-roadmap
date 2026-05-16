@@ -54,7 +54,7 @@ pnpm seed                    # seed 108 lessons from content/*.md
 pnpm dev                     # → http://localhost:3006  🎉
 ```
 
-That's the full read-only app — search, audio, knowledge graph and analytics all work without a backend. For AI features (chat, article / flashcard / course-review generation), also run the [LangGraph backend](#langgraph-backend).
+That's the full read-only app — search, audio, knowledge graph, and analytics all work without a backend. For AI features (chat, article / flashcard / course-review generation), also run the [LangGraph backend](#langgraph-backend).
 
 ## 🧱 Stack
 
@@ -95,7 +95,7 @@ graph TD
 ## 🗂 Project Layout
 
 ```
-app/                  Next.js App Router (lessons, AWS hub, anthropic, coursework, problems, api/*)
+app/                  Next.js App Router (lessons, AWS hub, applications, coursework, problems, api/*)
 components/           React components (search, audio-player, toc, …)
 content/              Markdown lesson files
 src/db/               Neon client + Drizzle schema (22 tables)

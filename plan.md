@@ -9,7 +9,7 @@ The iterate system is a multi-iteration task execution engine with:
 ## Problems Identified
 
 ### P1: Heuristic evaluation is too crude
-The eval uses cosine similarity between task description and output text as a proxy for "task completion." This produces scores that hover around 0.4-0.6 regardless of actual progress. The evaluator can't distinguish between "Claude explained the task" vs "Claude actually implemented the task." This causes:
+The eval uses cosine similarity between task description and output text as a proxy for "task completion." This produces scores that hover around 0.4-0.6 regardless of actual progress. The evaluator can't distinguish between "Claude explained the task" and "Claude actually implemented the task." This causes:
 - Premature stops (plateau detection fires on flat scores)
 - Missed completions (real progress doesn't raise the score)
 - Poor feedback (scores don't tell Claude what to focus on)
@@ -44,10 +44,10 @@ Add an optional LLM-based evaluator that produces accurate, actionable scores an
 1. Create `llm_eval.py` — a self-contained LLM judge module:
    - Accepts task, output, context, diff as inputs
    - Calls a local OpenAI-compatible API (configurable via `ITERATE_EVAL_URL` env var)
-   - Uses a structured prompt that asks the LLM to score Task Completion, Incremental Progress, and Code Quality on 0-1 scale with reasoning
+   - Uses a structured prompt that asks the LLM to score Task Completion, Incremental Progress, and Code Quality on a 0-1 scale with reasoning
    - Returns the same dict shape as `run_heuristic()` for compatibility
    - Falls back to heuristic if the LLM is unavailable
-   - Hard timeout of 15s to not block the stop hook
+   - Hard timeout of 15s to avoid blocking the stop hook
 
 2. Update `evaluate.py`:
    - Try LLM eval first, fall back to heuristic
