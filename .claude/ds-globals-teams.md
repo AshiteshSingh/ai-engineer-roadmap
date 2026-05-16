@@ -37,6 +37,39 @@ Base: all team branches `ds-globals-t{1..5}` forked from `design-system-loop`
 (orchestrator: serialized merges into `ds-globals`, then HP-10 reconcile, then
 full verification + PR)
 
+## PLAN CORRECTION (2026-05-16)
+
+Original plan's premise was WRONG: it assumed globals.css = 6,608 lines with
+HP-TEAM regions + legacy↔HP cascade chains. That was measured from
+`homepage-polish` (6,519 lines, 31 HP-TEAM banners) because the volatile
+`apps/ai-engineer-roadmap` submodule had branch-switched during plan-time
+exploration. **Actual `design-system-loop`@55d892a globals.css = 4,263 lines,
+ZERO HP-TEAM structure, already DS-tokenized** (253 residual raw gray/hex).
+
+Teams (t2/t3/t4 esp.) correctly refused to guess and t2 **empirically proved**
+naive move+delete regresses the LIVE site: scattered responsive `@media`
+overrides are bare single-class (spec 0,1,0) and lose to the CSS-Module class
+by source order. JS coupling: `scroll-animations.tsx` queries `.cat-card`/
+`.hero-stat-number`.
+
+User decision: **continue the migration** — via the CORRECTED behavior-
+preserving technique below (not naive move+delete):
+
+1. Move ALL of an owned class's rules into its module — base AND every
+   responsive `@media` override, including surgically lifted from shared/
+   managed `@media` blocks (own selectors only).
+2. JS-coupled classes: keep literal name via `:global(.x){…}` in the module;
+   never hash JS-queried classes; don't edit `scroll-animations.tsx`.
+3. `app/**/page.tsx` className strings MAY now be minimally edited for migrated
+   classes. base.css ancestor rules handled via `:global()` + specificity.
+4. Keyframes → one shared `app/styles/motion.css` (t4-owned).
+5. **MANDATORY parity gate**: Playwright 1280/768/390 screenshot+
+   getComputedStyle vs clean 55d892a baseline before EVERY commit; ~0 diff or
+   fix/revert. t2 owns the baseline harness, shared to all.
+6. Nothing reaches prod until orchestrator integration + full parity sweep +
+   explicit user approval. Live site stays on the just-deployed state.
+
 ## Tick / event log
 
 - setup — 5 worktrees @ 55d892a, node_modules symlinked, upstreams set, ledger created.
+- correction — premise-mismatch surfaced by teams; HOLD broadcast; user chose continue; all 5 re-briefed with corrected `:global()`+relocate-@media+parity-gate technique. t1 pushed 86c5ea7/a5c931d, t5 pushed 9af8b1d — flagged for parity re-verification (possible leftover @media regression).
