@@ -1,0 +1,65 @@
+/* Co-located styles for the home "Research Collections" section,
+   migrated from app/globals.css. Behavior-preserving move: the FULL
+   cascade is co-located here — base rules + the tablet (<=768px) and
+   phone (<=480px) responsive overrides that were surgically lifted out
+   of globals.css's shared @media blocks. Co-locating the whole cascade
+   makes global source-order / specificity moot (the empirically-proven
+   failure mode of a partial move).
+
+   Tokenization: only EXACT 1:1 swaps per app/styles/tokens.css
+   (8px==--space-2, 12px==--space-3, 16px==--space-4, 24px==--space-5).
+   Non-exact values (13px, 12px/10px font-size, 20px, 10px gap) kept raw
+   to guarantee zero visual change.
+
+   .cat-card / .cat-card-desc are HP-TEAM-6 (t3-owned) global classes —
+   referenced via :global() so they keep matching the unhashed DOM
+   classes; not renamed. */
+
+.researchCollections {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-5) var(--space-6);
+}
+.researchCollectionsTitle {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-muted);
+  margin-bottom: var(--space-4);
+}
+.researchCollectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+.researchCollectionsGrid :global(.cat-card) {
+  text-decoration: none;
+  cursor: pointer;
+}
+.researchCollectionsGrid :global(.cat-card-desc) {
+  font-size: 13px;
+  color: var(--ds-text);
+  line-height: 1.5;
+  margin-top: var(--space-2);
+}
+
+/* Tablet — relocated verbatim from globals.css @media (max-width: 768px) */
+@media (max-width: 768px) {
+  .researchCollections { padding: 0 var(--space-4) var(--space-5); }
+  .researchCollectionsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+/* Phone — relocated verbatim from globals.css @media (max-width: 480px) */
+@media (max-width: 480px) {
+  .researchCollections { padding: 0 var(--space-3) 20px; }
+  .researchCollectionsTitle { font-size: 10px; }
+  .researchCollectionsGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .researchCollectionsGrid :global(.cat-card-desc) { font-size: 12px; }
+}
