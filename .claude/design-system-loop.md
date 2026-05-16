@@ -23,7 +23,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 
 ## Pages (priority order)
 
-- [ ] app/page.tsx
+- [x] app/page.tsx
 - [ ] app/memorize/page.tsx
 - [ ] app/memorize/[categorySlug]/page.tsx
 - [ ] app/applications/page.tsx
@@ -60,3 +60,5 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 ## Tick log
 
 (append `<page> — <one-line summary>` per completed tick)
+
+- app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
