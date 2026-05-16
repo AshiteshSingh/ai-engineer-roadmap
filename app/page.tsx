@@ -8,6 +8,7 @@ import { RoadmapGraph } from "@/components/roadmap-graph";
 import { buildLessonLookup } from "@/components/roadmap-graph/lesson-lookup";
 import { buildRoadmapModel } from "@/lib/roadmap-flow";
 import { Section, Eyebrow, Heading } from "@/components/ui";
+import styles from "./page.module.css";
 
 export default async function HomePage() {
   const groups = await getGroupedLessons();
@@ -23,7 +24,7 @@ export default async function HomePage() {
 
       <ScrollReveal delay={60}>
         <section className="roadmap-flow" aria-label="AI Engineer roadmap flow">
-          <Section style={{ paddingBottom: 0 }}>
+          <Section className={styles.flushBottom}>
             <Eyebrow>The Path</Eyebrow>
             <Heading as="h2">AI Engineer Roadmap</Heading>
           </Section>
