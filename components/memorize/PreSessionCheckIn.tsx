@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Heading, Text, Flex, Button } from "@radix-ui/themes";
 import { detectTimeOfDay, type PreSessionState } from "@/lib/session-tracking";
+import styles from "./PreSessionCheckIn.module.css";
 
 const FOCUS_LABELS = ["😵", "😔", "😐", "🙂", "🔥"];
 const ENERGY_LABELS = ["🪫", "😴", "😐", "⚡", "🚀"];
@@ -33,7 +34,7 @@ export function PreSessionCheckIn({ onStart }: PreSessionCheckInProps) {
         <Heading size="4" mb="2">
           Quick Check-in
         </Heading>
-        <Text size="2" color="gray" style={{ display: "block", marginBottom: 16 }}>
+        <Text size="2" color="gray" className={styles.intro}>
           How are you feeling right now? (Optional — helps track your best study conditions)
         </Text>
 

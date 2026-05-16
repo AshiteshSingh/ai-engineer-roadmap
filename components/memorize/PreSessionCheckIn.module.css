@@ -1,0 +1,11 @@
+/* Co-located static styling for PreSessionCheckIn.
+   The component's visual shell (overlay, card, emoji buttons) is owned by
+   global `css-memorize.css` (.session-checkin-* — shared with .session-summary-*)
+   and is intentionally left LITERAL in the TSX per design-system rules.
+   Only the one static inline style is migrated here. */
+
+.intro {
+  display: block;
+  /* original inline: marginBottom: 16 -> var(--space-4) [tokens.css: 16px, exact] */
+  margin-bottom: var(--space-4);
+}
