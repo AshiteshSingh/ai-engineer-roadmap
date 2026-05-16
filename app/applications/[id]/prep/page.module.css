@@ -1,0 +1,24 @@
+/* Co-located styles for app/applications/[id]/prep/page.tsx — no global CSS.
+   Conservative pass: violet-accented markdown prose left as-is (intentional
+   theme, no --ds-* equivalent). */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ds-text);
+  text-decoration: none;
+}
+.skel {
+  max-width: 300px;
+}
+/* font-size omitted on purpose: source used the undefined `--font-size-1`
+   token, so code already renders at the inherited size — preserve that
+   while dropping the broken var and the raw --gray-2. */
+.codePre {
+  margin: 0;
+  padding: var(--space-3);
+  overflow-x: auto;
+  font-family: var(--font-mono, monospace);
+  line-height: 1.7;
+  background: var(--ds-surface-sub);
+}
