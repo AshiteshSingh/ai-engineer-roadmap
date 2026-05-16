@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications, concepts, knowledgeStates } from "@/src/db/schema";
 import { eq, and, like } from "drizzle-orm";
@@ -31,7 +32,7 @@ export async function GET(
   const col = UUID_RE.test(appId) ? applications.id : applications.slug;
   let app: { id: string; aiMemorizeCategories: string | null } | undefined;
 
-  if (session) {
+  if (session && isOwner(session)) {
     [app] = await db
       .select({ id: applications.id, aiMemorizeCategories: applications.aiMemorizeCategories })
       .from(applications)
@@ -66,7 +67,7 @@ export async function GET(
     }
   > = {};
 
-  if (session) {
+  if (session && isOwner(session)) {
     const prefix = `app:${app.id}:%`;
     const rows = await db
       .select({
@@ -113,8 +114,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const [session, { id: appId }] = await Promise.all([getSession(), params]);
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !isOwner(session))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
   const { propertyId, isCorrect } = body as {

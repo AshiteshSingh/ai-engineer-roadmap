@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { coursework } from "@/src/db/schema";
 import { deleteFromR2 } from "@/lib/r2";
@@ -12,7 +13,7 @@ async function getSession() {
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const [session, { id }] = await Promise.all([getSession(), params]);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !isOwner(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const [row] = await db
     .delete(coursework)

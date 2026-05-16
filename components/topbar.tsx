@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "@/lib/auth-client";
+import { isOwner } from "@/lib/owner";
 import { useRouter } from "next/navigation";
 
 function initials(name?: string | null): string {
@@ -15,6 +16,7 @@ function initials(name?: string | null): string {
 
 export function Topbar({ lessonCount }: { lessonCount?: number }) {
   const { data: session } = useSession();
+  const owner = isOwner(session);
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -66,8 +68,8 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
         )}
       </div>
 
-      {/* ── ZONE 2: centered segmented nav (auth only) ───────── */}
-      {session?.user && (
+      {/* ── ZONE 2: centered segmented nav (owner only) ──────── */}
+      {owner && (
         <div className="yc-topbar-seg" role="presentation">
           <Link href="/applications" className="yc-topbar-seg-link">
             Applications
@@ -154,20 +156,24 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
         {session?.user ? (
           <>
             <span className="yc-nav-drawer-username">{session.user.name}</span>
-            <Link
-              href="/applications"
-              className="yc-nav-drawer-link"
-              onClick={() => setNavOpen(false)}
-            >
-              Applications
-            </Link>
-            <Link
-              href="/coursework"
-              className="yc-nav-drawer-link"
-              onClick={() => setNavOpen(false)}
-            >
-              Coursework
-            </Link>
+            {owner && (
+              <>
+                <Link
+                  href="/applications"
+                  className="yc-nav-drawer-link"
+                  onClick={() => setNavOpen(false)}
+                >
+                  Applications
+                </Link>
+                <Link
+                  href="/coursework"
+                  className="yc-nav-drawer-link"
+                  onClick={() => setNavOpen(false)}
+                >
+                  Coursework
+                </Link>
+              </>
+            )}
             <button
               type="button"
               aria-label="Sign out"

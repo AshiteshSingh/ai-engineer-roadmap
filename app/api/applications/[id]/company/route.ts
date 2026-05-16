@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -30,7 +31,7 @@ export async function GET(
   // Allow public access for apps marked public; otherwise require auth.
   const col = UUID_RE.test(id) ? applications.id : applications.slug;
 
-  const where = session
+  const where = session && isOwner(session)
     ? whereApp(id, session.user.id)
     : and(eq(col, id), eq(applications.public, true));
 
