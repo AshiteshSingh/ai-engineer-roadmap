@@ -1,0 +1,28 @@
+/* Co-located cosmetic styles for ProblemWorkspace.
+   Functional/layout sizing (flex, minHeight, height, overflow, viewport
+   units) stays inline in the component — only static cosmetics live here. */
+
+.editorPane {
+  /* borderRadius: 8 -> --ds-radius-md (8px exact) */
+  border: 1px solid var(--gray-a5);
+  border-radius: var(--ds-radius-md);
+}
+
+.diffBlock {
+  margin: 0;
+  /* fontSize: 12 — no exact --text-* (xs=11px, sm=clamp); keep literal */
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.logBlock {
+  margin: 0;
+  /* fontSize: 12 — no exact --text-* (xs=11px, sm=clamp); keep literal */
+  font-size: 12px;
+  white-space: pre-wrap;
+  /* padding: 8 -> --space-2 (8px exact) */
+  padding: var(--space-2);
+  background: var(--gray-a2);
+  /* borderRadius: 6 -> --ds-radius (6px exact) */
+  border-radius: var(--ds-radius);
+}

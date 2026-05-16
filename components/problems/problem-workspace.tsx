@@ -8,6 +8,7 @@ import { Badge, Button, Callout, Card, Flex, SegmentedControl, Tabs, Text } from
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { runTests, type Language, type RunResult, type TestCase } from "@/lib/problems/runner";
+import styles from "./problem-workspace.module.css";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -152,7 +153,7 @@ export function ProblemWorkspace(props: ProblemWorkspaceProps) {
             </Flex>
           </Flex>
 
-          <div style={{ flex: "1 1 0", minHeight: 320, border: "1px solid var(--gray-a5)", borderRadius: 8, overflow: "hidden" }}>
+          <div className={styles.editorPane} style={{ flex: "1 1 0", minHeight: 320, overflow: "hidden" }}>
             <CodeMirror
               value={code}
               onChange={setCode}
@@ -227,7 +228,7 @@ function ResultPanel({ result }: { result: RunResult | null }) {
                     <Text size="1" color="gray">{r.runtimeMs.toFixed(2)}ms</Text>
                   </Flex>
                   {!r.ok && (
-                    <pre style={{ margin: 0, fontSize: 12, whiteSpace: "pre-wrap" }}>
+                    <pre className={styles.diffBlock}>
 {`expected: ${safeStringify(r.expected)}
 actual:   ${safeStringify(r.actual)}${"error" in r && r.error ? `\nerror:    ${r.error}` : ""}`}
                     </pre>
@@ -238,7 +239,7 @@ actual:   ${safeStringify(r.actual)}${"error" in r && r.error ? `\nerror:    ${r
           </Flex>
         </Tabs.Content>
         <Tabs.Content value="logs">
-          <pre style={{ fontSize: 12, whiteSpace: "pre-wrap", padding: 8, margin: 0, background: "var(--gray-a2)", borderRadius: 6 }}>
+          <pre className={styles.logBlock}>
             {result.logs.length === 0 ? "(no console output)" : result.logs.join("\n")}
           </pre>
         </Tabs.Content>
