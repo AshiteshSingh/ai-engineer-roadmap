@@ -28,7 +28,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/memorize/[categorySlug]/page.tsx
 - [x] app/applications/page.tsx
 - [x] app/applications/[id]/page.tsx
-- [ ] app/applications/[id]/prep/page.tsx
+- [x] app/applications/[id]/prep/page.tsx
 - [ ] app/applications/[id]/prep/memorize/page.tsx
 - [ ] app/applications/[id]/debrief/page.tsx
 - [ ] app/applications/[id]/notes/page.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/applications/[id]/prep/page.tsx — large/sensitive (markdown renderer). Conservative: 3 simple-state `<Box>` → `<Section>`; title → ui `<Heading as=h1 size=xl>`; nav back-link `--gray-11` → `.backLink`/`--ds-text`; 2× `<pre>` fixed broken **undefined `--font-size-1`** + raw `--gray-2` → `.codePre` (font-size intentionally omitted to preserve current inherited size). Violet-accented md prose styles left as-is (intentional theme, no --ds- equivalent). Build green (34a0e9e).
 - app/applications/[id]/page.tsx — 4 simple loading/error/not-found/fallback `Container size=3` → `<Section>`; static `Skeleton maxWidth:200` → `page.module.css` `.skel`. Main full-bleed tabbed detail (`Container size=4` + global `.app-detail`/`maxWidth:100%`) left intact (sensitive layout); no raw color vars present. Build green (ec3e68f).
 - app/applications/page.tsx — `Container size=4` → `<Section>`; title → ui `<Heading as=h1 size=xl>`; raw `--gray-1/2/5/9`/`--color-surface`/`borderRadius:8` → `--ds-*` via `page.module.css` (12 statics extracted); per-column dynamic colors kept inline via `--chip-bg/border/op` CSS vars; pre-existing `app-row` global class kept. Build green (ab413bf).
 - app/memorize/[categorySlug]/page.tsx — full-height dashboard shell (left non-Section, conservative); raw `--gray-11`/`--gray-2`/undefined `--radius-3` → tokens; 8 static inline objects → `page.module.css` (.screen/.screenCol/.backLink/.empty/.skelTitle). Radix Heading/Box layout + css-memorize import kept. Build green (c3291dd).
