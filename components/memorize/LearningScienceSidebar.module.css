@@ -1,0 +1,29 @@
+/* Co-located polish for LearningScienceSidebar.
+   Visual chrome (.science-sidebar*, .science-group*, .science-paper) is owned
+   by the global components/memorize/css-memorize.css and stays literal in the
+   TSX — only the previously-inline static layout styles live here. */
+
+.intro {
+  display: block;
+  margin-bottom: var(--space-3); /* was marginBottom: 12 — --space-3 is 12px */
+}
+
+.groupHeaderTitle {
+  flex: 1;
+}
+
+.groupIcon {
+  /* exact original — no --text-* token resolves to 20px (closest are clamps) */
+  font-size: 20px;
+}
+
+.paperTitle {
+  display: block;
+}
+
+.paperFindings {
+  display: block;
+  margin-top: var(--space-1); /* was marginTop: 4 — --space-1 is 4px */
+  /* exact original — --ds-leading-snug is 1.35, --ds-leading-body is 1.6, neither is 1.5 */
+  line-height: 1.5;
+}

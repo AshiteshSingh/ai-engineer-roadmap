@@ -8,6 +8,7 @@ import {
   formatAuthors,
   type TechniqueGroup,
 } from "@/lib/learning-science";
+import styles from "./LearningScienceSidebar.module.css";
 
 export function LearningScienceSidebar() {
   const [open, setOpen] = useState(false);
@@ -37,7 +38,7 @@ export function LearningScienceSidebar() {
 
       {open && (
         <div className="science-sidebar-content">
-          <Text size="2" color="gray" style={{ display: "block", marginBottom: 12 }}>
+          <Text size="2" color="gray" className={styles.intro}>
             Evidence-based memory techniques backed by peer-reviewed research.
           </Text>
 
@@ -74,8 +75,8 @@ function TechniqueGroupCard({
   return (
     <Card variant="surface" className="science-group-card">
       <button className="science-group-header" onClick={onToggle}>
-        <Flex align="center" gap="2" style={{ flex: 1 }}>
-          <span style={{ fontSize: 20 }}>{group.icon}</span>
+        <Flex align="center" gap="2" className={styles.groupHeaderTitle}>
+          <span className={styles.groupIcon}>{group.icon}</span>
           <Text size="3" weight="bold">
             {group.name}
           </Text>
@@ -102,7 +103,7 @@ function TechniqueGroupCard({
           <Flex direction="column" gap="2" mt="1">
             {visiblePapers.map((paper, i) => (
               <div key={i} className="science-paper">
-                <Text size="2" weight="medium" style={{ display: "block" }}>
+                <Text size="2" weight="medium" className={styles.paperTitle}>
                   {paper.title}
                 </Text>
                 <Flex align="center" gap="2" wrap="wrap" mt="1">
@@ -128,11 +129,7 @@ function TechniqueGroupCard({
                   </Badge>
                 </Flex>
                 {paper.keyFindings.length > 0 && (
-                  <Text
-                    size="1"
-                    color="gray"
-                    style={{ lineHeight: "1.5", display: "block", marginTop: 4 }}
-                  >
+                  <Text size="1" color="gray" className={styles.paperFindings}>
                     {paper.keyFindings.join("; ")}
                   </Text>
                 )}

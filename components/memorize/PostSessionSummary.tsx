@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Heading, Text, Flex, Button, Badge } from "@radix-ui/themes";
 import type { PostSessionState } from "@/lib/session-tracking";
+import styles from "./PostSessionSummary.module.css";
 
 const DIFFICULTY_LABELS = ["Very Easy", "Easy", "Medium", "Hard", "Very Hard"];
 const RETENTION_LABELS = ["None", "Little", "Some", "Most", "Everything"];
@@ -77,7 +78,7 @@ export function PostSessionSummary({ stats, onDone }: PostSessionSummaryProps) {
           </Badge>
         </Flex>
 
-        <Text size="2" color="gray" style={{ display: "block", marginBottom: 12 }}>
+        <Text size="2" color="gray" className={styles.feelPrompt}>
           How did that feel? (Optional)
         </Text>
 

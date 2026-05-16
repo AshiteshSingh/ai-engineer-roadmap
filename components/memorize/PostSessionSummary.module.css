@@ -1,0 +1,9 @@
+/* Co-located static styles for PostSessionSummary.
+   Structural/static only — all visual styling lives in the global
+   css-memorize.css (session-summary-* classes) or Radix Themes props. */
+
+.feelPrompt {
+  display: block;
+  /* original literal: marginBottom: 12 — exact == --space-3 (12px) */
+  margin-bottom: var(--space-3);
+}
