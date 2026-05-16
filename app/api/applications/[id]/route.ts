@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications } from "@/src/db/schema";
 import { eq, and, or } from "drizzle-orm";
@@ -19,7 +20,7 @@ async function getSession() {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const [session, { id }] = await Promise.all([getSession(), params]);
 
-  if (session) {
+  if (session && isOwner(session)) {
     const [row] = await db
       .select()
       .from(applications)
@@ -42,7 +43,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const [session, { id }] = await Promise.all([getSession(), params]);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !isOwner(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await req.json();
   const { company, position, url, status, slug, notes, appliedAt, jobDescription, aiInterviewQuestions, aiTechStack, aiInterviewers, techDismissedTags } = body;
 
@@ -72,7 +73,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const [session, { id }] = await Promise.all([getSession(), params]);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !isOwner(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const [row] = await db
     .delete(applications)
     .where(whereApp(id, session.user.id))

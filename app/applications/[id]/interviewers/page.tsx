@@ -17,6 +17,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSession } from "@/lib/auth-client";
+import { isOwner } from "@/lib/owner";
 import { ApplicationHeader } from "@/components/app-detail/ApplicationHeader";
 import type { AppData } from "@/components/app-detail/types";
 import { Section } from "@/components/ui";
@@ -34,7 +35,7 @@ function InterviewersPageInner() {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const isAdmin = !!session?.user;
+  const isAdmin = isOwner(session);
 
   useEffect(() => {
     if (params.id) {

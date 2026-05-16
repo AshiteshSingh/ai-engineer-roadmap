@@ -5,6 +5,7 @@ import { Container, Heading, Button, Flex, Text, Box, Card, Skeleton, Tabs } fro
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
+import { isOwner } from "@/lib/owner";
 import { ApplicationHeader } from "@/components/app-detail/ApplicationHeader";
 import { JobDescriptionTab } from "@/components/app-detail/JobDescriptionTab";
 import { TechStackTab } from "@/components/app-detail/TechStackTab";
@@ -27,7 +28,7 @@ function ApplicationDetailInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isAdmin = !!session?.user;
+  const isAdmin = isOwner(session);
 
   useEffect(() => {
     if (params.id) {

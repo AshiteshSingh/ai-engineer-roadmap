@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications, concepts } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -43,8 +44,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const [session, { id: appId }] = await Promise.all([getSession(), params]);
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !isOwner(session))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const col = UUID_RE.test(appId) ? applications.id : applications.slug;
   const [app] = await db

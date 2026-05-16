@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { coursework } from "@/src/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -11,7 +12,7 @@ async function getSession() {
 
 export async function GET() {
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !isOwner(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const rows = await db
     .select()

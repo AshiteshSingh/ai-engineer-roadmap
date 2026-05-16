@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -21,7 +22,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const [session, { id }] = await Promise.all([getSession(), params]);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !isOwner(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const [row] = await db
     .select({ techDismissedTags: applications.techDismissedTags })
@@ -42,7 +43,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const [session, { id }] = await Promise.all([getSession(), params]);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !isOwner(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
   const dismissed: string[] = Array.isArray(body.dismissed) ? body.dismissed : [];
