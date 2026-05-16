@@ -25,7 +25,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 
 - [x] app/page.tsx
 - [x] app/memorize/page.tsx
-- [ ] app/memorize/[categorySlug]/page.tsx
+- [x] app/memorize/[categorySlug]/page.tsx
 - [ ] app/applications/page.tsx
 - [ ] app/applications/[id]/page.tsx
 - [ ] app/applications/[id]/prep/page.tsx
@@ -62,4 +62,5 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/memorize/[categorySlug]/page.tsx — full-height dashboard shell (left non-Section, conservative); raw `--gray-11`/`--gray-2`/undefined `--radius-3` → tokens; 8 static inline objects → `page.module.css` (.screen/.screenCol/.backLink/.empty/.skelTitle). Radix Heading/Box layout + css-memorize import kept. Build green (c3291dd).
 - app/memorize/page.tsx — 3× `<Box maxWidth:1000>` → `<Section>`; Radix `<Heading size=7>` → ui `<Heading as=h1 size=xl>`; raw `--gray-2`/undefined `--radius-3` → `.empty` with `--ds-surface-sub`/`--ds-border-subtle`/`--ds-radius`; 6 static inline objects → `page.module.css`; progress bar dynamic via `--pct`/`--bar` CSS vars. Kept `css-memorize.css` import + `memorize-cat-*` globals untouched. Build green (b75c21b).
