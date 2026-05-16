@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Lesson, CategoryMeta } from "@/lib/articles";
+import { cx } from "@/components/ui";
+import styles from "./article-nav.module.css";
 
 interface Props {
   prev: Lesson | null;
@@ -18,17 +20,17 @@ export function ArticleNav({ prev, next, currentCategory, prevMeta, nextMeta }: 
   const nm = nextMeta ?? FALLBACK_META;
 
   return (
-    <div className="article-nav">
+    <div className={styles.articleNav}>
       {prev ? (
         <Link
           href={prev.url}
-          className={`article-nav-card cat-${pm.slug}`}
+          className={cx(styles.card, `cat-${pm.slug}`)}
           aria-label={prev ? `Previous lesson: ${prev.title}` : undefined}
         >
-          <span className="article-nav-label">&larr; Previous</span>
-          <span className="article-nav-title">{prev.title}</span>
+          <span className={styles.label}>&larr; Previous</span>
+          <span className={styles.title}>{prev.title}</span>
           {currentCategory && prev.category !== currentCategory && (
-            <span className="article-nav-transition">
+            <span className={styles.transition}>
               From: {pm.icon} {prev.category}
             </span>
           )}
@@ -39,13 +41,13 @@ export function ArticleNav({ prev, next, currentCategory, prevMeta, nextMeta }: 
       {next ? (
         <Link
           href={next.url}
-          className={`article-nav-card article-nav-card--next cat-${nm.slug}`}
+          className={cx(styles.card, styles.cardNext, `cat-${nm.slug}`)}
           aria-label={next ? `Next lesson: ${next.title}` : undefined}
         >
-          <span className="article-nav-label">Next &rarr;</span>
-          <span className="article-nav-title">{next.title}</span>
+          <span className={styles.label}>Next &rarr;</span>
+          <span className={styles.title}>{next.title}</span>
           {currentCategory && next.category !== currentCategory && (
-            <span className="article-nav-transition">
+            <span className={styles.transition}>
               Up next: {nm.icon} {next.category}
             </span>
           )}
