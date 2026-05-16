@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Container,
   Heading,
   Button,
   Flex,
@@ -28,6 +27,8 @@ import { useRouter, useParams } from "next/navigation";
 import NextLink from "next/link";
 import { useSession } from "@/lib/auth-client";
 import type { Learner, Coursework } from "@/src/db/schema";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 
 function slugify(name: string) {
   return name
@@ -74,11 +75,12 @@ function FileRow({
       <Flex
         align="center"
         gap="3"
-        style={{ flex: 1, minWidth: 0, cursor: isPreviewable(item.mimeType) ? "pointer" : "default" }}
+        className={styles.fileMain}
+        style={{ cursor: isPreviewable(item.mimeType) ? "pointer" : "default" }}
         onClick={() => isPreviewable(item.mimeType) && onPreview()}
       >
-        <Box style={{ color: "var(--accent-9)", flexShrink: 0 }}>{fileIcon(item.mimeType)}</Box>
-        <Box style={{ minWidth: 0 }}>
+        <Box className={styles.fileIcon}>{fileIcon(item.mimeType)}</Box>
+        <Box className={styles.minw0}>
           <Text size="2" weight="medium" truncate>
             {item.title}
           </Text>
@@ -133,11 +135,11 @@ function PreviewDialog({
         </Dialog.Description>
         <Box className="cw-preview">
           {isPdf && (
-            <iframe src={item.fileUrl} title={item.title} style={{ width: "100%", height: 500, border: "none" }} />
+            <iframe src={item.fileUrl} title={item.title} className={styles.previewFrame} />
           )}
           {isImage && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.fileUrl} alt={item.title} style={{ width: "100%", maxHeight: 600, objectFit: "contain" }} />
+            <img src={item.fileUrl} alt={item.title} className={styles.previewImg} />
           )}
         </Box>
         <Flex justify="end" mt="4" gap="2">
@@ -285,16 +287,16 @@ export default function LearnerCourseworkPage() {
 
   if (isPending || loading) {
     return (
-      <Container size="3" py="8">
+      <Section>
         <Skeleton height="40px" mb="4" />
         <Skeleton height="200px" />
-      </Container>
+      </Section>
     );
   }
 
   if (notFound) {
     return (
-      <Container size="3" py="8" className="cw-container">
+      <Section className="cw-container">
         <Flex align="center" gap="2" mb="4">
           <RadixLink asChild color="gray">
             <NextLink href="/coursework">
@@ -304,7 +306,7 @@ export default function LearnerCourseworkPage() {
             </NextLink>
           </RadixLink>
         </Flex>
-        <Card style={{ textAlign: "center", padding: "48px 24px" }}>
+        <Card className={styles.emptyCard}>
           <Heading size="5" mb="2">
             No learner named &ldquo;{slug}&rdquo;
           </Heading>
@@ -358,14 +360,14 @@ export default function LearnerCourseworkPage() {
             </Dialog.Content>
           </Dialog.Root>
         </Card>
-      </Container>
+      </Section>
     );
   }
 
   if (!learner) return null;
 
   return (
-    <Container size="3" py="8" className="cw-container">
+    <Section className="cw-container">
       <Flex align="center" gap="2" mb="4">
         <RadixLink asChild color="gray">
           <NextLink href="/coursework">
@@ -378,7 +380,7 @@ export default function LearnerCourseworkPage() {
 
       <Flex justify="between" align="center" mb="6">
         <Box>
-          <Heading size="7">{learner.name}</Heading>
+          <DSHeading as="h1" size="xl">{learner.name}</DSHeading>
           <Flex gap="2" mt="2" align="center">
             <Badge size="1" variant="soft" color="gray">
               Age {learner.age}
@@ -432,7 +434,7 @@ export default function LearnerCourseworkPage() {
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.heic,.webp,.doc,.docx"
-                  style={{ display: "none" }}
+                  className={styles.hidden}
                   onChange={(e) => e.target.files?.[0] && setUploadFile(e.target.files[0])}
                 />
                 {uploadFile ? (
@@ -473,7 +475,7 @@ export default function LearnerCourseworkPage() {
       </Flex>
 
       {files.length === 0 ? (
-        <Card style={{ textAlign: "center", padding: "32px 24px" }}>
+        <Card className={styles.emptyCardSm}>
           <Text size="2" color="gray">
             No coursework submitted yet. Click Upload to add files.
           </Text>
@@ -492,6 +494,6 @@ export default function LearnerCourseworkPage() {
       )}
 
       <PreviewDialog item={previewItem} open={!!previewItem} onClose={() => setPreviewItem(null)} />
-    </Container>
+    </Section>
   );
 }
