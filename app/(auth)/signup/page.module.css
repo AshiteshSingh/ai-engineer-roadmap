@@ -1,0 +1,8 @@
+/* Co-located styles for app/(auth)/signup/page.tsx — no global CSS.
+   Full-viewport centered auth card: intentionally not a Section page. */
+.screen {
+  min-height: 100vh;
+}
+.card {
+  width: 400px;
+}
