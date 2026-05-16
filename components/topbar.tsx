@@ -6,6 +6,7 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { isOwner } from "@/lib/owner";
 import { useRouter } from "next/navigation";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import styles from "./topbar.module.css";
 
 function initials(name?: string | null): string {
   if (!name) return "AI";
@@ -89,7 +90,7 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
           rel="noopener noreferrer"
           aria-label="View source on GitHub"
           title="GitHub repository"
-          className="yc-topbar-signin yc-topbar-signin--icon"
+          className={styles.githubLink}
         >
           <GitHubLogoIcon width={18} height={18} aria-hidden="true" />
         </a>

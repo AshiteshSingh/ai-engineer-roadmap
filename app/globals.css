@@ -3619,8 +3619,7 @@
   background: var(--ds-surface-hover);
 }
 .yc-topbar-seg-link:focus-visible,
-.yc-topbar-signin--pill:focus-visible,
-.yc-topbar-signin--icon:focus-visible {
+.yc-topbar-signin--pill:focus-visible {
   box-shadow: var(--ds-shadow-focus);
 }
 
@@ -3720,10 +3719,6 @@
   box-shadow: var(--ds-shadow-1);
 }
 .yc-topbar-signin--pill:active { transform: translateY(1px); }
-.yc-topbar-signin--icon {
-  padding: 0 var(--space-2);
-  color: var(--ds-text-muted);
-}
 .yc-topbar-cta-arrow {
   transition: transform var(--ds-dur) var(--ds-ease);
 }

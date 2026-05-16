@@ -1,0 +1,34 @@
+/* Topbar — co-located component styling (token-only, no `yc-` classes).
+   Self-contained: replicates the muted/accent-hover/focus-ring/sizing the
+   GitHub link previously inherited from globals' .yc-topbar-signin, so it
+   stays visually identical while owning its own cascade. */
+
+.githubLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-muted);
+  text-decoration: none;
+  transition: color var(--ds-dur) var(--ds-ease);
+}
+
+.githubLink:hover {
+  color: var(--ds-accent-text);
+}
+
+/* Match the topbar's box-shadow focus treatment (not an outline). */
+.githubLink:focus-visible {
+  box-shadow: var(--ds-shadow-focus);
+}
+.githubLink:focus:not(:focus-visible) {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .githubLink {
+    transition: none;
+  }
+}
