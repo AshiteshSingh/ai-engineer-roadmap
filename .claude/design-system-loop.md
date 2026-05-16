@@ -37,7 +37,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/aws/[slug]/page.tsx
 - [x] app/courses/page.tsx
 - [x] app/coursework/page.tsx
-- [ ] app/coursework/[slug]/page.tsx
+- [x] app/coursework/[slug]/page.tsx
 - [ ] app/coursework/[slug]/slovenia/page.tsx
 - [ ] app/coursework/[slug]/slovenia/ideas/page.tsx
 - [ ] app/coursework/[slug]/slovenia/images/page.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/coursework/[slug]/page.tsx — near-identical to /coursework: 3× `Container size=3` → `<Section>` (cw-container kept); learner-name title → ui `<Heading as=h1 size=xl>`; raw `--accent-9` → `--ds-accent`; 8 static inline objects → `page.module.css`. notFound block had mixed indentation (open 4-sp, close 6-sp) → grep-verified + fixed dangling close. Build green (9d989da).
 - app/coursework/page.tsx — 2× `Container size=3` → `<Section>` (kept `cw-container` global class); title → ui `<Heading as=h1 size=xl>`; raw `--accent-9` → `--ds-accent`; 9 static inline objects → `page.module.css` (.clickable/.fileMain/.fileIcon/.minw0/.previewFrame/.previewImg/.emptyCard[Sm]/.hidden); dynamic file-row cursor kept inline. `cw-*` globals untouched. Build green (38ad385).
 - app/courses/page.tsx — mostly global `courses-page`/`course-card` classes (left as-is, `.courses-page` layout not Section-able). Only actionable: empty-state `<p>` inline `--gray-9`+0.875rem → `page.module.css` `.empty` (`--ds-text-faint`/`--text-sm`). Build green (bcc0b58).
 - app/aws/[slug]/page.tsx — NO CHANGES (same as /aws): server component, full-bleed article layout via shared components + pre-existing global `article-*`/`badge-pill`/`cat-*` classes; zero inline styles/raw vars/Radix containers. Ledger-only tick.
