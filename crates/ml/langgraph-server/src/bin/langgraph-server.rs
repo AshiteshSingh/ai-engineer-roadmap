@@ -20,8 +20,8 @@ use serde_json::json;
 use tracing_subscriber::EnvFilter;
 
 use knowledge_ml_langgraph_server::{
-    build_chat_messages, llm, parse_chat_input, retrieval::Retriever, ChatInput, RunRequest,
-    DEFERRED_GRAPHS,
+    build_chat_messages, graphs, llm, parse_chat_input, retrieval::Retriever, ChatInput,
+    RunRequest,
 };
 
 struct AppState {
@@ -49,12 +49,6 @@ impl AppError {
     fn bad_request(detail: impl Into<String>) -> Self {
         Self {
             status: StatusCode::BAD_REQUEST,
-            detail: detail.into(),
-        }
-    }
-    fn not_implemented(detail: impl Into<String>) -> Self {
-        Self {
-            status: StatusCode::NOT_IMPLEMENTED,
             detail: detail.into(),
         }
     }
@@ -127,9 +121,22 @@ async fn runs_wait(
 
             Ok(Json(json!({ "response": text })))
         }
-        id if DEFERRED_GRAPHS.contains(&id) => Err(AppError::not_implemented(format!(
-            "{id} not implemented in rust backend yet"
-        ))),
+        id if graphs::PORTED_GRAPHS.contains(&id) => {
+            // Ported graphs return LangGraph's fully-merged final state.
+            // `state.temperature` is the configured LLM_TEMPERATURE — the
+            // default for graphs whose Python uses `make_llm()` with no
+            // explicit temperature (course_review/fetch_courses set their own).
+            let out = graphs::dispatch(
+                id,
+                req.input,
+                &state.llm,
+                &state.model,
+                state.temperature,
+            )
+            .await
+            .map_err(|e| AppError::bad_gateway(format!("{id} failed: {e}")))?;
+            Ok(Json(out))
+        }
         other => Err(AppError::bad_request(format!(
             "unknown assistant_id '{other}'"
         ))),

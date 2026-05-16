@@ -1,28 +1,27 @@
-//! Local Rust replacement for the Python FastAPI LangGraph backend.
+//! Local Rust replacement for the Python FastAPI LangGraph backend — now a
+//! full drop-in, not just `chat`.
 //!
 //! Honors the exact wire contract that `src/lib/langgraph-client.ts` calls:
-//! `POST /runs/wait` with `{ assistant_id, input, thread_id? }`. Only the
-//! `chat` graph is implemented (RAG retrieval over SQLite + LanceDB → one
-//! DeepSeek call). The heavyweight multi-pass graphs are deferred and return
-//! HTTP 501 with `{ "detail": "<graph> not implemented in rust backend yet" }`.
+//! `POST /runs/wait` with `{ assistant_id, input, thread_id? }`. All six
+//! graphs the Python service exposes are implemented:
+//!
+//! - `chat` — RAG retrieval over SQLite + LanceDB → one DeepSeek call (here).
+//! - `app_prep`, `memorize_generate`, `article_generate`, `course_review`,
+//!   `fetch_courses` — pure LLM orchestration ports in [`graphs`], returning
+//!   LangGraph's fully-merged final-state object so callers see an identical
+//!   wire shape.
 //!
 //! Stateless: chat `history` is supplied by the caller (Next.js reads it from
-//! Postgres in `app/api/chat/route.ts`), so there is no checkpointer.
+//! Postgres in `app/api/chat/route.ts`); the other graphs run with a fresh
+//! thread id (`resumable=False` in Python), so there is no checkpointer.
 
+pub mod graphs;
+pub mod json;
 pub mod llm;
 pub mod retrieval;
 pub mod store;
 
 use serde::{Deserialize, Serialize};
-
-/// Graphs served by the Python backend that are intentionally not ported yet.
-pub const DEFERRED_GRAPHS: &[&str] = &[
-    "app_prep",
-    "memorize_generate",
-    "article_generate",
-    "course_review",
-    "fetch_courses",
-];
 
 /// System prompt — kept verbatim in sync with
 /// `backend/knowledge_agent/chat_graph.py::SYSTEM`.
@@ -158,9 +157,16 @@ mod tests {
     }
 
     #[test]
-    fn deferred_graphs_listed() {
-        assert!(DEFERRED_GRAPHS.contains(&"app_prep"));
-        assert!(DEFERRED_GRAPHS.contains(&"course_review"));
-        assert!(!DEFERRED_GRAPHS.contains(&"chat"));
+    fn ported_graphs_cover_all_non_chat_assistants() {
+        for id in [
+            "app_prep",
+            "memorize_generate",
+            "article_generate",
+            "course_review",
+            "fetch_courses",
+        ] {
+            assert!(graphs::PORTED_GRAPHS.contains(&id));
+        }
+        assert!(!graphs::PORTED_GRAPHS.contains(&"chat"));
     }
 }
