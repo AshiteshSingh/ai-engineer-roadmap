@@ -35,7 +35,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/applications/[id]/interviewers/page.tsx
 - [x] app/aws/page.tsx
 - [x] app/aws/[slug]/page.tsx
-- [ ] app/courses/page.tsx
+- [x] app/courses/page.tsx
 - [ ] app/coursework/page.tsx
 - [ ] app/coursework/[slug]/page.tsx
 - [ ] app/coursework/[slug]/slovenia/page.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/courses/page.tsx — mostly global `courses-page`/`course-card` classes (left as-is, `.courses-page` layout not Section-able). Only actionable: empty-state `<p>` inline `--gray-9`+0.875rem → `page.module.css` `.empty` (`--ds-text-faint`/`--text-sm`). Build green (bcc0b58).
 - app/aws/[slug]/page.tsx — NO CHANGES (same as /aws): server component, full-bleed article layout via shared components + pre-existing global `article-*`/`badge-pill`/`cat-*` classes; zero inline styles/raw vars/Radix containers. Ledger-only tick.
 - app/aws/page.tsx — NO CHANGES (already clean for rubric scope): server component, full-bleed article layout via shared components + pre-existing global `article-*`/`badge-pill`/`cat-*` classes; zero inline styles, zero raw `--gray-*`, no Radix Container/Heading, no undefined tokens. Forcing `<Section>` would break article-grid; migrating globals is out of scope. Ledger-only tick.
 - app/applications/[id]/interviewers/page.tsx — 5× `Container size=3` → `<Section>`; `--gray-6` Tabs border, content Card border (cyan accent kept), TextArea (fixed undefined `--font-size-1`) → `page.module.css` (.skel/.tabsList/.panel/.codeArea). Cyan markdown `components` map left as-is (intentional theme, like prep's violet). Build green (1efc932).
