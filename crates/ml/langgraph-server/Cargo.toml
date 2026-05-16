@@ -26,6 +26,9 @@ tokio = { version = "1", features = ["full"] }
 serde      = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# Quality-gate regexes (article_generate::check_quality parity)
+regex = "1"
+
 # Errors / logging
 anyhow             = "1"
 thiserror          = "2"
