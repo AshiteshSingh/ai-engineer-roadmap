@@ -45,7 +45,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/problems/page.tsx
 - [x] app/problems/[slug]/page.tsx
 - [x] app/evals/page.tsx
-- [ ] app/kv-quant/page.tsx
+- [x] app/kv-quant/page.tsx
 - [ ] app/langgraph/lead-gen/page.tsx
 - [ ] app/langgraph/lead-gen/sd/page.tsx
 - [ ] app/nexttech/senior-genai-engineer/page.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/kv-quant/page.tsx — NO CHANGES: fully class-based via pre-existing global `se-*` layout + shared Topbar/PaperCard; zero inline styles/raw vars/Radix containers. Globals left as-is (out of scope), `se-main` not Section-able. Ledger-only tick.
 - app/evals/page.tsx — NO CHANGES: already the DS-native redesigned hub (EvalsHero/EvalsBrowser with own CSS Modules, "zero global CSS"). Only inline style is the dynamic category gradient via `--cat-from/--cat-to` CSS vars (rubric-sanctioned). Ledger-only tick.
 - app/problems/[slug]/page.tsx — Radix `<Section size=2><Container size=4>` → ui `<Section>`; raw `--gray-11`→`--ds-text`, fontSize 14→`--text-sm`, teal sign-in accent kept → `page.module.css` (.backLink/.signin). Workspace component out of scope. Build green (cd848e6).
 - app/problems/page.tsx — replaced Radix `<Section size=3><Container size=3>` nest with ui `<Section>`; title → ui `<Heading as=h1 size=xl>`; 2 static inline (link/spacer22) → `page.module.css`. No raw vars. Build green (e55349c).
