@@ -220,41 +220,47 @@ Output the complete revised article (full markdown, starting with `# Title`).
 /// `{ident}`→field. Unknown `{...}` is left verbatim (defensive — our
 /// templates only use known fields). Inserted values are not re-scanned.
 fn pyformat(template: &str, fields: &[(&str, &str)]) -> String {
-    let bytes = template.as_bytes();
-    let mut out = String::with_capacity(template.len() + 256);
+    // Byte scan: `{`/`}` are ASCII (0x7B/0x7D) and can never occur inside a
+    // multibyte UTF-8 sequence, so copying every other byte verbatim is
+    // UTF-8-safe (the em-dashes / ≥ / … in the prompts pass through intact).
+    let b = template.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(b.len() + 256);
     let mut i = 0;
-    while i < bytes.len() {
-        let c = bytes[i] as char;
-        if c == '{' {
-            if i + 1 < bytes.len() && bytes[i + 1] == b'{' {
-                out.push('{');
-                i += 2;
-                continue;
-            }
-            if let Some(close) = template[i + 1..].find('}') {
-                let name = &template[i + 1..i + 1 + close];
-                if let Some((_, v)) = fields.iter().find(|(k, _)| *k == name) {
-                    out.push_str(v);
-                    i = i + 1 + close + 1;
+    while i < b.len() {
+        match b[i] {
+            b'{' => {
+                if i + 1 < b.len() && b[i + 1] == b'{' {
+                    out.push(b'{');
+                    i += 2;
                     continue;
                 }
+                if let Some(rel) = b[i + 1..].iter().position(|&x| x == b'}') {
+                    let name = &template[i + 1..i + 1 + rel];
+                    if let Some((_, v)) = fields.iter().find(|(k, _)| *k == name) {
+                        out.extend_from_slice(v.as_bytes());
+                        i = i + 1 + rel + 1;
+                        continue;
+                    }
+                }
+                out.push(b'{');
+                i += 1;
             }
-            out.push('{');
-            i += 1;
-        } else if c == '}' {
-            if i + 1 < bytes.len() && bytes[i + 1] == b'}' {
-                out.push('}');
-                i += 2;
-                continue;
+            b'}' => {
+                if i + 1 < b.len() && b[i + 1] == b'}' {
+                    out.push(b'}');
+                    i += 2;
+                    continue;
+                }
+                out.push(b'}');
+                i += 1;
             }
-            out.push('}');
-            i += 1;
-        } else {
-            out.push(c);
-            i += 1;
+            x => {
+                out.push(x);
+                i += 1;
+            }
         }
     }
-    out
+    String::from_utf8(out).expect("pyformat preserves UTF-8 boundaries")
 }
 
 fn sfield(state: &Map<String, Value>, key: &str) -> String {
