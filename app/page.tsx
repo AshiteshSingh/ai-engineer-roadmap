@@ -9,6 +9,7 @@ import { buildLessonLookup } from "@/components/roadmap-graph/lesson-lookup";
 import { buildRoadmapModel } from "@/lib/roadmap-flow";
 import { Section, Eyebrow, Heading } from "@/components/ui";
 import styles from "./page.module.css";
+import home from "./home.module.css";
 
 export default async function HomePage() {
   const groups = await getGroupedLessons();
@@ -35,9 +36,9 @@ export default async function HomePage() {
       <main>
         {/* Research Collections */}
         <ScrollReveal delay={100}>
-          <section className="research-collections">
-            <h2 className="research-collections-title">Research Collections</h2>
-            <div className="research-collections-grid">
+          <section className={home.researchCollections}>
+            <h2 className={home.researchCollectionsTitle}>Research Collections</h2>
+            <div className={home.researchCollectionsGrid}>
               <Link href="/kv-quant" className="cat-card">
                 <div className="cat-card-header">
                   <span className="cat-card-icon" aria-hidden="true">🗜️</span>

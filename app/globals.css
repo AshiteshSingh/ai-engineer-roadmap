@@ -364,37 +364,8 @@
    tsx/ts/js (unreachable legacy CSS). Removing dead rules is
    behavior-preserving. Scattered @media fragments also removed. */
 
-/* ================================================================
-   RESEARCH COLLECTIONS
-   ================================================================ */
-.research-collections {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 var(--space-5) var(--space-6);
-}
-.research-collections-title {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ds-text-muted);
-  margin-bottom: 16px;
-}
-.research-collections-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-.research-collections-grid .cat-card {
-  text-decoration: none;
-  cursor: pointer;
-}
-.research-collections-grid .cat-card-desc {
-  font-size: 13px;
-  color: var(--ds-text);
-  line-height: 1.5;
-  margin-top: 8px;
-}
+/* RESEARCH COLLECTIONS migrated to app/home.module.css (base +
+   tablet/phone @media relocated together; full cascade co-located). */
 
 /* ================================================================
    SEARCH INPUT (glass)
@@ -2694,12 +2665,7 @@
   .cat-nav-icon { font-size: 12px; }
   .cat-nav-count { font-size: 9px; }
 
-  /* Research collections */
-  .research-collections { padding: 0 16px 24px; }
-  .research-collections-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
+  /* Research collections @media relocated to app/home.module.css */
 }
 
 /* ================================================================
@@ -2783,14 +2749,7 @@
   .difficulty-filter { padding: 0 12px 10px; gap: 4px; }
   .difficulty-filter-btn { font-size: 10px; padding: 6px 10px; gap: 4px; }
 
-  /* Research collections */
-  .research-collections { padding: 0 12px 20px; }
-  .research-collections-title { font-size: 10px; }
-  .research-collections-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  .research-collections-grid .cat-card-desc { font-size: 12px; }
+  /* Research collections @media relocated to app/home.module.css */
 }
 
 /* ================================================================
