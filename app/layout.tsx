@@ -4,10 +4,12 @@ import { Theme } from "@radix-ui/themes";
 import { Analytics } from "@vercel/analytics/next";
 import "@radix-ui/themes/styles.css";
 // Pinned cascade order (Phase 1 — globals.css dissolution):
-// radix base → design tokens → base resets → (transitional) legacy globals.
+// radix base → design tokens → base resets → (transitional) legacy globals
+// → shared keyframes (global; CSS Modules can't reference cross-file).
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./globals.css";
+import "./styles/motion.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });

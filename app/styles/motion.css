@@ -1,0 +1,15 @@
+/* ================================================================
+   MOTION — shared @keyframes (global)
+
+   CSS Modules cannot reference an animation-name defined in another
+   file, so keyframes consumed by migrated component modules live here
+   as a minimal global. Behavior-preserving: definitions are moved
+   verbatim from globals.css, names unchanged. Imported once in
+   app/layout.tsx after globals.css.
+   ================================================================ */
+
+/* audio-player: chapter panel slide-in (components/audio-player.module.css) */
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

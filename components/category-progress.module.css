@@ -1,0 +1,37 @@
+.categoryProgress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--ds-text-faint); /* was var(--gray-9) */
+  font-weight: 500;
+}
+.label {
+  white-space: nowrap;
+}
+.dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ds-border-subtle); /* was var(--gray-4) */
+  transition: background 0.2s ease, transform 0.2s ease;
+  text-decoration: none;
+}
+.dot:hover {
+  transform: scale(1.3);
+  background: var(--gray-6); /* no --ds-* maps to gray-6 — keep raw */
+}
+/* --cat-from is the dynamic per-category accent — keep raw. */
+.dotCurrent {
+  background: var(--cat-from);
+  transform: scale(1.2);
+}
+.dotCurrent:hover {
+  background: var(--cat-from);
+}

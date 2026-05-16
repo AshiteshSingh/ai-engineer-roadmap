@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cx } from "@/components/ui";
+import styles from "./toc.module.css";
 
 interface TocEntry {
   level: number;
@@ -43,12 +45,9 @@ function TocNav({
     <nav>
       {headings.map((h, i) => {
         const isActive = activeId === h.id;
-        const classes = [
-          h.level === 3 ? "toc-h3" : undefined,
-          isActive ? "toc-active" : undefined,
-        ]
-          .filter(Boolean)
-          .join(" ") || undefined;
+        const classes =
+          cx(h.level === 3 && styles.tocH3, isActive && styles.tocActive) ||
+          undefined;
 
         return (
           <a
@@ -123,15 +122,15 @@ export function TableOfContents({ markdown }: { markdown: string }) {
   return (
     <>
       {/* Desktop TOC */}
-      <div className="toc-sidebar" aria-label="Table of contents">
-        <div className="toc-sidebar-title">On this page</div>
+      <div className={styles.tocSidebar} aria-label="Table of contents">
+        <div className={styles.tocTitle}>On this page</div>
         <TocNav headings={headings} activeId={activeId} onSelect={handleSelect} />
       </div>
 
       {/* Mobile TOC trigger + drawer */}
       <button
         type="button"
-        className="toc-mobile-trigger"
+        className={styles.tocMobileTrigger}
         aria-label="Toggle table of contents"
         onClick={() => setDrawerOpen(true)}
       >
@@ -140,14 +139,14 @@ export function TableOfContents({ markdown }: { markdown: string }) {
 
       {drawerOpen && (
         <div
-          className="toc-mobile-backdrop toc-mobile-backdrop--open"
+          className={cx(styles.tocMobileBackdrop, styles.tocMobileBackdropOpen)}
           aria-hidden="true"
           onClick={() => setDrawerOpen(false)}
         />
       )}
-      <div className={`toc-mobile-drawer ${drawerOpen ? "toc-mobile-drawer--open" : ""}`}>
-        <div className="toc-mobile-drawer-handle" />
-        <div className="toc-sidebar-title">On this page</div>
+      <div className={cx(styles.tocMobileDrawer, drawerOpen && styles.tocMobileDrawerOpen)}>
+        <div className={styles.tocMobileDrawerHandle} />
+        <div className={styles.tocTitle}>On this page</div>
         <TocNav headings={headings} activeId={activeId} onSelect={handleSelect} />
       </div>
     </>

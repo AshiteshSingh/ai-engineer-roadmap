@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Lesson } from "@/lib/articles";
+import { cx } from "@/components/ui";
+import styles from "./category-progress.module.css";
 
 interface Props {
   categoryLessons: Lesson[];
@@ -12,16 +14,16 @@ export function CategoryProgress({ categoryLessons, currentSlug, categoryName }:
   if (currentIndex === -1) return null;
 
   return (
-    <div className="category-progress">
-      <span className="category-progress-label">
+    <div className={styles.categoryProgress}>
+      <span className={styles.label}>
         Lesson {currentIndex + 1} of {categoryLessons.length} in {categoryName}
       </span>
-      <div className="category-progress-dots">
+      <div className={styles.dots}>
         {categoryLessons.map((l) => (
           <Link
             key={l.slug}
             href={l.url}
-            className={`category-progress-dot${l.slug === currentSlug ? " category-progress-dot--current" : ""}`}
+            className={cx(styles.dot, l.slug === currentSlug && styles.dotCurrent)}
             title={l.title}
           />
         ))}
