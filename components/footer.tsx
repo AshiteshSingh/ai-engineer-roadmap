@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { CATEGORIES, CATEGORY_META } from "@/lib/articles";
+import { cx } from "@/components/ui";
+import styles from "./footer.module.css";
 
 export function Footer({ wordCount }: { wordCount?: number }) {
   const year = new Date().getFullYear();
@@ -29,7 +31,10 @@ export function Footer({ wordCount }: { wordCount?: number }) {
             <span className="ftr-headline-accent">one lesson at a time.</span>
           </h2>
         </div>
-        <Link href="/#cat-phase-0-orientation" className="ftr-cta-btn">
+        <Link
+          href="/#cat-phase-0-orientation"
+          className={cx("ftr-cta-btn", styles.cta)}
+        >
           <span>Start the path</span>
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
             <path
@@ -78,7 +83,7 @@ export function Footer({ wordCount }: { wordCount?: number }) {
                 <li key={name}>
                   <Link
                     href={`/#cat-${meta.slug}`}
-                    className={`ftr-nav-link cat-${meta.slug}`}
+                    className={cx(`ftr-nav-link cat-${meta.slug}`, styles.navLink)}
                   >
                     <span className="ftr-nav-dot" aria-hidden="true" />
                     <span className="ftr-nav-icon" aria-hidden="true">

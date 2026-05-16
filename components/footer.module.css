@@ -1,0 +1,36 @@
+/* Footer — co-located UX-polish module (additive, token-only).
+   Behavior-preserving: literal `ftr-*` classes stay on every element so
+   all globals.css (HP-TEAM-7) base rules and HP-TEAM-10 unifying-rhythm
+   overrides keep matching at unchanged source order. This module only
+   ADDS what the globals omit: accessible :focus-visible rings on the
+   interactive controls, plus a reduced-motion safeguard.
+   No @keyframes here — the global `ftr-pulse` animation is untouched. */
+
+/* Keyboard focus ring — the global footer has no visible focus state.
+   Uses the design-system focus tokens (tokens.css --ds-focus-ring*). */
+.cta:focus-visible,
+.navLink:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
+  border-radius: var(--ds-radius-md);
+}
+
+/* The CTA is a pill — match its corner so the ring hugs the shape. */
+.cta:focus-visible {
+  border-radius: var(--ds-radius-pill);
+}
+
+/* Pointer interactions stay mouse-only; never paint the ring on click. */
+.cta:focus:not(:focus-visible),
+.navLink:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Module-scoped echo of the global reduced-motion guard so the
+     polish layer itself introduces no motion under the preference. */
+  .cta,
+  .navLink {
+    transition: none;
+  }
+}
