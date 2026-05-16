@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSession, signOut } from "@/lib/auth-client";
 import { isOwner } from "@/lib/owner";
 import { useRouter } from "next/navigation";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
 
 function initials(name?: string | null): string {
   if (!name) return "AI";
@@ -82,6 +83,16 @@ export function Topbar({ lessonCount }: { lessonCount?: number }) {
 
       {/* ── ZONE 3: identity / actions ───────────────────────── */}
       <div className="yc-topbar-right">
+        <a
+          href="https://github.com/v9ai/ai-engineer-roadmap"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="View source on GitHub"
+          title="GitHub repository"
+          className="yc-topbar-signin yc-topbar-signin--icon"
+        >
+          <GitHubLogoIcon width={18} height={18} aria-hidden="true" />
+        </a>
         {session?.user ? (
           <div className="yc-topbar-user">
             <span className="yc-topbar-id" title={session.user.name ?? undefined}>

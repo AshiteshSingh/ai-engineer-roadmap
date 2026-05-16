@@ -3344,6 +3344,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "knowledge-ml-langgraph-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arrow-array",
+ "arrow-schema",
+ "async-trait",
+ "axum",
+ "clap",
+ "deepseek-loop",
+ "futures",
+ "lancedb",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lance"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

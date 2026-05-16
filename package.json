@@ -22,6 +22,8 @@
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "backend:dev": "cd backend && uvicorn app:app --host 0.0.0.0 --port 7860 --reload",
+    "backend:rust": "cd crates/ml && cargo run -p knowledge-ml-langgraph-server --release --bin langgraph-server",
+    "backend:rust:index": "cd crates/ml && cargo run -p knowledge-ml-langgraph-server --release --bin langgraph-index",
     "backend:deploy": "cd backend && wrangler deploy",
     "backend:tail": "cd backend && wrangler tail",
     "test:backend": "cd backend && .venv/bin/pytest -q",
