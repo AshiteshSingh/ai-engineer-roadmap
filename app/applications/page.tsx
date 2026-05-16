@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Container,
   Heading,
   Button,
   Flex,
@@ -28,6 +27,8 @@ import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import type { ApplicationStatus, AppData } from "@/components/app-detail/types";
 import { COLUMNS, NEXT_STATUS, formatDate } from "@/components/app-detail/constants";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Pipeline Funnel Bar
@@ -47,12 +48,17 @@ function PipelineFunnel({ apps }: { apps: AppData[] }) {
             gap="2"
             px="3"
             py="2"
-            style={{
-              borderRadius: 8,
-              backgroundColor: counts[col.status] > 0 ? `var(--${col.color}-3)` : "var(--gray-2)",
-              border: `1px solid var(--${col.color}-6)`,
-              opacity: counts[col.status] > 0 ? 1 : 0.5,
-            }}
+            className={styles.chip}
+            style={
+              {
+                "--chip-bg":
+                  counts[col.status] > 0
+                    ? `var(--${col.color}-3)`
+                    : "var(--gray-2)",
+                "--chip-border": `var(--${col.color}-6)`,
+                "--chip-op": counts[col.status] > 0 ? 1 : 0.5,
+              } as React.CSSProperties
+            }
           >
             <Text size="2" weight="medium" color={counts[col.status] > 0 ? col.color : "gray"}>
               {col.label}
@@ -62,7 +68,7 @@ function PipelineFunnel({ apps }: { apps: AppData[] }) {
             </Badge>
           </Flex>
           {i < COLUMNS.length - 1 && (
-            <Text size="1" color="gray" style={{ opacity: 0.4 }}>&rsaquo;</Text>
+            <Text size="1" color="gray" className={styles.sep}>&rsaquo;</Text>
           )}
         </Flex>
       ))}
@@ -91,23 +97,17 @@ function ApplicationRow({
   return (
     <Link
       href={`/applications/${app.slug}`}
-      style={{ textDecoration: "none", color: "inherit" }}
+      className={styles.rowLink}
     >
       <Flex
         align="center"
         gap="3"
         px="4"
         py="3"
-        style={{
-          borderTop: index > 0 ? "1px solid var(--gray-5)" : undefined,
-          backgroundColor: "var(--color-surface)",
-          cursor: "pointer",
-          transition: "background-color 0.1s",
-        }}
-        className="app-row"
+        className={`app-row ${styles.row}${index > 0 ? ` ${styles.rowDivided}` : ""}`}
       >
-        <Box style={{ flex: 1, minWidth: 0 }}>
-          <Text size="2" weight="medium" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
+        <Box className={styles.rowMain}>
+          <Text size="2" weight="medium" className={styles.ellipsis}>
             {displayTitle}
           </Text>
           <Text size="1" color="gray">
@@ -173,9 +173,9 @@ function StatusSection({
         px="3"
         py="2"
         onClick={() => setOpen((v) => !v)}
-        style={{ cursor: "pointer", userSelect: "none" }}
+        className={styles.secHeader}
       >
-        <Box style={{ color: "var(--gray-9)", flexShrink: 0 }}>
+        <Box className={styles.chevron}>
           {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
         </Box>
         <Badge color={column.color} variant="soft" size="2">
@@ -187,7 +187,7 @@ function StatusSection({
       </Flex>
 
       {open && apps.length > 0 && (
-        <Box style={{ border: "1px solid var(--gray-5)", borderRadius: 8, overflow: "hidden", marginLeft: 6 }}>
+        <Box className={styles.list}>
           {apps.map((app, i) => (
             <ApplicationRow
               key={app.id}
@@ -205,11 +205,7 @@ function StatusSection({
           align="center"
           justify="center"
           py="4"
-          style={{
-            border: "1px dashed var(--gray-5)",
-            borderRadius: 8,
-            backgroundColor: "var(--gray-1)",
-          }}
+          className={styles.emptySlot}
         >
           <Text size="1" color="gray">
             Nothing here yet
@@ -373,17 +369,17 @@ export default function ApplicationsPage() {
   ) as Record<ApplicationStatus, AppData[]>;
 
   return (
-    <Container size="4" p={{ initial: "4", md: "8" }}>
+    <Section>
       {/* Header */}
       <Flex justify="between" align="center" mb="4" wrap="wrap" gap="3">
         <Box>
           <Flex align="center" gap="3">
-            <Link href="/" style={{ color: "var(--gray-9)", textDecoration: "none", fontSize: 13 }}>
+            <Link href="/" className={styles.backLink}>
               &larr; Back
             </Link>
-            <Heading size="8" mb="1">
+            <DSHeading as="h1" size="xl">
               Application Pipeline
-            </Heading>
+            </DSHeading>
           </Flex>
           {total > 0 && (
             <Text size="2" color="gray">
@@ -408,7 +404,7 @@ export default function ApplicationsPage() {
 
       {/* Empty state */}
       {!loading && total === 0 && (
-        <Card size="3" style={{ textAlign: "center" }}>
+        <Card size="3" className={styles.emptyCard}>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5" color="gray">
               No applications yet
@@ -435,6 +431,6 @@ export default function ApplicationsPage() {
           ))}
         </Box>
       )}
-    </Container>
+    </Section>
   );
 }
