@@ -31,7 +31,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/applications/[id]/prep/page.tsx
 - [x] app/applications/[id]/prep/memorize/page.tsx
 - [x] app/applications/[id]/debrief/page.tsx
-- [ ] app/applications/[id]/notes/page.tsx
+- [x] app/applications/[id]/notes/page.tsx
 - [ ] app/applications/[id]/interviewers/page.tsx
 - [ ] app/aws/page.tsx
 - [ ] app/aws/[slug]/page.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/applications/[id]/notes/page.tsx — identical shape to debrief: 5× `Container size=3` → `<Section>`; `--gray-6` Tabs border + 2 Skeletons → `page.module.css`. Build green (89eb4a6).
 - app/applications/[id]/debrief/page.tsx — plain `Container size=3` (not full-bleed) so all 5 → `<Section>`; raw `--gray-6` Tabs border + 2 static Skeletons → `page.module.css` (.skel/.tabsList → `--ds-border`). Radix error Headings + `tab-shortcut-hint` global kept. Build green (7e27859).
 - app/applications/[id]/prep/memorize/page.tsx — full-height dashboard shell (left non-Section, like tick 3); 11 static inline objects → `page.module.css` (.screen/.screenCol[NoScroll]/.backLink/.skelTitle/.fillCol/.genCard/.rocket/.fullBtn); raw `--gray-11` → `--ds-text`. Radix Heading toolbar + css-memorize import + violet accent kept. 480/32px kept literal (no clean token). Build green (7588631).
 - app/applications/[id]/prep/page.tsx — large/sensitive (markdown renderer). Conservative: 3 simple-state `<Box>` → `<Section>`; title → ui `<Heading as=h1 size=xl>`; nav back-link `--gray-11` → `.backLink`/`--ds-text`; 2× `<pre>` fixed broken **undefined `--font-size-1`** + raw `--gray-2` → `.codePre` (font-size intentionally omitted to preserve current inherited size). Violet-accented md prose styles left as-is (intentional theme, no --ds- equivalent). Build green (34a0e9e).
