@@ -42,7 +42,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/coursework/[slug]/slovenia/ideas/page.tsx
 - [x] app/coursework/[slug]/slovenia/images/page.tsx
 - [x] app/coursework/[slug]/slovenia/images/[imageSlug]/page.tsx
-- [ ] app/problems/page.tsx
+- [x] app/problems/page.tsx
 - [ ] app/problems/[slug]/page.tsx
 - [ ] app/evals/page.tsx
 - [ ] app/kv-quant/page.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/problems/page.tsx — replaced Radix `<Section size=3><Container size=3>` nest with ui `<Section>`; title → ui `<Heading as=h1 size=xl>`; 2 static inline (link/spacer22) → `page.module.css`. No raw vars. Build green (e55349c).
 - app/coursework/[slug]/slovenia/images/[imageSlug]/page.tsx — 2× `Container size=3` → `<Section>` (cw-container kept); 3 page titles → ui Heading (notFound size=6 kept Radix); undefined `--radius-4`→`--ds-radius-lg`, raw `--gray-2/3`→`--ds-surface-sub`; dynamic bg/objectFit via `--frame-bg`/`--fit`; blue phrase accent kept. Completes /coursework/* cluster. Build green (89f2d4d).
 - app/coursework/[slug]/slovenia/images/page.tsx — large gallery: `Container size=3` → `<Section>` (cw-container kept); title → ui Heading; ~20 static inline objects → `page.module.css`; undefined `--radius-2/3`→`--ds-radius[-md]`, raw `--gray-3/4/5`→`--ds-*`; dynamic bg/objectFit/selected-outline via CSS vars + conditional `.selected` class; teal accent + functional overlay rgba/blur kept. Build green (1471a98).
 - app/coursework/[slug]/slovenia/ideas/page.tsx — `Container size=3` → `<Section>` (cw-container kept); title → ui Heading; ~17 static inline objects (12+ identical list styles via replace_all, label/grow/pairBox/wordBox/badge80) → `page.module.css`; raw `--gray-2`→`--ds-surface-sub`, `borderRadius:8`→`--ds-radius`; teal accent kept. Build green (5a0e272).
