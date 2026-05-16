@@ -4565,14 +4565,14 @@
    HP-TEAM-3 · LEARNING PATH — "The Expedition" vertical rail
    ============================================================ */
 .lp {
-  max-width: 1200px;
+  max-width: var(--ds-content-wide);
   margin: 0 auto;
   padding: var(--space-7) var(--space-section-x) var(--space-8);
 }
 
 /* ── Header ───────────────────────────────────────────── */
 .lp-head {
-  max-width: 640px;
+  max-width: var(--ds-measure);
   margin: 0 auto var(--space-7);
   text-align: center;
 }
@@ -4586,7 +4586,7 @@
 }
 .lp-headline {
   margin: 0 0 var(--space-3);
-  font-size: var(--text-2xl);
+  font-size: var(--section-title-size);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -4594,7 +4594,7 @@
 }
 .lp-sub {
   margin: 0 auto;
-  max-width: 520px;
+  max-width: var(--ds-measure-tight);
   font-size: var(--text-base);
   line-height: 1.55;
   color: var(--ds-text-muted);
@@ -4613,7 +4613,7 @@
   gap: var(--space-1);
   min-width: 96px;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--ds-border-subtle);
+  border: var(--ds-hairline-subtle);
   border-radius: var(--ds-radius-md);
   background: var(--ds-surface-sub);
 }
@@ -4637,7 +4637,7 @@
   list-style: none;
   margin: 0 auto;
   padding: 0;
-  max-width: 920px;
+  max-width: var(--ds-content-narrow);
   position: relative;
 }
 .lp-rail::before {
@@ -4663,7 +4663,7 @@
   position: relative;
   display: flex;
   padding: 0 0 var(--space-6) 0;
-  min-height: 64px;
+  min-height: var(--space-8);
 }
 .lp-station:last-child { padding-bottom: 0; }
 .lp-station {
@@ -4708,16 +4708,14 @@
   width: 100%;
   margin-right: var(--space-6);
   padding: var(--space-4);
-  border: 1px solid var(--ds-border);
+  border: var(--ds-hairline);
   border-top: 3px solid var(--cat-from);
   border-radius: var(--ds-radius-lg);
   background: var(--ds-surface);
   box-shadow: var(--ds-shadow-1);
   text-decoration: none;
   color: inherit;
-  transition: transform var(--ds-dur-fast) var(--ds-ease),
-    border-color var(--ds-dur) var(--ds-ease),
-    box-shadow var(--ds-dur) var(--ds-ease);
+  transition: var(--ds-transition-elevate);
 }
 .lp-station:nth-child(even) .lp-card {
   margin-right: 0;
@@ -4726,11 +4724,11 @@
 .lp-card:hover {
   transform: translateY(-3px);
   border-color: var(--cat-from);
-  box-shadow: var(--ds-shadow-2);
+  box-shadow: var(--ds-shadow-raised);
 }
 .lp-card:focus-visible {
-  outline: 2px solid var(--ds-accent);
-  outline-offset: 2px;
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
 }
 .lp-card-top {
   display: flex;
@@ -4789,7 +4787,7 @@
   list-style: none;
   margin: var(--space-1) 0 0;
   padding: var(--space-3) 0 0;
-  border-top: 1px solid var(--ds-border-subtle);
+  border-top: var(--ds-hairline-subtle);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -4834,7 +4832,7 @@
   gap: var(--space-3);
   margin-top: var(--space-2);
   padding-top: var(--space-3);
-  border-top: 1px solid var(--ds-border-subtle);
+  border-top: var(--ds-hairline-subtle);
 }
 .lp-meta {
   font-size: var(--text-2xs);
@@ -4922,7 +4920,7 @@
 
 /* >>> HP-TEAM-5 RESEARCH COLLECTIONS (.hp-research scope only; NOT bare .cat-card) — DO NOT EDIT outside this fence >>> */
 .hp-research {
-  max-width: 1200px;
+  max-width: var(--ds-content-wide);
   margin: 0 auto;
   padding: 0 var(--space-section-x) var(--space-6);
 }
@@ -4941,7 +4939,7 @@
   margin-bottom: var(--space-2);
 }
 .hp-research-title {
-  font-size: var(--text-2xl);
+  font-size: var(--section-title-size);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ds-ink);
@@ -4970,14 +4968,12 @@
   text-decoration: none;
   overflow: hidden;
   background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
+  border: var(--ds-hairline);
   border-radius: var(--ds-radius-lg);
   padding: var(--space-5);
   min-height: 44px;
   box-shadow: var(--ds-shadow-1);
-  transition: border-color var(--ds-dur) var(--ds-ease),
-    box-shadow var(--ds-dur) var(--ds-ease),
-    transform var(--ds-dur-fast) var(--ds-ease);
+  transition: var(--ds-transition-elevate);
 }
 .hp-research-card::before {
   content: "";
@@ -4991,13 +4987,13 @@
 }
 .hp-research-card:hover {
   border-color: var(--ds-accent-border);
-  box-shadow: var(--ds-shadow-2);
+  box-shadow: var(--ds-shadow-raised);
   transform: translateY(-3px);
 }
 .hp-research-card:hover::before { transform: scaleY(1); }
 .hp-research-card:focus-visible {
-  outline: 2px solid var(--ds-accent);
-  outline-offset: 2px;
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
 }
 
 /* ---- Featured (first) card spans wider when room allows ---- */
@@ -5055,7 +5051,7 @@
   font-size: 20px;
   border-radius: var(--ds-radius-md);
   background: var(--ds-surface-sub);
-  border: 1px solid var(--ds-border-subtle);
+  border: var(--ds-hairline-subtle);
 }
 .hp-research-card--featured .hp-research-icon {
   width: 48px;

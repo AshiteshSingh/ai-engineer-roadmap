@@ -225,7 +225,7 @@
   min-height: 56px;
   padding: var(--space-3) var(--space-5);
   border-radius: var(--ds-radius-pill);
-  background: linear-gradient(135deg, var(--ds-accent), var(--ds-accent-hover));
+  background: var(--ds-accent-gradient);
   border-color: transparent;
   justify-content: center;
   box-shadow: var(--ds-shadow-2);
