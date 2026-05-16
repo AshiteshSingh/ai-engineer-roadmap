@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Container,
   Heading,
   Text,
   Box,
@@ -22,6 +21,8 @@ import {
 } from "@radix-ui/react-icons";
 import NextLink from "next/link";
 import { useParams } from "next/navigation";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 
 const SCHOOL = {
   child: "Bogdan Nicolai",
@@ -82,7 +83,7 @@ export default function SloveniaEventPage() {
   const slug = params?.slug ?? "bogdan";
 
   return (
-    <Container size="3" py="8" className="cw-container">
+    <Section className="cw-container">
       {/* Breadcrumb */}
       <Flex align="center" gap="2" mb="4">
         <RadixLink asChild color="gray" size="2">
@@ -98,7 +99,7 @@ export default function SloveniaEventPage() {
       <Card mb="5">
         <Flex align="center" gap="3">
           <Avatar size="4" fallback={initials(SCHOOL.child)} radius="full" color="teal" />
-          <Box style={{ flex: 1, minWidth: 0 }}>
+          <Box className={styles.grow0}>
             <Text size="4" weight="bold" as="div">
               {SCHOOL.child}
             </Text>
@@ -116,9 +117,9 @@ export default function SloveniaEventPage() {
       <Flex align="center" gap="3" mb="2">
         <Text size="9">{EVENT.flag}</Text>
         <Box>
-          <Heading size="8" mb="1">
+          <DSHeading as="h1" size="xl">
             {EVENT.title} — {EVENT.country}
-          </Heading>
+          </DSHeading>
           <Flex gap="2" wrap="wrap">
             <Badge size="2" color="teal" variant="soft">
               <CalendarIcon /> {EVENT.date}
@@ -149,7 +150,7 @@ export default function SloveniaEventPage() {
       </Callout.Root>
 
       {/* Team Slovenia — highlighted */}
-      <Card mb="5" style={{ borderColor: "var(--teal-7)" }}>
+      <Card mb="5" className={styles.tealCard}>
         <Flex align="center" gap="2" mb="3">
           <StarIcon color="var(--teal-9)" />
           <Heading size="4">Echipa Slovenia</Heading>
@@ -182,7 +183,7 @@ export default function SloveniaEventPage() {
           De pregătit pentru standul Slovenia
         </Heading>
         <Flex direction="column" gap="2" asChild>
-          <ol style={{ paddingLeft: 20, margin: 0 }}>
+          <ol className={styles.list}>
             {TODOS.map((t, i) => (
               <li key={i}>
                 <Text size="2">{t}</Text>
@@ -195,7 +196,7 @@ export default function SloveniaEventPage() {
           Idei pentru organizarea standului:
         </Text>
         <Flex direction="column" gap="1" asChild>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
+          <ul className={styles.list}>
             {STAND_IDEAS.map((s) => (
               <li key={s}>
                 <Text size="2" color="gray">
@@ -208,11 +209,11 @@ export default function SloveniaEventPage() {
       </Card>
 
       {/* Link to full guide */}
-      <Card mb="3" asChild style={{ borderColor: "var(--teal-7)", cursor: "pointer" }}>
+      <Card mb="3" asChild className={styles.linkCard}>
         <NextLink href={`/coursework/${slug}/slovenia/ideas`}>
           <Flex align="center" gap="3">
-            <Box style={{ fontSize: 32 }}>📘</Box>
-            <Box style={{ flex: 1 }}>
+            <Box className={styles.emoji}>📘</Box>
+            <Box className={styles.grow}>
               <Flex align="center" gap="2">
                 <StarIcon color="var(--teal-9)" />
                 <Heading size="4">Ghid complet de pregătire</Heading>
@@ -229,11 +230,11 @@ export default function SloveniaEventPage() {
       </Card>
 
       {/* Link to image gallery */}
-      <Card mb="5" asChild style={{ borderColor: "var(--teal-7)", cursor: "pointer" }}>
+      <Card mb="5" asChild className={styles.linkCard}>
         <NextLink href={`/coursework/${slug}/slovenia/images`}>
           <Flex align="center" gap="3">
-            <Box style={{ fontSize: 32 }}>🖼️</Box>
-            <Box style={{ flex: 1 }}>
+            <Box className={styles.emoji}>🖼️</Box>
+            <Box className={styles.grow}>
               <Flex align="center" gap="2">
                 <StarIcon color="var(--teal-9)" />
                 <Heading size="4">Galerie imagini</Heading>
@@ -294,6 +295,6 @@ export default function SloveniaEventPage() {
           Sursa repartizării echipelor pe țări (mesaj din portalul școlii).
         </Text>
       </Card>
-    </Container>
+    </Section>
   );
 }
