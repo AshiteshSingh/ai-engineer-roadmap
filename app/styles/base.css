@@ -25,8 +25,8 @@ body {
 /* ---------- custom scrollbar ---------- */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--gray-5); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--gray-7); }
+::-webkit-scrollbar-thumb { background: var(--ds-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ds-border-strong); }
 
 ::selection {
   background: var(--accent-5);

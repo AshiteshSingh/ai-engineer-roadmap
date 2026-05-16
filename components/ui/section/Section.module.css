@@ -1,5 +1,5 @@
 .section {
-  max-width: 1120px;
+  max-width: var(--ds-content);
   margin: 0 auto;
   padding: var(--space-section-y) var(--space-section-x);
 }

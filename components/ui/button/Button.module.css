@@ -9,10 +9,12 @@
   text-decoration: none;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background var(--ds-dur) var(--ds-ease),
-    border-color var(--ds-dur) var(--ds-ease),
-    color var(--ds-dur) var(--ds-ease),
+  transition: var(--ds-transition-colors),
     transform var(--ds-dur-fast) var(--ds-ease);
+}
+.btn:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
 }
 .btn:active {
   transform: translateY(1px);

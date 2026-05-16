@@ -6,13 +6,17 @@
   font-weight: 600;
   color: var(--ds-text);
   background: var(--ds-surface-sub);
-  border: 1px solid var(--ds-border-subtle);
+  border: var(--ds-hairline-subtle);
   padding: 6px 14px;
   border-radius: var(--ds-radius-pill);
   cursor: pointer;
 }
 .pill:hover {
   border-color: var(--ds-border-strong);
+}
+.pill:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
 }
 .active,
 .pill[aria-pressed="true"] {

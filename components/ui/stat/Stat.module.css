@@ -1,7 +1,7 @@
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .value {
   font-size: var(--text-2xl);

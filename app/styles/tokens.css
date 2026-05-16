@@ -23,6 +23,15 @@
   /* Section heading (h2) — distinct from the singular hero h1 size */
   --section-title-size: var(--text-2xl);
 
+  /* Line-height scale — ADDED. The fences hand-code 1.05/1.1/1.15/1.2/
+     1.25/1.3/1.35/1.4/1.45/1.5/1.55/1.6/1.65 ad hoc. These tokens give
+     three canonical rhythms downstream teams can converge on without
+     changing any current numeric value (existing literals stay until a
+     team opts in). Additive only. */
+  --ds-leading-tight: 1.15;   /* headings / titles */
+  --ds-leading-snug: 1.35;    /* compact UI labels, list rows */
+  --ds-leading-body: 1.6;     /* prose / subheads / descriptions */
+
   /* Spacing scale — 8px base (fixed; used for internal component spacing) */
   --space-1: 4px;
   --space-2: 8px;
@@ -42,6 +51,20 @@
   /* Cohesion: one shared between-section rhythm + one raised-card tier */
   --space-section-gap: var(--space-section-y);
   --ds-shadow-raised: var(--ds-shadow-2);
+
+  /* Content container widths — ADDED. Section shells hard-code 1120 /
+     1100 / 1200 / 920 / 640 / 520 / 420 px independently. These tokens
+     name the recurring max-widths so sections converge on one ladder.
+     Values chosen to MATCH the most common existing widths exactly —
+     swapping a 1200px shell to --ds-content-wide is pixel-identical;
+     a 1120px shell to --ds-content is pixel-identical. Sections on a
+     different width (1100) should adopt the nearest tier only with
+     sign-off (flagged in the audit). Additive only. */
+  --ds-content: 1120px;        /* default section shell (Section primitive) */
+  --ds-content-wide: 1200px;   /* wide shells: .lp .hp-research .cmd-* .bento */
+  --ds-content-narrow: 920px;  /* reading-width rails: .lp-rail */
+  --ds-measure: 640px;         /* centered header copy block */
+  --ds-measure-tight: 520px;   /* sub/lede max line length */
 
   /* ============================================================
      DS SEMANTIC TOKEN LAYER (dark-only + indigo)
@@ -66,6 +89,15 @@
   --ds-border-subtle: var(--gray-4);
   --ds-border: var(--gray-5);
   --ds-border-strong: var(--gray-7);
+  /* Canonical hairline rule — ADDED. ~60 sites write
+     `1px solid var(--ds-border*)`. This token names the default 1px
+     stroke so a primitive can write `border: var(--ds-hairline)` and
+     stay consistent. Default colour == --ds-border (the current most
+     common hairline); call sites needing subtle/strong still set
+     border-color explicitly. Pixel-identical where it replaces an
+     existing `1px solid var(--ds-border)`. Additive only. */
+  --ds-hairline: 1px solid var(--ds-border);
+  --ds-hairline-subtle: 1px solid var(--ds-border-subtle);
 
   /* Indigo accent ramp */
   --ds-accent: var(--accent-9);
@@ -76,6 +108,26 @@
   --ds-accent-bg: var(--accent-2);
   --ds-accent-border: var(--accent-7);
   --ds-on-accent: #fff;
+  /* Accent gradient stops + ready-made gradients — ADDED. The 135deg
+     accent gradient `linear-gradient(135deg,var(--ds-accent),
+     var(--ds-accent-hover))` is duplicated ~8× (topbar logo/avatar,
+     rg entry/ship pills) and the 90deg accent→accent-text variant ~4×
+     (footer headline, topbar progress). These name the stops and the
+     two canonical gradients so call sites converge. Built only from
+     existing accent tokens → pixel-identical wherever it replaces the
+     identical literal. Additive only. */
+  --ds-accent-grad-from: var(--ds-accent);
+  --ds-accent-grad-to: var(--ds-accent-hover);
+  --ds-accent-gradient: linear-gradient(
+    135deg,
+    var(--ds-accent-grad-from),
+    var(--ds-accent-grad-to)
+  );
+  --ds-accent-gradient-sheen: linear-gradient(
+    90deg,
+    var(--ds-accent),
+    var(--ds-accent-text)
+  );
 
   /* Semantic (levels, not brand) */
   --ds-success: var(--jade-9);
@@ -84,6 +136,15 @@
   --ds-warn-text: var(--amber-11);
   --ds-danger: var(--red-9);
   --ds-danger-text: var(--red-11);
+  /* Soft level fills — ADDED. The bento rows + rg chips repeat
+     `color-mix(in srgb, var(--ds-success) 14-16%, transparent)` etc.
+     by hand with inconsistent percentages (14% vs 16%). These name one
+     canonical soft tint per level so they stop drifting. NOT a forced
+     swap where 16% is currently used (that would change the pixel) —
+     teams adopt where they currently use ~15%. Additive only. */
+  --ds-success-soft: color-mix(in srgb, var(--ds-success) 15%, transparent);
+  --ds-warn-soft: color-mix(in srgb, var(--ds-warn) 15%, transparent);
+  --ds-danger-soft: color-mix(in srgb, var(--ds-danger) 15%, transparent);
 
   /* Radii */
   --ds-radius-sm: 4px;
@@ -100,12 +161,43 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --ds-shadow-3: 0 16px 40px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  /* Focus glow ring — ADDED. The command bar / focused search card use
+     `0 0 0 4px var(--ds-accent-subtle)` and `0 0 0 3px ...` as a soft
+     focus halo (distinct from the hard a11y outline). Named here for
+     consistency; value == the more common 4px form. Additive only. */
+  --ds-shadow-focus: 0 0 0 4px var(--ds-accent-subtle);
+
+  /* Focus ring — ADDED. The single most duplicated pattern in the
+     codebase: `outline: 2px solid var(--ds-accent); outline-offset: 2px`
+     is hand-written in base.css, HP-TEAM-9, .lp-card, .hp-research-card,
+     .rg-node, and the skip-link (with --ds-on-accent). These tokens are
+     the canonical keyboard-focus contract. Value is byte-identical to
+     every existing site → adopting it is pixel-identical. Team 4 owns
+     the global :focus-visible rule and will reference these. Additive. */
+  --ds-focus-ring-width: 2px;
+  --ds-focus-ring-color: var(--ds-accent);
+  --ds-focus-ring-offset: 2px;
+  --ds-focus-ring: var(--ds-focus-ring-width) solid var(--ds-focus-ring-color);
 
   /* Motion */
   --ds-dur-fast: 120ms;
   --ds-dur: 180ms;
   --ds-dur-slow: 280ms;
   --ds-ease: cubic-bezier(0.2, 0, 0, 1);
+  /* Named transition bundles — ADDED. Interactive primitives repeat the
+     same multi-prop transition lists. These let a component write
+     `transition: var(--ds-transition-colors)` instead of re-listing
+     border/background/color every time. Built from existing dur/ease
+     tokens; semantically identical to the lists already in use.
+     Additive only — no existing transition is forced to change. */
+  --ds-transition-colors:
+    color var(--ds-dur) var(--ds-ease),
+    background var(--ds-dur) var(--ds-ease),
+    border-color var(--ds-dur) var(--ds-ease);
+  --ds-transition-elevate:
+    border-color var(--ds-dur) var(--ds-ease),
+    box-shadow var(--ds-dur) var(--ds-ease),
+    transform var(--ds-dur-fast) var(--ds-ease);
 
   /* Legacy category-gradient hooks → rerouted to indigo (no teal) */
   --cat-from: var(--accent-9);
