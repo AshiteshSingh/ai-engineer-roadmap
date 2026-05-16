@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  Container,
-  Heading,
   Button,
   Flex,
   Dialog,
@@ -29,6 +27,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import type { Learner, Coursework } from "@/src/db/schema";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -71,9 +71,8 @@ function LearnerCard({
 }) {
   return (
     <Card
-      className={`cw-learner-card${active ? " cw-learner-card--active" : ""}`}
+      className={`cw-learner-card${active ? " cw-learner-card--active" : ""} ${styles.clickable}`}
       onClick={onSelect}
-      style={{ cursor: "pointer" }}
     >
       <Flex justify="between" align="start">
         <Box>
@@ -129,13 +128,14 @@ function FileRow({
       <Flex
         align="center"
         gap="3"
-        style={{ flex: 1, minWidth: 0, cursor: isPreviewable(item.mimeType) ? "pointer" : "default" }}
+        className={styles.fileMain}
+        style={{ cursor: isPreviewable(item.mimeType) ? "pointer" : "default" }}
         onClick={() => isPreviewable(item.mimeType) && onPreview()}
       >
-        <Box style={{ color: "var(--accent-9)", flexShrink: 0 }}>
+        <Box className={styles.fileIcon}>
           {fileIcon(item.mimeType)}
         </Box>
-        <Box style={{ minWidth: 0 }}>
+        <Box className={styles.minw0}>
           <Text size="2" weight="medium" truncate>
             {item.title}
           </Text>
@@ -201,7 +201,7 @@ function PreviewDialog({
             <iframe
               src={item.fileUrl}
               title={item.title}
-              style={{ width: "100%", height: 500, border: "none" }}
+              className={styles.previewFrame}
             />
           )}
           {isImage && (
@@ -209,7 +209,7 @@ function PreviewDialog({
             <img
               src={item.fileUrl}
               alt={item.title}
-              style={{ width: "100%", maxHeight: 600, objectFit: "contain" }}
+              className={styles.previewImg}
             />
           )}
         </Box>
@@ -373,18 +373,18 @@ export default function CourseworkPage() {
 
   if (isPending || loading) {
     return (
-      <Container size="3" py="8">
+      <Section>
         <Skeleton height="40px" mb="4" />
         <Skeleton height="200px" />
-      </Container>
+      </Section>
     );
   }
 
   return (
-    <Container size="3" py="8" className="cw-container">
+    <Section className="cw-container">
       {/* Header */}
       <Flex justify="between" align="center" mb="6">
-        <Heading size="7">Coursework</Heading>
+        <DSHeading as="h1" size="xl">Coursework</DSHeading>
         <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>
           <Dialog.Trigger>
             <Button>
@@ -435,7 +435,7 @@ export default function CourseworkPage() {
 
       {/* Learner cards */}
       {learnersList.length === 0 ? (
-        <Card style={{ textAlign: "center", padding: "48px 24px" }}>
+        <Card className={styles.emptyCard}>
           <Text size="3" color="gray">
             No learners registered yet. Add a learner to start managing coursework.
           </Text>
@@ -508,7 +508,7 @@ export default function CourseworkPage() {
                           ref={fileInputRef}
                           type="file"
                           accept=".pdf,.jpg,.jpeg,.png,.heic,.webp,.doc,.docx"
-                          style={{ display: "none" }}
+                          className={styles.hidden}
                           onChange={(e) => e.target.files?.[0] && setUploadFile(e.target.files[0])}
                         />
                         {uploadFile ? (
@@ -547,7 +547,7 @@ export default function CourseworkPage() {
               </Flex>
 
               {activeFiles.length === 0 ? (
-                <Card style={{ textAlign: "center", padding: "32px 24px" }}>
+                <Card className={styles.emptyCardSm}>
                   <Text size="2" color="gray">
                     No coursework submitted yet. Click Upload to add files.
                   </Text>
@@ -574,6 +574,6 @@ export default function CourseworkPage() {
         open={!!previewItem}
         onClose={() => setPreviewItem(null)}
       />
-    </Container>
+    </Section>
   );
 }
