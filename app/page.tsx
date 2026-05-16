@@ -16,14 +16,13 @@ export default async function HomePage() {
   const total = allLessons.length;
   const catCount = groups.length;
   const wordCount = allLessons.reduce((sum, l) => sum + l.wordCount, 0);
-  const readingHours = Math.round(allLessons.reduce((sum, l) => sum + l.readingTimeMin, 0) / 60);
   const roadmapModel = buildRoadmapModel(groups);
   return (
     <div>
       <a href="#lessons" className="skip-link">Skip to lessons</a>
       <Topbar lessonCount={total} />
 
-      <Hero lessonCount={total} domainCount={catCount} wordCount={wordCount} readingHours={readingHours} />
+      <Hero lessonCount={total} domainCount={catCount} wordCount={wordCount} />
 
       <main id="content">
       <ScrollReveal>

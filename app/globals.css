@@ -4022,8 +4022,7 @@
 .hx-grid {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
   max-width: 1100px;
   margin: 0 auto;
@@ -4154,92 +4153,11 @@
   color: var(--ds-accent-text);
 }
 
-/* ---- Roadmap panel ---- */
-.hx-panel {
-  position: relative;
-  min-width: 0;
-  padding: var(--space-5);
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-lg);
-  box-shadow: var(--ds-shadow-raised);
-}
-.hx-panel-head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin-bottom: var(--space-5);
-  padding-bottom: var(--space-3);
-  border-bottom: var(--ds-hairline-subtle);
-}
-.hx-panel-tag {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--ds-ink);
-}
-.hx-panel-sub {
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--ds-text-faint);
-}
-
-/* ---- Stat ledger ---- */
-.hx-ledger {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-.hx-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-.hx-row-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.hx-row-value {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1;
-  color: var(--ds-ink);
-  font-variant-numeric: tabular-nums;
-}
-.hx-row-label {
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--ds-text-muted);
-}
-.hx-row-track {
-  position: relative;
-  height: var(--space-1);
-  border-radius: var(--ds-radius-pill);
-  background: var(--ds-surface-sub);
-  overflow: hidden;
-}
-.hx-row-fill {
-  position: absolute;
-  inset: 0;
-  transform-origin: left center;
-  transform: scaleX(0);
-  border-radius: var(--ds-radius-pill);
-  background: var(--ds-accent-gradient-sheen);
-  transition: transform var(--ds-dur-slow) var(--ds-ease);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hx-kicker-dot { animation: none; }
   .hx-cta,
   .hx-cta-arrow,
-  .hx-cta-ghost,
-  .hx-row-fill { transition: none; }
+  .hx-cta-ghost { transition: none; }
   .hx-cta:hover { transform: none; }
   .hx-cta:hover .hx-cta-arrow { transform: none; }
 }
@@ -4273,8 +4191,6 @@
     width: 100%;
   }
   .hx-cta-ghost { justify-content: center; }
-  .hx-panel { padding: var(--space-4); }
-  .hx-row-top { flex-wrap: wrap; gap: var(--space-1); }
 }
 /* <<< HP-TEAM-1 <<< */
 
@@ -6521,11 +6437,6 @@ textarea:focus-visible,
 }
 .hp-research {
   border-bottom: 1px solid var(--ds-border-subtle);
-}
-
-/* ---- LEVER 2: ONE CARD ELEVATION TIER ---- */
-.hx-panel {
-  box-shadow: var(--ds-shadow-2);
 }
 
 /* ---- LEVER 3a: ONE SECTION EYEBROW ---- */

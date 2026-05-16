@@ -1,15 +1,11 @@
-import { AnimatedStats } from "./animated-stats";
-
 export function Hero({
   lessonCount,
   domainCount,
   wordCount,
-  readingHours,
 }: {
   lessonCount: number;
   domainCount: number;
   wordCount: number;
-  readingHours: number;
 }) {
   const wordLabel =
     wordCount >= 1000 ? `${Math.round(wordCount / 1000)}K+` : String(wordCount);
@@ -63,20 +59,6 @@ export function Hero({
               Browse the curriculum
             </a>
           </div>
-        </div>
-
-        <div className="hx-panel" aria-hidden={false}>
-          <div className="hx-panel-head">
-            <span className="hx-panel-tag">The Roadmap</span>
-            <span className="hx-panel-sub">at a glance</span>
-          </div>
-          <AnimatedStats
-            lessonCount={lessonCount}
-            domainCount={domainCount}
-            readingHours={readingHours}
-            wordLabel={wordLabel}
-            wordCount={wordCount}
-          />
         </div>
       </div>
     </section>
