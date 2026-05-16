@@ -1,0 +1,12 @@
+/* Co-located component styles for ModeTip.
+   Container chrome (.mode-tip / .mode-tip-dismiss) remains owned by the
+   global css-memorize.css; this module covers only the genuine
+   component-level inline styles previously set in ModeTip.tsx. */
+
+.fill {
+  flex: 1;
+}
+
+.citation {
+  font-style: italic;
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Flex, Text, Badge } from "@radix-ui/themes";
 import { getTipsForMode } from "@/lib/learning-science";
+import s from "./ModeTip.module.css";
 
 type Mode = "flashcards" | "fill" | "matcher" | "drill" | "explorer" | "dashboard";
 
@@ -16,14 +17,14 @@ export function ModeTip({ mode }: { mode: Mode }) {
 
   return (
     <div className="mode-tip">
-      <Flex align="center" gap="2" wrap="wrap" style={{ flex: 1 }}>
+      <Flex align="center" gap="2" wrap="wrap" className={s.fill}>
         <Badge color="violet" variant="soft" size="1">
           {tip.technique}
         </Badge>
-        <Text size="2" style={{ flex: 1 }}>
+        <Text size="2" className={s.fill}>
           {tip.tip}
         </Text>
-        <Text size="1" color="gray" style={{ fontStyle: "italic" }}>
+        <Text size="1" color="gray" className={s.citation}>
           {tip.citation}
         </Text>
       </Flex>

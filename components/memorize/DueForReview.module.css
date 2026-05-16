@@ -1,0 +1,21 @@
+/* Co-located styling for DueForReview.tsx.
+ * Scope is limited to genuine component-level ad-hoc inline styles that were
+ * NOT part of the css-memorize.css globals. The .due-review-* global classes
+ * (card padding/border/background, list gap, item box, prop typography) and
+ * the Radix component props are intentionally left untouched. */
+
+/* Was style={{ flex: 1, minWidth: 0 }} on the term/level <Flex>.
+ * Plain layout: lets the inner row grow and allows the <code> term to
+ * truncate instead of overflowing. No design-system token applies. */
+.termRow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Was style={{ padding: "4px 0" }} on the "+N more due" <Text>.
+ * 4px resolves EXACTLY to tokens.css --space-1 (verified: --space-1: 4px),
+ * so the literal is swapped to the token without changing the rendered
+ * value. Horizontal padding stays 0. */
+.moreRow {
+  padding: var(--space-1) 0;
+}

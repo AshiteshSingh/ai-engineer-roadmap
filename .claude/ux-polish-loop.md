@@ -81,6 +81,13 @@ Team: `ux-polish` (3 persistent agents: ux1, ux2, ux3). 10-min loop.
 
 ## Tick log
 
+- tick (skip-spawn): prior batch DueForReview/LearningInsights/ModeTip still
+  in flight (no commits/reports; 3 agents serializing on shared build-lock).
+  Sync CLEAN, lane f3e631e intact. Did NOT spawn a new batch — 6 concurrent
+  agents on one worktree caused prior instability. Awaiting prior reports;
+  next tick reconciles. (Orchestrator rule: never over-spawn past an
+  outstanding batch on the shared worktree.)
+
 - setup — ux-polish worktree @ 5aae9ec (off origin/main), node_modules linked,
   upstream set, ledger created. globals.css baseline = 4263 lines (must not change).
 - Prior verified work (footer a11y c803785 + reading-progress 3f27312) lives on

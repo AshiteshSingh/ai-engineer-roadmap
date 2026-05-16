@@ -10,6 +10,7 @@ import {
   formatRelativeTime,
   type ReviewItem,
 } from "@/lib/spaced-repetition";
+import s from "./DueForReview.module.css";
 
 interface DueForReviewProps {
   categories: MemorizeCategory[];
@@ -112,7 +113,7 @@ export function DueForReview({
         {displayItems.map((item) => (
           <div key={item.id} className="due-review-item">
             <Flex justify="between" align="center" gap="2">
-              <Flex align="center" gap="2" style={{ flex: 1, minWidth: 0 }}>
+              <Flex align="center" gap="2" className={s.termRow}>
                 <code className="due-review-prop">{findItemName(item.id)}</code>
                 <Badge
                   color={getLevelColor(item.id)}
@@ -139,7 +140,7 @@ export function DueForReview({
           </div>
         ))}
         {dueItems.length > 5 && (
-          <Text size="2" color="gray" style={{ padding: "4px 0" }}>
+          <Text size="2" color="gray" className={s.moreRow}>
             +{dueItems.length - 5} more due
           </Text>
         )}
