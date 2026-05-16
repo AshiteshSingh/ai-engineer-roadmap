@@ -1,0 +1,55 @@
+[package]
+name = "knowledge-ml-langgraph-server"
+version = "0.1.0"
+edition = "2021"
+description = "Local Rust replacement for the Python FastAPI LangGraph backend — SQLite + LanceDB RAG chat over the /runs/wait contract"
+license = "MIT"
+
+[lib]
+name = "knowledge_ml_langgraph_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "langgraph-server"
+path = "src/bin/langgraph-server.rs"
+
+[[bin]]
+name = "langgraph-index"
+path = "src/bin/langgraph-index.rs"
+
+[dependencies]
+# HTTP server / runtime
+axum  = "0.8"
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Errors / logging
+anyhow             = "1"
+thiserror          = "2"
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI (index binary)
+clap = { version = "4", features = ["derive", "env"] }
+
+# SQLite content store (canonical data/knowledge.db)
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# LanceDB vector store + Arrow (versions matched to topic-miner / udemy)
+lancedb      = "0.27"
+arrow-array  = "57"
+arrow-schema = "57"
+futures      = "0.3"
+
+# Embedding server client
+reqwest = { version = "0.12", features = ["json"] }
+
+# DeepSeek API client (shared crate, reqwest transport)
+deepseek = { path = "../../../../../crates/deepseek-loop", package = "deepseek-loop", default-features = false, features = ["reqwest-client"] }
+
+[dev-dependencies]
+tempfile    = "3"
+async-trait = "0.1"
