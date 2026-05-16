@@ -104,18 +104,24 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
   since landed on main). Recommend WIND-DOWN rather than grinding 32
   low-yield route probes — surfaced to user 2026-05-16.
 
-## Status
+## Status — LOOP WOUND DOWN (2026-05-16, user-directed)
 
-| Agent | Current item | Status |
-|-------|--------------|--------|
-| ux1-13 | components/category-grid.tsx | spawning |
-| ux2-13 | components/page-analytics.tsx | spawning |
-| ux3-13 | components/app-detail/NotesTab.tsx | spawning |
-| ux2-12 | components/markdown-prose.tsx | in flight (no commit yet) |
-| ux3-12 | components/search.tsx | in flight (no commit yet) |
+**Tier-A COMPLETE; Tier-B deferred (already DS-migrated). Cron `45f9199e`
+DELETED. No agents active.** All shared components DONE-or-NO-OP and on
+`main` (last via PR #21, origin/main `1e074ee`). Lane `ux-polish` realigned
+== `main`. Salvage refs `ux-polish-salvage-*` retained as history. To
+resume: re-create the 10-min cron with this ledger's tick procedure under
+the LANE-ACCUMULATE + PR-MERGE model.
 
 ## Tick log
 
+- **WIND-DOWN (user-directed):** Tier-A complete + merged (PR #21,
+  `1e074ee`). User chose "Wind down" — Tier-B (32 routes) left deferred
+  (already DS-migrated by the original design-system loop; ~all-NO-OP
+  expected). Cron `45f9199e` deleted. Loop closed. Net delivered:
+  ~13 value-exact polish commits across shell/app-detail/memorize/problems
+  tiers + many correctly-identified NO-OPs, all on `main`, zero global-CSS
+  growth, every token swap value-verified.
 - **tick (DONE + Tier-A COMPLETE):** ux1-16 problems/problem-workspace
   DONE `78df658` — orchestrator value-verified all 3 swaps EXACT
   (`--ds-radius-md`=8, `--space-2`=8, `--ds-radius`=6), no-global clean.
