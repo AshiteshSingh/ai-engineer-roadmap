@@ -189,7 +189,7 @@ fn normalize_expert(raw: &Value) -> Value {
             .and_then(Value::as_array)
             .map(|a| {
                 a.iter()
-                    .filter(|x| is_truthy(x))
+                    .filter(|&x| is_truthy(x))
                     .map(|x| match x {
                         Value::String(s) => json!(s),
                         other => json!(other.to_string()),
@@ -316,7 +316,7 @@ pub async fn run<H: HttpClient>(
             .and_then(Value::as_array)
             .map(|a| {
                 a.iter()
-                    .filter(|x| is_truthy(x))
+                    .filter(|&x| is_truthy(x))
                     .map(|x| match x {
                         Value::String(s) => json!(s),
                         other => json!(other.to_string()),

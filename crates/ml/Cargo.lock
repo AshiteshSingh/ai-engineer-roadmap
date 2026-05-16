@@ -3356,6 +3356,7 @@ dependencies = [
  "deepseek-loop",
  "futures",
  "lancedb",
+ "regex",
  "reqwest",
  "rusqlite",
  "serde",

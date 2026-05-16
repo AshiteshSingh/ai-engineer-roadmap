@@ -160,7 +160,7 @@ fn clean_items(tech: &Value, parsed: &Value) -> Vec<Value> {
             .and_then(Value::as_array)
             .map(|rs| {
                 rs.iter()
-                    .filter(|r| truthy(r))
+                    .filter(|&r| truthy(r))
                     .map(|r| json!(pystr(Some(r), "")))
                     .collect()
             })

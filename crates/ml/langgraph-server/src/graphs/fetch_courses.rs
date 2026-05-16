@@ -70,6 +70,15 @@ fn slim_for_prompt(course: &Value) -> Value {
         _ => Value::Array(vec![]),
     };
 
+    let is_free = match course.get("isFree") {
+        Some(v) if is_truthy(v) => v.clone(),
+        _ => course.get("is_free").cloned().unwrap_or(json!(false)),
+    };
+    let instructors = match metadata.get("instructors") {
+        Some(v) if is_truthy(v) => v.clone(),
+        _ => json!([]),
+    };
+
     json!({
         "url": get(&course, "url").cloned().unwrap_or(json!("")),
         "title": get(&course, "title").cloned().unwrap_or(json!("")),
@@ -80,17 +89,9 @@ fn slim_for_prompt(course: &Value) -> Value {
         "enrolled": get(&course, "enrolled").cloned().unwrap_or(Value::Null),
         "duration_hours": or(course.get("durationHours"), course.get("duration_hours")),
         "level": get(&course, "level").cloned().unwrap_or(Value::Null),
-        "is_free": {
-            match course.get("isFree") {
-                Some(v) if is_truthy(v) => v.clone(),
-                _ => course.get("is_free").cloned().unwrap_or(json!(false)),
-            }
-        },
+        "is_free": is_free,
         "what_youll_learn": learn,
-        "instructors": match metadata.get("instructors") {
-            Some(v) if is_truthy(v) => v.clone(),
-            _ => json!([]),
-        },
+        "instructors": instructors,
     })
 }
 
@@ -127,8 +128,8 @@ Return STRICTLY {{\"summary\": \"...\"}}."
 fn normalize_ranked(raw: &Value, valid_urls: &[String], count: usize) -> Vec<Value> {
     let items: Vec<Value> = match raw {
         Value::Object(m) => {
-            let r = m.get("ranked").filter(|v| is_truthy(v));
-            let c = m.get("courses").filter(|v| is_truthy(v));
+            let r = m.get("ranked").filter(|&v| is_truthy(v));
+            let c = m.get("courses").filter(|&v| is_truthy(v));
             r.or(c)
                 .and_then(Value::as_array)
                 .cloned()
@@ -177,7 +178,7 @@ fn normalize_ranked(raw: &Value, valid_urls: &[String], count: usize) -> Vec<Val
     let any_valid = out.iter().any(|r| {
         r.get("url")
             .and_then(Value::as_str)
-            .map(|u| valid_urls.iter().any(|v| v == u))
+            .map(|u| valid_urls.iter().any(|v| v.as_str() == u))
             .unwrap_or(false)
     });
     if !any_valid {
@@ -224,7 +225,7 @@ pub async fn run<H: HttpClient>(
     let mut valid_urls: Vec<String> = Vec::new();
     for c in &candidates {
         if let Some(u) = c.get("url").and_then(Value::as_str) {
-            if !u.is_empty() && !valid_urls.iter().any(|x| x == u) {
+            if !u.is_empty() && !valid_urls.iter().any(|x| x.as_str() == u) {
                 valid_urls.push(u.to_string());
             }
         }
