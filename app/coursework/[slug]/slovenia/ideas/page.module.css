@@ -1,0 +1,27 @@
+/* Co-located styles for app/coursework/[slug]/slovenia/ideas/page.tsx.
+   No global CSS. `cw-container` global + teal route accent kept.
+   12/8px paddings kept literal (no clean DS token). */
+.list {
+  padding-left: 20px;
+  margin: 0;
+}
+.label {
+  min-width: 140px;
+}
+.grow {
+  flex: 1;
+}
+.pairBox {
+  background: var(--ds-surface-sub);
+  padding: 12px;
+  border-radius: var(--ds-radius);
+}
+.wordBox {
+  background: var(--teal-2);
+  padding: 8px 12px;
+  border-radius: var(--ds-radius);
+  min-width: 140px;
+}
+.badge80 {
+  min-width: 80px;
+}
