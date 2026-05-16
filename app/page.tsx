@@ -1,7 +1,6 @@
 import { getGroupedLessons } from "@/lib/data";
 import { ResearchCollections } from "@/components/research-collections";
 import { Topbar } from "@/components/topbar";
-import { Hero } from "@/components/hero";
 import { LearningPath } from "@/components/learning-path";
 import { Search } from "@/components/search";
 import { Footer } from "@/components/footer";
@@ -14,15 +13,12 @@ export default async function HomePage() {
   const groups = await getGroupedLessons();
   const allLessons = groups.flatMap((g) => g.articles);
   const total = allLessons.length;
-  const catCount = groups.length;
   const wordCount = allLessons.reduce((sum, l) => sum + l.wordCount, 0);
   const roadmapModel = buildRoadmapModel(groups);
   return (
     <div>
       <a href="#lessons" className="skip-link">Skip to lessons</a>
       <Topbar lessonCount={total} />
-
-      <Hero lessonCount={total} domainCount={catCount} wordCount={wordCount} />
 
       <main id="content">
       <ScrollReveal>
