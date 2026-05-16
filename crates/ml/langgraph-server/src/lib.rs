@@ -148,7 +148,11 @@ mod tests {
             .content
             .as_str()
             .contains("Relevant knowledge base excerpts:"));
-        assert!(msgs[0].content.as_str().contains("body1\n\n---\n\nbody2"));
+        // Snippets are joined whole, separated by the chat_graph.py separator.
+        assert!(msgs[0]
+            .content
+            .as_str()
+            .contains("[A > B]\nbody1\n\n---\n\n[C > D]\nbody2"));
         assert_eq!(msgs[1].content.as_str(), "prev");
         assert_eq!(msgs[2].role, "user");
     }
