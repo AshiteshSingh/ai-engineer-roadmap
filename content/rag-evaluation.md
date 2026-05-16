@@ -2,6 +2,34 @@
 
 Evaluating retrieval-augmented generation systems is fundamentally harder than evaluating either retrieval or generation in isolation. A RAG pipeline can fail at retrieval, at synthesis, or at the interface between the two -- and different failure modes require different diagnostic approaches. This article provides a comprehensive framework for RAG evaluation, covering automated metrics, human evaluation protocols, systematic failure analysis, and the operational practices that enable continuous improvement of production RAG systems.
 
+## Mental Model
+
+The mental model for RAG evaluation is **a two-stage pipeline with two independent failure points, so one number cannot diagnose it**. A RAG system can fail by *retrieving the wrong context* (a retrieval problem) or by *generating an unsupported answer from correct context* (a synthesis problem) — and a single end-to-end accuracy score conflates them, telling you something is wrong but not *where*. So RAG evaluation must be *factored*: measure retrieval quality (did we fetch the right evidence?) and generation quality (is the answer faithful to and answering from that evidence?) separately, then attribute every failure to a stage.
+
+That gives the canonical metric quartet, each pinned to a stage: context precision/recall judge retrieval; faithfulness and answer relevance judge generation. Faithfulness — does every claim trace to the context? — is the operationally critical one because it directly measures hallucination. This is [eval fundamentals](/eval-fundamentals) specialized to a pipeline; the scorers themselves are an [LLM-as-judge](/llm-as-judge) that must be calibrated; and failures here are the signal that drives the loops in [advanced RAG](/advanced-rag).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "ret", "label": "Retrieve", "shape": "rect"},
+    {"id": "rmetric", "label": "Context precision\n/ recall", "shape": "diamond"},
+    {"id": "gen", "label": "Generate", "shape": "rect"},
+    {"id": "gmetric", "label": "Faithfulness /\nanswer relevance", "shape": "diamond"},
+    {"id": "blame", "label": "Attribute failure\nto a stage", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "ret"},
+    {"source": "ret", "target": "rmetric"},
+    {"source": "ret", "target": "gen"},
+    {"source": "gen", "target": "gmetric"},
+    {"source": "rmetric", "target": "blame", "label": "retrieval fault"},
+    {"source": "gmetric", "target": "blame", "label": "synthesis fault"}
+  ]
+}
+```
+
 ## Why RAG Evaluation Is Hard
 
 Traditional IR evaluation measures retrieval quality (precision, recall, nDCG) against relevance judgments. Traditional NLG evaluation measures generation quality (BLEU, ROUGE, human ratings) against reference texts. RAG evaluation must assess both simultaneously, plus the interaction between them.
@@ -807,6 +835,110 @@ This tiered approach typically reduces evaluation cost by 60-80% while maintaini
 **Offline batch evaluation**. Rather than evaluating in real-time (which adds latency and cost to every query), run evaluation in daily or hourly batches. This allows you to use spot instances or lower-priority API tiers and to aggregate results for trend analysis rather than per-query alerting. Reserve real-time evaluation for critical-path quality gates (e.g., before surfacing answers on high-stakes topics).
 
 **Metric selection**. Not every query needs every metric. Faithfulness is the most operationally critical metric for most RAG systems -- it directly measures hallucination. Context recall requires ground truth and is therefore better suited to periodic offline evaluation. Answer relevance is most useful during development and A/B testing. Choosing which metrics to run on which queries reduces cost without sacrificing coverage of the dimensions that matter most.
+
+## Runtime Internals
+
+The "factored two-stage" model hides the mechanics that make RAG evaluation actionable.
+
+### Faithfulness as claim decomposition
+
+Faithfulness is not a holistic score: the runtime decomposes the answer into atomic claims, then checks each against the retrieved context (entailment or LLM judge). The score is supported-claims ÷ total-claims. This pinpoints *which sentence* hallucinated, not just that the answer is "bad" — sentence-level scoring would miss a mixed sentence with one true and one fabricated clause.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ans", "label": "Answer", "shape": "circle"},
+    {"id": "atom", "label": "Atomic claims", "shape": "rect"},
+    {"id": "chk", "label": "Entailed by\ncontext?", "shape": "diamond"},
+    {"id": "ok", "label": "Supported", "shape": "rect"},
+    {"id": "hall", "label": "Hallucinated\nclaim", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "ans", "target": "atom"},
+    {"source": "atom", "target": "chk"},
+    {"source": "chk", "target": "ok", "label": "yes"},
+    {"source": "chk", "target": "hall", "label": "no"}
+  ]
+}
+```
+
+### Failure attribution: the decision tree
+
+Given a wrong final answer, the runtime localizes the fault: was the right document in the corpus at all? was it retrieved? was it in the top-k passed to the model? did the model use it? Each "no" points at a different fix (ingestion, retriever, reranker, prompt). Skipping this tree leads teams to tune the model when the bug was a missing chunk.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "bad", "label": "Wrong answer", "shape": "circle"},
+    {"id": "incorp", "label": "Doc in corpus?", "shape": "diamond"},
+    {"id": "retr", "label": "Retrieved?", "shape": "diamond"},
+    {"id": "topk", "label": "In top-k?", "shape": "diamond"},
+    {"id": "used", "label": "Model used it?", "shape": "diamond"},
+    {"id": "fix", "label": "Stage-specific fix", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "bad", "target": "incorp"},
+    {"source": "incorp", "target": "fix", "label": "no: ingestion"},
+    {"source": "incorp", "target": "retr", "label": "yes"},
+    {"source": "retr", "target": "fix", "label": "no: retriever"},
+    {"source": "retr", "target": "topk", "label": "yes"},
+    {"source": "topk", "target": "fix", "label": "no: reranker"},
+    {"source": "topk", "target": "used", "label": "yes"},
+    {"source": "used", "target": "fix", "label": "no: prompt"}
+  ]
+}
+```
+
+### Online evaluation with sampling
+
+Offline metrics need ground truth; production has none. The runtime samples a fraction of live traffic, runs reference-free metrics (faithfulness needs only answer+context, no gold), and alarms on a moving-window drop. The cost knob is sample rate — judging 100% doubles spend. Failures feed back into the offline regression set, the [eval fundamentals](/eval-fundamentals) closed loop.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "prod", "label": "Prod traffic", "shape": "circle"},
+    {"id": "samp", "label": "Sample p%", "shape": "diamond"},
+    {"id": "faith", "label": "Faithfulness\n(reference-free)", "shape": "rect"},
+    {"id": "win", "label": "Window regressed?", "shape": "diamond"},
+    {"id": "alarm", "label": "Alarm + add to\nregression set", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "prod", "target": "samp"},
+    {"source": "samp", "target": "faith", "label": "sampled"},
+    {"source": "samp", "target": "prod", "label": "skip"},
+    {"source": "faith", "target": "win"},
+    {"source": "win", "target": "alarm", "label": "yes"},
+    {"source": "win", "target": "prod", "label": "no"}
+  ]
+}
+```
+
+### Judge reliability gates the whole thing
+
+Every RAGAS-style metric is an [LLM-as-judge](/llm-as-judge) call and inherits its biases and noise. The runtime safeguard: calibrate the judge against a human-labeled RAG set (agreement coefficient), use a strong judge for faithfulness, and treat a metric as untrustworthy until its human-agreement clears a threshold. An uncalibrated faithfulness score is a confident number with unknown error.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "set", "label": "Human-labeled\nRAG set", "shape": "circle"},
+    {"id": "judge", "label": "Run judge metric", "shape": "rect"},
+    {"id": "agree", "label": "Agreement ≥ τ?", "shape": "diamond"},
+    {"id": "trust", "label": "Trust metric", "shape": "rect"},
+    {"id": "tune", "label": "Tune judge\nprompt/model", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "set", "target": "judge"},
+    {"source": "judge", "target": "agree"},
+    {"source": "agree", "target": "trust", "label": "yes"},
+    {"source": "agree", "target": "tune", "label": "no"},
+    {"source": "tune", "target": "judge"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

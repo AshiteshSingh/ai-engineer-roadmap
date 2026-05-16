@@ -2,6 +2,46 @@
 
 Language models hallucinate -- they generate fluent, confident text that is factually wrong, unsupported by evidence, or entirely fabricated. This is not a bug to be patched but a fundamental property of probabilistic text generation. This article presents a systematic treatment of hallucination: its taxonomy, detection methods ranging from self-consistency checks to entailment verification, mitigation techniques including RAG and citation grounding, and production-grade verification pipelines like FActScore.
 
+## Mental Model
+
+The mental model for hallucination is **a language model is a fluency engine, not a truth engine** — it samples the most *plausible* continuation, and plausibility is uncorrelated with truth when the model lacks grounded knowledge. Hallucination is therefore not a bug to patch but the default behavior to *contain*. Containment has exactly two levers: **reduce** the probability of fabrication (ground the model in retrieved evidence, constrain decoding) and **detect** fabrication after the fact (consistency checks, entailment against a source, claim verification). Production systems always need both — grounding lowers the rate, detection catches the residual.
+
+That frames the whole article as a pipeline with a confidence gate: generate → check claims against a source → and only surface what passes (or attach citations / abstain). Whether the gate works is an [eval fundamentals](/eval-fundamentals) and [benchmark design](/benchmark-design) question — you must measure the false-accept/false-reject trade with the same rigor as any classifier, and in agentic systems a hallucinated tool argument propagates, so it is also an [agent evaluation](/agent-evaluation) concern.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query; model lacks grounded knowledge", "shape": "circle"},
+    {"id": "fluent", "label": "Samples most-plausible continuation (fluency, not truth)", "shape": "rect"},
+    {"id": "lever", "label": "Which containment lever?", "shape": "diamond"},
+    {"id": "ground", "label": "REDUCE: retrieved-evidence grounding", "shape": "rect"},
+    {"id": "decode", "label": "REDUCE: constrained decoding", "shape": "rect"},
+    {"id": "consist", "label": "DETECT: self-consistency", "shape": "rect"},
+    {"id": "entail", "label": "DETECT: entailment vs source", "shape": "rect"},
+    {"id": "gate", "label": "Claims supported and confident?", "shape": "diamond"},
+    {"id": "slip", "label": "Confidently fluent fabrication slips through", "shape": "stadium"},
+    {"id": "abstain", "label": "Abstain or attach citation", "shape": "stadium"},
+    {"id": "out", "label": "Trustworthy answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "fluent"},
+    {"source": "fluent", "target": "lever"},
+    {"source": "lever", "target": "ground", "label": "reduce"},
+    {"source": "lever", "target": "decode", "label": "reduce"},
+    {"source": "lever", "target": "consist", "label": "detect"},
+    {"source": "lever", "target": "entail", "label": "detect"},
+    {"source": "ground", "target": "gate"},
+    {"source": "decode", "target": "gate"},
+    {"source": "consist", "target": "gate"},
+    {"source": "entail", "target": "gate"},
+    {"source": "gate", "target": "out", "label": "yes"},
+    {"source": "gate", "target": "abstain", "label": "unsupported"},
+    {"source": "gate", "target": "slip", "label": "detector missed it"}
+  ]
+}
+```
+
 ## The Nature of Hallucination
 
 Hallucination in language models is the generation of content that is nonsensical or unfaithful to the provided source content (Maynez et al., 2020). Unlike human confabulation, which often fills gaps in memory with plausible reconstructions, LLM hallucination emerges from the statistical mechanics of next-token prediction. The model selects tokens that are probable given the context, but probability and truth are different things.
@@ -582,6 +622,141 @@ class HumanInTheLoopRouter:
 ## Hallucination in Vision-Language Models
 
 Hallucination is not limited to text-only models. Vision-language models (VLMs) exhibit their own hallucination patterns, including describing objects that are not present in an image, misattributing spatial relationships, and fabricating text that appears in a scene. The CHAIR (Caption Hallucination Assessment with Image Relevance) metric and the POPE (Polling-based Object Probing Evaluation) benchmark provide standardized evaluation for visual hallucination. Mitigation strategies specific to VLMs -- including visual grounding, attention supervision, and contrastive decoding -- are covered in depth in [Article 49: Vision-Language Models](/vision-language-models).
+
+## Runtime Internals
+
+The "reduce + detect" model hides the mechanics that decide whether a verification pipeline is trustworthy or just adds latency.
+
+### Self-consistency as a cheap detector
+
+Sample the same prompt N times; factual answers tend to agree, hallucinated ones diverge. The runtime is a clustering of N samples and a disagreement threshold — high divergence flags low confidence. It needs no external source (cheap) but only catches *unstable* fabrications; a confidently consistent hallucination passes, so it is a first filter, not the whole gate.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Prompt", "shape": "circle"},
+    {"id": "n", "label": "Sample N independent completions", "shape": "rect"},
+    {"id": "embed", "label": "Embed each completion", "shape": "rect"},
+    {"id": "clus", "label": "Cluster by semantic equivalence", "shape": "rect"},
+    {"id": "div", "label": "Divergence above threshold?", "shape": "diamond"},
+    {"id": "flag", "label": "Low confidence: unstable fabrication", "shape": "stadium"},
+    {"id": "size", "label": "Largest cluster a clear majority?", "shape": "diamond"},
+    {"id": "trap", "label": "Confidently consistent hallucination passes", "shape": "stadium"},
+    {"id": "escalate", "label": "Escalate survivors to entailment gate", "shape": "rect"},
+    {"id": "verdict", "label": "Confidence-scored verdict", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "n"},
+    {"source": "n", "target": "embed"},
+    {"source": "embed", "target": "clus"},
+    {"source": "clus", "target": "div"},
+    {"source": "div", "target": "flag", "label": "high"},
+    {"source": "div", "target": "size", "label": "low"},
+    {"source": "size", "target": "trap", "label": "yes but wrong"},
+    {"source": "size", "target": "escalate", "label": "no clear winner"},
+    {"source": "flag", "target": "escalate"},
+    {"source": "escalate", "target": "verdict"},
+    {"source": "trap", "target": "escalate", "label": "still source-check"}
+  ]
+}
+```
+
+### Entailment-based grounding verification
+
+For RAG, the strong check is NLI: does the retrieved evidence *entail* each generated sentence? The runtime splits the answer into claims and runs an entailment model (or LLM judge) per claim against the cited passage. Unentailed claims are the actionable signal — they are precisely the unsupported sentences, even when fluent.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "ans", "label": "Generated answer", "shape": "circle"},
+    {"id": "split", "label": "Split into atomic claims", "shape": "rect"},
+    {"id": "pair", "label": "Pair each claim with its cited passage", "shape": "rect"},
+    {"id": "nli", "label": "Evidence entails the claim? (NLI / LLM judge)", "shape": "diamond"},
+    {"id": "contra", "label": "Evidence contradicts the claim?", "shape": "diamond"},
+    {"id": "keep", "label": "Keep + attach citation", "shape": "rect"},
+    {"id": "strip", "label": "Strip / flag unsupported claim", "shape": "stadium"},
+    {"id": "fluent", "label": "Fluent but unentailed: still unsupported", "shape": "stadium"},
+    {"id": "ver", "label": "Verified, cited answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ans", "target": "split"},
+    {"source": "split", "target": "pair"},
+    {"source": "pair", "target": "nli"},
+    {"source": "nli", "target": "keep", "label": "entailed"},
+    {"source": "nli", "target": "contra", "label": "not entailed"},
+    {"source": "contra", "target": "strip", "label": "yes: contradiction"},
+    {"source": "contra", "target": "fluent", "label": "no: unsupported"},
+    {"source": "fluent", "target": "strip"},
+    {"source": "keep", "target": "ver"},
+    {"source": "strip", "target": "ver", "label": "after removal"}
+  ]
+}
+```
+
+### FActScore: atomic decomposition
+
+Sentence-level checks miss mixed sentences ("X founded in 1998 [true] in Berlin [false]"). FActScore decomposes the output into *atomic facts*, verifies each against a knowledge source, and scores the supported fraction. The runtime cost is many verification calls per response, so it is used as an offline eval metric and on sampled production traffic, not inline on every request.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "resp", "label": "Response", "shape": "circle"},
+    {"id": "gran", "label": "Sentence-level or atomic granularity?", "shape": "diamond"},
+    {"id": "mixed", "label": "Misses mixed sentence (true clause + false clause)", "shape": "stadium"},
+    {"id": "atom", "label": "Decompose into atomic facts", "shape": "rect"},
+    {"id": "retrieve", "label": "Retrieve evidence per atom", "shape": "rect"},
+    {"id": "verify", "label": "Supported / refuted / unverifiable?", "shape": "diamond"},
+    {"id": "frac", "label": "Score = supported / (supported + refuted)", "shape": "rect"},
+    {"id": "calls", "label": "Many verification calls per response?", "shape": "diamond"},
+    {"id": "inline", "label": "Too costly inline on every request", "shape": "stadium"},
+    {"id": "offline", "label": "Offline metric + sampled prod traffic", "shape": "rect"},
+    {"id": "out", "label": "FActScore reported", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "resp", "target": "gran"},
+    {"source": "gran", "target": "mixed", "label": "sentence-level"},
+    {"source": "gran", "target": "atom", "label": "atomic"},
+    {"source": "mixed", "target": "atom", "label": "decompose finer"},
+    {"source": "atom", "target": "retrieve"},
+    {"source": "retrieve", "target": "verify"},
+    {"source": "verify", "target": "frac"},
+    {"source": "frac", "target": "calls"},
+    {"source": "calls", "target": "inline", "label": "forced inline"},
+    {"source": "calls", "target": "offline", "label": "sampled"},
+    {"source": "offline", "target": "out"},
+    {"source": "inline", "target": "offline", "label": "move off path"}
+  ]
+}
+```
+
+### The production verification pipeline and its budget
+
+Inline verification adds latency and cost, so the runtime tiers it: a cheap self-consistency/uncertainty signal on every request, full entailment only on low-confidence or high-stakes responses, and FActScore sampled offline. The output gate is abstain-or-cite, never silent. Picking the tier thresholds is the same precision/cost dial as a guardrail, validated with [agent evaluation](/agent-evaluation) when tool outputs are in the loop.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "out", "label": "Generated answer", "shape": "circle"},
+    {"id": "cheap", "label": "Cheap uncertainty\nsignal", "shape": "rect"},
+    {"id": "risk", "label": "Low-conf or\nhigh-stakes?", "shape": "diamond"},
+    {"id": "full", "label": "Full entailment\nverify", "shape": "rect"},
+    {"id": "serve", "label": "Serve + cite", "shape": "circle"},
+    {"id": "ab", "label": "Abstain", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "out", "target": "cheap"},
+    {"source": "cheap", "target": "risk"},
+    {"source": "risk", "target": "serve", "label": "no: confident"},
+    {"source": "risk", "target": "full", "label": "yes"},
+    {"source": "full", "target": "serve", "label": "supported"},
+    {"source": "full", "target": "ab", "label": "unsupported"}
+  ]
+}
+```
 
 ## Key Takeaways
 

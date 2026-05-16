@@ -20,26 +20,6 @@ These requirements demand an execution model where state is first-class, control
 
 Imagine a whiteboard where each step of a process writes its results, and the next step reads what it needs. The whiteboard persists between steps—if a step fails, you can see what was written and resume from there. Arrows on the whiteboard show which step comes next, but some arrows have conditions: "if the answer is good, go to end; otherwise, go back to research." Multiple people can write to the same whiteboard simultaneously (parallel execution), and a supervisor watches the whiteboard and decides who works next.
 
-```xyflow
-{
-  "direction": "TD",
-  "nodes": [
-    {"id": "input", "label": "User Input", "shape": "circle"},
-    {"id": "llm", "label": "LLM Call", "shape": "rect"},
-    {"id": "decide", "label": "Needs Tool?", "shape": "diamond"},
-    {"id": "tool", "label": "Execute Tool", "shape": "rect"},
-    {"id": "output", "label": "Final Answer", "shape": "circle"}
-  ],
-  "edges": [
-    {"source": "input", "target": "llm"},
-    {"source": "llm", "target": "decide"},
-    {"source": "decide", "target": "tool", "label": "yes"},
-    {"source": "decide", "target": "output", "label": "no"},
-    {"source": "tool", "target": "llm", "label": "loop back"}
-  ]
-}
-```
-
 ### Hello-world in ~10 lines
 
 Here's a minimal agent that calls an LLM, checks if it wants to use a tool, and loops until it produces a final answer:
@@ -71,20 +51,29 @@ app = graph.compile()
 
 This is a complete, stateful agent loop in under 15 lines. The state persists across turns, the conditional edge routes based on the LLM's decision, and the graph loops until a final answer is produced.
 
+The diagram below traces the *compiled topology* of exactly this snippet: the `START` and `END` pseudo-nodes that `StateGraph` injects, the `messages` channel whose `operator.add` reducer sits between every node return and the next read, and the checkpoint write that fires once per superstep so the loop can resume mid-flight.
+
 ```xyflow
 {
-  "direction": "TD",
+  "direction": "LR",
   "nodes": [
-    {"id": "start", "label": "invoke()", "shape": "circle"},
-    {"id": "model", "label": "call_model", "shape": "rect"},
-    {"id": "decide", "label": "should_continue", "shape": "diamond"},
-    {"id": "end", "label": "END", "shape": "circle"}
+    {"id": "start", "label": "START (pseudo-node)", "shape": "stadium"},
+    {"id": "model", "label": "model: call_model()", "shape": "rect"},
+    {"id": "reducer", "label": "messages channel · operator.add", "shape": "rect"},
+    {"id": "cond", "label": "should_continue(state)", "shape": "diamond"},
+    {"id": "tool", "label": "tool: execute_tool()", "shape": "rect"},
+    {"id": "ckpt", "label": "checkpoint write", "shape": "circle"},
+    {"id": "end", "label": "END (pseudo-node)", "shape": "stadium"}
   ],
   "edges": [
     {"source": "start", "target": "model"},
-    {"source": "model", "target": "decide"},
-    {"source": "decide", "target": "end", "label": "final"},
-    {"source": "decide", "target": "model", "label": "continue"}
+    {"source": "model", "target": "reducer", "label": "returns {messages,next_action}"},
+    {"source": "reducer", "target": "cond"},
+    {"source": "cond", "target": "tool", "label": "next_action=='tool'"},
+    {"source": "cond", "target": "end", "label": "next_action=='final'"},
+    {"source": "tool", "target": "reducer", "label": "appends ToolMessage"},
+    {"source": "reducer", "target": "ckpt", "label": "one per superstep"},
+    {"source": "ckpt", "target": "model", "label": "resume point"}
   ]
 }
 ```
@@ -109,19 +98,31 @@ class AgentState(TypedDict):
 
 The state acts as a central hub that all nodes read from and write to. Reducers define how updates to the same key are merged when multiple nodes write in parallel.
 
+There is no single `STATE` blob: each TypedDict key is an independent **channel** with its own merge policy. The diagram traces two parallel writers landing on the `messages` channel — whose `operator.add` reducer concatenates `[x]` and `[y]` into `[x, y]` — versus the `next_agent` key, a `LastValueChannel` where the second write simply wins. Only after every channel resolves does the runtime materialize the immutable, read-only snapshot the next node sees.
+
 ```xyflow
 {
   "direction": "TD",
   "nodes": [
-    {"id": "node_a", "label": "Node A", "shape": "rect"},
-    {"id": "node_b", "label": "Node B", "shape": "rect"},
-    {"id": "node_c", "label": "Node C", "shape": "rect"},
-    {"id": "state", "label": "STATE", "shape": "stadium"}
+    {"id": "writeA", "label": "Node A returns {messages:[x]}", "shape": "rect"},
+    {"id": "writeB", "label": "Node B returns {messages:[y]}", "shape": "rect"},
+    {"id": "writeR", "label": "Router returns {next_agent:'coder'}", "shape": "rect"},
+    {"id": "chMsgs", "label": "messages · AppendChannel", "shape": "stadium"},
+    {"id": "chNext", "label": "next_agent · LastValueChannel", "shape": "stadium"},
+    {"id": "redAdd", "label": "operator.add reducer", "shape": "diamond"},
+    {"id": "redLast", "label": "last-write-wins", "shape": "diamond"},
+    {"id": "snap", "label": "immutable snapshot", "shape": "rect"},
+    {"id": "reader", "label": "next node (read-only view)", "shape": "circle"}
   ],
   "edges": [
-    {"source": "node_a", "target": "state", "label": "writes"},
-    {"source": "state", "target": "node_b", "label": "reads"},
-    {"source": "state", "target": "node_c", "label": "reads"}
+    {"source": "writeA", "target": "chMsgs"},
+    {"source": "writeB", "target": "chMsgs"},
+    {"source": "writeR", "target": "chNext"},
+    {"source": "chMsgs", "target": "redAdd"},
+    {"source": "chNext", "target": "redLast"},
+    {"source": "redAdd", "target": "snap", "label": "[x, y]"},
+    {"source": "redLast", "target": "snap", "label": "'coder'"},
+    {"source": "snap", "target": "reader"}
   ]
 }
 ```
@@ -173,17 +174,25 @@ graph.add_conditional_edges(
 )
 ```
 
+A conditional edge is not a branch in the graph — it is a *function whose return string is looked up in a path-map dict*. The router node finishes, `route_based_on_topic(state)` returns a key like `"billing_agent"`, and `add_conditional_edges` resolves that key through the mapping `{"billing_agent": "billing", ...}` to pick the concrete destination node. Any return value missing from the map raises at compile-resolution time, which is why the map is drawn as an explicit gate rather than three free edges.
+
 ```xyflow
 {
-  "direction": "TD",
+  "direction": "LR",
   "nodes": [
-    {"id": "router", "label": "Router", "shape": "diamond"},
-    {"id": "agent_a", "label": "Agent A", "shape": "rect"},
-    {"id": "agent_b", "label": "Agent B", "shape": "rect"}
+    {"id": "src", "label": "router node finishes", "shape": "circle"},
+    {"id": "fn", "label": "route_based_on_topic(state)", "shape": "diamond"},
+    {"id": "map", "label": "path_map dict lookup", "shape": "stadium"},
+    {"id": "billing", "label": "billing node", "shape": "rect"},
+    {"id": "tech", "label": "tech_support node", "shape": "rect"},
+    {"id": "general", "label": "general node", "shape": "rect"}
   ],
   "edges": [
-    {"source": "router", "target": "agent_a", "label": "if topic == A"},
-    {"source": "router", "target": "agent_b", "label": "if topic == B"}
+    {"source": "src", "target": "fn"},
+    {"source": "fn", "target": "map", "label": "returns key string"},
+    {"source": "map", "target": "billing", "label": "'billing_agent'"},
+    {"source": "map", "target": "tech", "label": "'tech_support_agent'"},
+    {"source": "map", "target": "general", "label": "'general_agent'"}
   ]
 }
 ```
@@ -340,26 +349,6 @@ result = app.invoke({"query": "What is the capital of France?"})
 print(result["answer"])  # "The capital of France is Paris."
 ```
 
-```xyflow
-{
-  "direction": "TD",
-  "nodes": [
-    {"id": "input", "label": "Input: 'What is 2+2?'", "shape": "circle"},
-    {"id": "model", "label": "call_model", "shape": "rect"},
-    {"id": "decide", "label": "should_continue", "shape": "diamond"},
-    {"id": "tool", "label": "execute_tool", "shape": "rect"},
-    {"id": "output", "label": "Output: '4'", "shape": "circle"}
-  ],
-  "edges": [
-    {"source": "input", "target": "model"},
-    {"source": "model", "target": "decide"},
-    {"source": "decide", "target": "tool", "label": "tool_call"},
-    {"source": "decide", "target": "output", "label": "final"},
-    {"source": "tool", "target": "model"}
-  ]
-}
-```
-
 ### Streaming Modes
 
 LangGraph supports multiple streaming modes for real-time applications:
@@ -399,26 +388,6 @@ app.update_state(
     {"approved_action": approved_action},
     as_node="sensitive_action_node"
 )
-```
-
-```xyflow
-{
-  "direction": "TD",
-  "nodes": [
-    {"id": "llm", "label": "LLM decides action", "shape": "rect"},
-    {"id": "check", "label": "Needs approval?", "shape": "diamond"},
-    {"id": "pause", "label": "PAUSED: Awaiting human", "shape": "stadium"},
-    {"id": "execute", "label": "Execute action", "shape": "rect"},
-    {"id": "continue", "label": "Continue", "shape": "circle"}
-  ],
-  "edges": [
-    {"source": "llm", "target": "check"},
-    {"source": "check", "target": "pause", "label": "yes"},
-    {"source": "check", "target": "execute", "label": "no"},
-    {"source": "pause", "target": "execute", "label": "approve"},
-    {"source": "execute", "target": "continue"}
-  ]
-}
 ```
 
 ## Runtime Internals

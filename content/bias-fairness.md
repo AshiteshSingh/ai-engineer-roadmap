@@ -2,6 +2,35 @@
 
 Large language models inherit, amplify, and sometimes create biases that can cause real-world harm when deployed at scale. Understanding the sources of bias, measuring it rigorously, and implementing systematic mitigation strategies is not merely an ethical imperative -- it is an engineering requirement for production AI systems. This article examines the full lifecycle of bias in LLMs, from training data through RLHF to deployment, and presents practical frameworks for building fairer systems.
 
+## Mental Model
+
+The mental model for bias and fairness is **a signal that enters at every pipeline stage and compounds, plus a fairness target that you must choose because you cannot satisfy all of them**. Bias is not a single defect to patch; it is injected by pretraining data, amplified by RLHF, and surfaced (or masked) at inference — so mitigation is layered, stage-by-stage, not a final filter. And "fair" is not one thing: demographic parity, equalized odds, and predictive parity are *mathematically incompatible* (the impossibility theorem), so the engineering act is *picking the criterion that matches the use case*, then measuring against it.
+
+Two corollaries. First, because bias compounds, the cheapest place to fix it is upstream — the same lesson as [pretraining data](/pretraining-data) and curation: the filter is the product. Second, because fairness is contested, you cannot rely on a single benchmark number; this is the [benchmark design](/benchmark-design) problem with protected groups as explicit slices, and scale interacts with it — larger models can both reduce some biases and amplify others, a [scaling laws](/scaling-laws) effect, not a monotone improvement.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "pre", "label": "Pretraining data: bias enters", "shape": "circle"},
+    {"id": "rlhf", "label": "RLHF amplifies the prior", "shape": "rect"},
+    {"id": "infer", "label": "Inference surfaces or masks it", "shape": "rect"},
+    {"id": "where", "label": "Fix upstream or at eval?", "shape": "diamond"},
+    {"id": "upstream", "label": "Upstream re-curation: compounds away cheapest", "shape": "circle"},
+    {"id": "measure", "label": "Measure per protected-group slice", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "pre", "target": "rlhf", "label": "compounds"},
+    {"source": "rlhf", "target": "infer", "label": "compounds"},
+    {"source": "infer", "target": "where"},
+    {"source": "where", "target": "upstream", "label": "cheapest"},
+    {"source": "upstream", "target": "pre", "label": "re-curate the filter"},
+    {"source": "where", "target": "measure", "label": "at eval time"},
+    {"source": "upstream", "target": "measure", "label": "verify reduction"}
+  ]
+}
+```
+
 ## Sources of Bias in Large Language Models
 
 Bias in LLMs is not a single phenomenon but a convergence of multiple interacting factors across the model development pipeline. Each stage introduces distinct biases that compound in the final system.
@@ -473,6 +502,132 @@ For a comprehensive discussion of how governance frameworks address both categor
 Chouldechova (2017) and Kleinberg et al. (2016) independently proved that certain fairness criteria are mathematically incompatible -- you cannot simultaneously satisfy demographic parity, equalized odds, and predictive parity except in trivial cases. This impossibility theorem means that fairness is always a choice about which fairness criterion to prioritize, and that choice depends on the application context.
 
 For LLM applications, the practical implication is that different use cases require different fairness criteria. A creative writing assistant might prioritize representation balance (demographic parity). A medical triage system might prioritize equal error rates (equalized odds). A hiring screener might prioritize equal predictive value (predictive parity). There is no universal "fair" -- only context-appropriate fairness.
+
+## Runtime Internals
+
+The "compounds + choose a criterion" model hides the mechanics that make fairness measurable and enforceable in production.
+
+### Counterfactual measurement
+
+The core runtime probe is counterfactual: hold the prompt fixed, swap only the protected attribute (name, pronoun, dialect), and measure output divergence. Statistically significant divergence under an otherwise identical input is bias evidence. The hard part is constructing minimally-different pairs that do not also change meaning.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "base", "label": "Fixed base prompt", "shape": "circle"},
+    {"id": "swap", "label": "Swap only protected attribute (name / pronoun / dialect)", "shape": "rect"},
+    {"id": "valid", "label": "Minimal pair: meaning unchanged?", "shape": "diamond"},
+    {"id": "discard", "label": "Discard: confounded pair", "shape": "stadium"},
+    {"id": "run", "label": "Run both variants", "shape": "rect"},
+    {"id": "sig", "label": "Divergence statistically significant?", "shape": "diamond"},
+    {"id": "bias", "label": "Bias evidence", "shape": "stadium"},
+    {"id": "inv", "label": "Invariant", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "base", "target": "swap"},
+    {"source": "swap", "target": "valid"},
+    {"source": "valid", "target": "discard", "label": "no: meaning shifted"},
+    {"source": "valid", "target": "run", "label": "yes"},
+    {"source": "run", "target": "sig"},
+    {"source": "sig", "target": "bias", "label": "significant"},
+    {"source": "sig", "target": "inv", "label": "not significant"}
+  ]
+}
+```
+
+### The impossibility theorem as a runtime constraint
+
+You cannot simultaneously satisfy demographic parity, equalized odds, and predictive parity except in degenerate cases. The runtime consequence: the system must *declare* which criterion it optimizes per use case, expose the trade-off explicitly, and accept measurable degradation on the others. Pretending all three hold is the silent failure.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "uc", "label": "Use-case fairness goal", "shape": "circle"},
+    {"id": "pick", "label": "Which single criterion to optimize?", "shape": "diamond"},
+    {"id": "dp", "label": "Demographic parity", "shape": "rect"},
+    {"id": "eo", "label": "Equalized odds", "shape": "rect"},
+    {"id": "pp", "label": "Predictive parity", "shape": "rect"},
+    {"id": "dpcost", "label": "DP cost: unequal error rates accepted", "shape": "rect"},
+    {"id": "eocost", "label": "EO cost: unequal selection rates accepted", "shape": "rect"},
+    {"id": "ppcost", "label": "PP cost: unequal TPR/FPR accepted", "shape": "rect"},
+    {"id": "declare", "label": "Declare choice + measured degradation publicly", "shape": "rect"},
+    {"id": "audit", "label": "Auditable fairness contract", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "uc", "target": "pick"},
+    {"source": "pick", "target": "dp", "label": "representation"},
+    {"source": "pick", "target": "eo", "label": "equal error"},
+    {"source": "pick", "target": "pp", "label": "equal PPV"},
+    {"source": "dp", "target": "dpcost"},
+    {"source": "eo", "target": "eocost"},
+    {"source": "pp", "target": "ppcost"},
+    {"source": "dpcost", "target": "declare"},
+    {"source": "eocost", "target": "declare"},
+    {"source": "ppcost", "target": "declare"},
+    {"source": "declare", "target": "audit"}
+  ]
+}
+```
+
+### Debiasing without capability collapse
+
+Debiasing fine-tuning (counterfactual data augmentation, targeted preference data) can reduce measured bias but also blunt capability or over-correct into a different bias. The runtime needs a paired eval: bias metric *and* a held-out capability benchmark, gating the debiased model on both — the same dual-axis discipline as serving-quality regression in [LLM serving](/llm-serving).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "base", "label": "Base model", "shape": "circle"},
+    {"id": "deb", "label": "Debias fine-tune (CDA / targeted prefs)", "shape": "rect"},
+    {"id": "biasm", "label": "Measured bias reduced?", "shape": "diamond"},
+    {"id": "cap", "label": "Held-out capability benchmark held?", "shape": "diamond"},
+    {"id": "over", "label": "Over-corrected into a different bias?", "shape": "diamond"},
+    {"id": "retune", "label": "Re-tune", "shape": "stadium"},
+    {"id": "ship", "label": "Ship debiased model", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "base", "target": "deb"},
+    {"source": "deb", "target": "biasm"},
+    {"source": "biasm", "target": "cap", "label": "yes"},
+    {"source": "biasm", "target": "retune", "label": "no"},
+    {"source": "cap", "target": "over", "label": "yes"},
+    {"source": "cap", "target": "retune", "label": "capability collapsed"},
+    {"source": "over", "target": "retune", "label": "yes"},
+    {"source": "over", "target": "ship", "label": "no"}
+  ]
+}
+```
+
+### Disparate-impact monitoring in production
+
+Offline fairness does not guarantee deployed fairness — traffic distribution differs. The runtime logs outcomes by protected group, computes disparate-impact ratios on a rolling window, and alarms on drift. Fairness is a continuously monitored SLO, not a launch checkbox; the alarm feeds the same incident path as governance.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "prod", "label": "Production outcomes stream", "shape": "circle"},
+    {"id": "shift", "label": "Traffic shifted vs offline distribution?", "shape": "diamond"},
+    {"id": "win", "label": "Rolling-window disparate-impact ratio per group", "shape": "stadium"},
+    {"id": "rule", "label": "Within 4/5ths-rule bound?", "shape": "diamond"},
+    {"id": "slo", "label": "Fairness SLO met this window", "shape": "circle"},
+    {"id": "review", "label": "Page on-call + manual review", "shape": "rect"},
+    {"id": "gov", "label": "Governance incident path", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "prod", "target": "shift"},
+    {"source": "shift", "target": "win", "label": "recompute either way"},
+    {"source": "win", "target": "rule"},
+    {"source": "rule", "target": "slo", "label": "yes"},
+    {"source": "rule", "target": "review", "label": "drift"},
+    {"source": "review", "target": "gov"},
+    {"source": "slo", "target": "prod", "label": "next window"},
+    {"source": "gov", "target": "prod", "label": "resume post-fix"}
+  ]
+}
+```
 
 ## Key Takeaways
 

@@ -19,6 +19,52 @@ A practitioner-oriented comparison of the major LLM evaluation frameworks as of 
 
 ---
 
+## Mental Model
+
+The decision matrix above is easier to internalize with one mental model: **an eval framework is three layers, and tools differ mostly in which layer they make easy.** Layer 1 is the *scorer* (exact match, embedding similarity, or an LLM-as-judge). Layer 2 is the *harness* (how scorers are run over a dataset and wired into CI). Layer 3 is the *platform* (tracing, dashboards, collaboration, regression history). DeepEval optimizes Layer 2 (pytest-native), RAGAS optimizes Layer 1 for RAG, Braintrust/LangSmith optimize Layer 3.
+
+Pick by the layer that is your bottleneck, not by feature-count. If your scorers are unreliable, no amount of Layer 3 dashboards helps — that is a [LLM-as-judge](/llm-as-judge) calibration problem, and the underlying scoring rubric is just [evaluation fundamentals](/eval-fundamentals) made executable.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Bottleneck?", "shape": "diamond"},
+    {"id": "scorer", "label": "Scorer quality\n→ RAGAS / GEval", "shape": "rect"},
+    {"id": "harness", "label": "CI wiring\n→ DeepEval / Promptfoo", "shape": "rect"},
+    {"id": "platform", "label": "Visibility / collab\n→ Braintrust / LangSmith", "shape": "rect"},
+    {"id": "ship", "label": "Quality gate in CI", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "scorer", "label": "metrics noisy"},
+    {"source": "q", "target": "harness", "label": "no CI"},
+    {"source": "q", "target": "platform", "label": "no visibility"},
+    {"source": "scorer", "target": "ship"},
+    {"source": "harness", "target": "ship"},
+    {"source": "platform", "target": "ship"}
+  ]
+}
+```
+
+A Layer-2 example — the assertion-based shape that makes evals a CI gate:
+
+```python
+from deepeval import assert_test
+from deepeval.metrics import GEval
+from deepeval.test_case import LLMTestCase
+
+def test_answer_is_grounded():
+    metric = GEval(
+        name="Groundedness",
+        criteria="Does the answer stay faithful to the retrieved context?",
+        threshold=0.7,
+    )
+    assert_test(
+        LLMTestCase(input=q, actual_output=answer, retrieval_context=ctx),
+        [metric],
+    )
+```
+
 ## Framework-by-Framework Breakdown
 
 ### 1. DeepEval (Confident AI)
@@ -351,6 +397,126 @@ This is a solid **Pattern 1 (Eval-as-Code)** setup. To expand coverage, consider
 3. **OpenTelemetry standardization:** Langfuse, Phoenix, and Agenta all build on OTel, creating interoperability between tracing backends.
 4. **LLM-as-judge everywhere:** Every framework now supports it. The differentiator is calibration quality and bias mitigation.
 5. **Shift-left evals:** CI/CD integration is table stakes. The question is whether quality gates are statistical (Braintrust) or assertion-based (DeepEval).
+
+---
+
+## Runtime Internals
+
+The framework comparison is the *what*; this is *how the scoring actually executes*, since that is where frameworks genuinely diverge.
+
+### LLM-as-judge scoring pipeline
+
+Every framework's judge metric is the same pipeline: render a rubric prompt, call a judge model, parse a score, optionally average over N samples for stability. The differentiators are bias controls (position-swapping, reference anchoring) and whether the score is calibrated. A miscalibrated judge fails silently — it returns numbers, just wrong ones — which is why [human evaluation](/human-evaluation) remains the ground-truth anchor.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "case", "label": "Test case", "shape": "circle"},
+    {"id": "rubric", "label": "Render rubric\nprompt", "shape": "rect"},
+    {"id": "judge", "label": "Judge model", "shape": "rect"},
+    {"id": "n", "label": "N samples?", "shape": "diamond"},
+    {"id": "score", "label": "Calibrated score", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "case", "target": "rubric"},
+    {"source": "rubric", "target": "judge"},
+    {"source": "judge", "target": "n"},
+    {"source": "n", "target": "judge", "label": "repeat"},
+    {"source": "n", "target": "score", "label": "aggregate"}
+  ]
+}
+```
+
+### Quality gate: assertion vs statistical
+
+The deepest behavioral split is the CI gate. DeepEval-style is *assertion-based* (each case must clear a threshold; one failure fails the build). Braintrust-style is *statistical* (compare the new run's aggregate to a baseline distribution; fail on regression). Assertion gates are strict and flaky; statistical gates are robust but need history.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "run", "label": "Eval run", "shape": "circle"},
+    {"id": "mode", "label": "Gate type?", "shape": "diamond"},
+    {"id": "assert", "label": "Per-case\nthreshold", "shape": "rect"},
+    {"id": "stat", "label": "vs baseline\ndistribution", "shape": "rect"},
+    {"id": "fail", "label": "Fail build", "shape": "stadium"},
+    {"id": "pass", "label": "Promote", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "run", "target": "mode"},
+    {"source": "mode", "target": "assert", "label": "assertion"},
+    {"source": "mode", "target": "stat", "label": "statistical"},
+    {"source": "assert", "target": "fail", "label": "any < thr"},
+    {"source": "stat", "target": "fail", "label": "regression"},
+    {"source": "assert", "target": "pass"},
+    {"source": "stat", "target": "pass"}
+  ]
+}
+```
+
+### RAG metric computation
+
+RAG-specific tools (RAGAS) decompose one answer into sub-metrics — faithfulness, answer relevance, context precision/recall — each its own judge call over a different slice of (question, context, answer). This is why RAG eval is several× the token cost of a single quality score.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "triple", "label": "q + ctx + answer", "shape": "circle"},
+    {"id": "faith", "label": "Faithfulness", "shape": "rect"},
+    {"id": "rel", "label": "Answer relevance", "shape": "rect"},
+    {"id": "ctx", "label": "Context precision", "shape": "rect"},
+    {"id": "agg", "label": "RAG score", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "triple", "target": "faith"},
+    {"source": "triple", "target": "rel"},
+    {"source": "triple", "target": "ctx"},
+    {"source": "faith", "target": "agg"},
+    {"source": "rel", "target": "agg"},
+    {"source": "ctx", "target": "agg"}
+  ]
+}
+```
+
+### Trace → eval → dataset feedback loop
+
+Platform-tier tools close a loop: production traces are sampled, scored online, and the failures are promoted into the regression dataset that gates the next release. Synthetic expansion of that dataset is exactly what a [DeepEval synthesizer](/deepeval-synthesizer) automates.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "trace", "label": "Prod traces", "shape": "circle"},
+    {"id": "sample", "label": "Sample + score", "shape": "rect"},
+    {"id": "fail", "label": "Failures", "shape": "diamond"},
+    {"id": "ds", "label": "Regression dataset", "shape": "rect"},
+    {"id": "gate", "label": "Next-release gate", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "trace", "target": "sample"},
+    {"source": "sample", "target": "fail"},
+    {"source": "fail", "target": "ds", "label": "promote"},
+    {"source": "ds", "target": "gate"},
+    {"source": "gate", "target": "trace", "label": "next cycle"}
+  ]
+}
+```
+
+A Layer-1 example — Promptfoo's declarative, assertion-style config:
+
+```yaml
+prompts: [file://prompts/answer.txt]
+providers: [anthropic:messages:claude-sonnet-4-20250514]
+tests:
+  - vars: { question: "What is RAG?" }
+    assert:
+      - type: llm-rubric
+        value: "Answer is accurate and mentions retrieval"
+      - type: latency
+        threshold: 3000
+```
 
 ---
 

@@ -10,6 +10,33 @@ The integration of large language models into search and recommendation systems 
 - **SPLADE** bridges lexical and semantic search while staying compatible with existing inverted index infrastructure (Elasticsearch, OpenSearch)
 - **Recommendation diversity** requires explicit design — MMR, exposure fairness, and exploration/exploitation balancing prevent filter bubbles
 
+## Mental Model
+
+The mental model for LLM-powered search and recommendations is **a funnel: cheap-and-broad at the top, expensive-and-precise at the bottom**. You never score a million documents with an LLM. Instead: retrieve thousands cheaply (BM25 + dense ANN), narrow to dozens with a mid-cost reranker, then optionally apply an expensive LLM judge or generation on the final handful. Every technique here — hybrid retrieval, HyDE, cross-encoders, ColBERT, learned-sparse — is an answer to "at which funnel stage, and at what cost, do I improve relevance?"
+
+Recommendations are the same funnel with the *query implicit* (the user/context is the query) plus an objective tension: relevance vs diversity/fairness, because pure relevance collapses into filter bubbles. The retrieval substrate is shared with RAG and is fundamentally an embedding-geometry problem; orchestration frameworks like [LlamaIndex](/llamaindex) wire these stages together; whether a change actually helped is an [eval fundamentals](/eval-fundamentals) question (offline metrics lie without online tests); and the heavy reranker/generation stages live under the same [LLM serving](/llm-serving) latency budget as any inference.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "corpus", "label": "Millions of docs", "shape": "circle"},
+    {"id": "retr", "label": "Cheap retrieve\n(BM25 + ANN)", "shape": "rect"},
+    {"id": "rerank", "label": "Mid-cost rerank\n(cross-encoder)", "shape": "rect"},
+    {"id": "llm", "label": "Expensive LLM\n(top handful)", "shape": "rect"},
+    {"id": "obj", "label": "Relevance vs\ndiversity", "shape": "diamond"},
+    {"id": "out", "label": "Results", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "corpus", "target": "retr", "label": "thousands"},
+    {"source": "retr", "target": "rerank", "label": "dozens"},
+    {"source": "rerank", "target": "llm", "label": "handful"},
+    {"source": "llm", "target": "obj"},
+    {"source": "obj", "target": "out"}
+  ]
+}
+```
+
 ## Semantic Search Foundations
 
 ### From BM25 to Dense Retrieval
@@ -922,6 +949,137 @@ Regular offline evaluation ensures model and index quality:
 3. **Test re-ranking precision**: Ensure the re-ranker correctly promotes relevant results
 4. **Regression testing**: Compare new models/configs against baselines before deployment
 5. **Freshness testing**: Verify that new content is discoverable within expected time frames
+
+## Runtime Internals
+
+The funnel model hides the mechanics that decide whether each stage actually improves relevance per dollar.
+
+### Hybrid retrieval fusion
+
+Dense retrieval captures semantics; BM25 captures exact terms (names, codes, rare tokens). Running both and fusing scores (Reciprocal Rank Fusion) beats either alone. The runtime knob is the fusion weight/RRF constant; the failure mode is normalizing incomparable score scales naively, so RRF (rank-based, scale-free) is the safe default.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "bm", "label": "BM25: exact terms (names, codes, rare tokens)", "shape": "rect"},
+    {"id": "dense", "label": "Dense ANN: semantic neighbors", "shape": "rect"},
+    {"id": "fuse", "label": "Fuse by raw score or by rank?", "shape": "diamond"},
+    {"id": "scale", "label": "Score-scale normalization", "shape": "rect"},
+    {"id": "skew", "label": "Incomparable scales: one signal dominates", "shape": "stadium"},
+    {"id": "rrf", "label": "Reciprocal Rank Fusion (scale-free)", "shape": "rect"},
+    {"id": "weight", "label": "Fusion weight / RRF k tuned per corpus?", "shape": "diamond"},
+    {"id": "default", "label": "Untuned: lexical or semantic over-weighted", "shape": "stadium"},
+    {"id": "cand", "label": "Robust candidate set", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "bm"},
+    {"source": "q", "target": "dense"},
+    {"source": "bm", "target": "fuse"},
+    {"source": "dense", "target": "fuse"},
+    {"source": "fuse", "target": "scale", "label": "raw score"},
+    {"source": "scale", "target": "skew"},
+    {"source": "fuse", "target": "rrf", "label": "by rank"},
+    {"source": "rrf", "target": "weight"},
+    {"source": "weight", "target": "cand", "label": "tuned"},
+    {"source": "weight", "target": "default", "label": "blind default"}
+  ]
+}
+```
+
+### Cross-encoder reranking cost
+
+A bi-encoder embeds query and doc separately (fast, precomputable); a cross-encoder scores the pair *jointly* (far more accurate, but one forward pass per candidate). The runtime rule: bi-encoder for retrieval over the corpus, cross-encoder only over the top-k candidates — applying it to thousands is a latency cliff.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "corpus", "label": "Full corpus", "shape": "circle"},
+    {"id": "bi", "label": "Bi-encoder: precomputed independent embeddings", "shape": "rect"},
+    {"id": "ann", "label": "ANN retrieve top-k candidates", "shape": "rect"},
+    {"id": "ksize", "label": "k small enough for per-pair scoring?", "shape": "diamond"},
+    {"id": "cliff", "label": "Cross-encoding thousands: latency cliff", "shape": "stadium"},
+    {"id": "shrink", "label": "Shrink k or two-stage rerank", "shape": "rect"},
+    {"id": "ce", "label": "Cross-encoder: joint query+doc pass", "shape": "rect"},
+    {"id": "gain", "label": "Accuracy gain worth the latency?", "shape": "diamond"},
+    {"id": "skip", "label": "Skip rerank for easy queries", "shape": "stadium"},
+    {"id": "rank", "label": "Reranked top-n", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "corpus", "target": "bi"},
+    {"source": "bi", "target": "ann"},
+    {"source": "ann", "target": "ksize"},
+    {"source": "ksize", "target": "ce", "label": "yes"},
+    {"source": "ksize", "target": "cliff", "label": "no: too many"},
+    {"source": "cliff", "target": "shrink"},
+    {"source": "shrink", "target": "ce"},
+    {"source": "ce", "target": "gain"},
+    {"source": "gain", "target": "rank", "label": "yes"},
+    {"source": "gain", "target": "skip", "label": "marginal"}
+  ]
+}
+```
+
+### HyDE: query–document asymmetry fix
+
+A short query embeds far from long answer documents. HyDE generates a *hypothetical answer* with an LLM and embeds that instead, landing closer to real relevant docs. The runtime cost is one extra LLM call per query and a risk: a hallucinated hypothetical can mislead retrieval, so it is gated to hard/ambiguous queries, not every request — an [LLM serving](/llm-serving) latency trade.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Short query", "shape": "circle"},
+    {"id": "gap", "label": "Embeds far from long answer documents", "shape": "rect"},
+    {"id": "gate", "label": "Hard / ambiguous enough to warrant HyDE?", "shape": "diamond"},
+    {"id": "plain", "label": "Embed the query verbatim", "shape": "rect"},
+    {"id": "gen", "label": "LLM drafts a hypothetical answer", "shape": "rect"},
+    {"id": "halluc", "label": "Hypothetical factually plausible?", "shape": "diamond"},
+    {"id": "mislead", "label": "Hallucinated draft misleads retrieval", "shape": "stadium"},
+    {"id": "embh", "label": "Embed the hypothetical instead", "shape": "rect"},
+    {"id": "latency", "label": "Extra LLM call on the latency path", "shape": "stadium"},
+    {"id": "ret", "label": "Retrieve near real relevant docs", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "gap"},
+    {"source": "gap", "target": "gate"},
+    {"source": "gate", "target": "plain", "label": "no: cheap path"},
+    {"source": "gate", "target": "gen", "label": "yes"},
+    {"source": "gen", "target": "halluc"},
+    {"source": "halluc", "target": "embh", "label": "grounded"},
+    {"source": "halluc", "target": "mislead", "label": "fabricated"},
+    {"source": "gen", "target": "latency"},
+    {"source": "plain", "target": "ret"},
+    {"source": "embh", "target": "ret"},
+    {"source": "mislead", "target": "gate", "label": "fall back to plain"}
+  ]
+}
+```
+
+### Diversity/fairness as a post-ranking pass
+
+Pure relevance ranking creates filter bubbles and exposure unfairness. The runtime inserts a re-ranking objective (MMR, determinantal point processes, or exposure constraints) that trades a little relevance for coverage. The dial is explicit and must be measured *online* — offline relevance metrics systematically reward the bubble, an [eval fundamentals](/eval-fundamentals) validity trap.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "ranked", "label": "Relevance-ranked", "shape": "circle"},
+    {"id": "mmr", "label": "MMR / exposure\nconstraint", "shape": "rect"},
+    {"id": "trade", "label": "Coverage gained,\nrelevance ok?", "shape": "diamond"},
+    {"id": "serve", "label": "Final list", "shape": "circle"},
+    {"id": "tune", "label": "Adjust λ", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "ranked", "target": "mmr"},
+    {"source": "mmr", "target": "trade"},
+    {"source": "trade", "target": "serve", "label": "yes"},
+    {"source": "trade", "target": "tune", "label": "no"},
+    {"source": "tune", "target": "mmr"}
+  ]
+}
+```
 
 ## Key Takeaways
 

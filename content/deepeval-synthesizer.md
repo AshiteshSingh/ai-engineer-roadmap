@@ -19,6 +19,37 @@ For multi-turn goldens, a `ConversationalGolden` object follows the same structu
 
 A critical distinction: the Synthesizer does **not** generate `actual_output` values. These come from running your LLM application against the generated inputs. Similarly, multi-turn generation does not create individual `turns` -- use DeepEval's `ConversationSimulator` for that purpose.
 
+## Mental Model
+
+The mental model for the Synthesizer is a **quality-controlled factory for test cases**: raw context goes in, structured "goldens" (input + expected context, *not* outputs) come out, and every station on the line either generates, mutates, or rejects. The point is not volume — it is producing goldens that are *hard in the ways your evaluation cares about*, which is why evolution (deliberately complicating inputs) and filtration (discarding weak ones) matter more than raw count.
+
+This only makes sense anchored to a downstream metric: a golden is good if it would expose a real weakness when scored by [evaluation fundamentals](/eval-fundamentals) and an [LLM-as-judge](/llm-as-judge). The Synthesizer is the supply side of that loop; the judge is the demand side. Concretely, the Synthesizer never invents `actual_output` — it manufactures the *probe* (input plus the context the answer must be grounded in) and leaves the system-under-test to produce the answer the judge then grades. That separation is the whole reason synthetic goldens are trustworthy: the difficulty is engineered at generation time and the correctness signal is decided independently at scoring time, so a passing run cannot be gamed by the generator and a failing golden points at the model, not at fabricated ground truth.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ctx", "label": "Context /\nseed", "shape": "circle"},
+    {"id": "gen", "label": "Generate\ninput", "shape": "rect"},
+    {"id": "eve", "label": "Evolve\n(harder)", "shape": "rect"},
+    {"id": "filt", "label": "Filter\nscore ≥ τ?", "shape": "diamond"},
+    {"id": "gold", "label": "Golden\n(input+context)", "shape": "stadium"},
+    {"id": "judge", "label": "LLM-as-judge\ngrades SUT", "shape": "diamond"},
+    {"id": "weak", "label": "Exposed\nweakness", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ctx", "target": "gen"},
+    {"source": "gen", "target": "eve"},
+    {"source": "eve", "target": "filt"},
+    {"source": "filt", "target": "gen", "label": "reject: regen"},
+    {"source": "filt", "target": "gold", "label": "pass"},
+    {"source": "gold", "target": "judge", "label": "supply"},
+    {"source": "judge", "target": "weak", "label": "demand"},
+    {"source": "weak", "target": "gen", "label": "steer next batch"}
+  ]
+}
+```
+
 ## The Generation Pipeline
 
 Regardless of which generation method you use, the Synthesizer follows a four-stage pipeline:
@@ -624,6 +655,121 @@ print(f"Average context quality: {df['context_quality'].mean():.3f}")
 synthesizer.save_as(file_type="json", directory="./eval_data", file_name="ml_docs_goldens")
 dataset = EvaluationDataset(goldens=goldens)
 dataset.push(alias="ML Docs Evaluation Set v1")
+```
+
+## Runtime Internals
+
+The pipeline diagram hides the mechanics that determine whether your goldens are usable.
+
+### Context construction and chunking
+
+"From documents" first chunks and embeds the corpus, then groups related chunks into *contexts* — a golden's quality is capped by the coherence of its context group. Bad chunking (splitting a definition from its example) produces goldens that are unanswerable, not hard. This is the same failure surface as [RAG evaluation](/rag-evaluation): garbage context, garbage verdict.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "docs", "label": "Documents", "shape": "circle"},
+    {"id": "chunk", "label": "Chunk", "shape": "rect"},
+    {"id": "embed", "label": "Embed", "shape": "rect"},
+    {"id": "cluster", "label": "Cluster by\nsimilarity", "shape": "rect"},
+    {"id": "coh", "label": "Group\ncoherent?", "shape": "diamond"},
+    {"id": "ctx", "label": "Context group", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "docs", "target": "chunk"},
+    {"source": "chunk", "target": "embed"},
+    {"source": "embed", "target": "cluster"},
+    {"source": "cluster", "target": "coh"},
+    {"source": "coh", "target": "ctx", "label": "yes"},
+    {"source": "coh", "target": "chunk", "label": "no: re-chunk"}
+  ]
+}
+```
+
+### Evolution: controlled difficulty injection
+
+Evolution rewrites a base input to be harder along chosen axes (multi-hop, reasoning, constraints). The runtime risk is *over-evolution* — too many passes drift the input off its context so the "expected" answer is no longer derivable. Bounded evolution depth is the key knob.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "base", "label": "Base input", "shape": "circle"},
+    {"id": "evo", "label": "Evolve pass\n(+1 axis)", "shape": "rect"},
+    {"id": "chk", "label": "Still grounded\nin context?", "shape": "diamond"},
+    {"id": "revert", "label": "Revert to\nlast valid", "shape": "stadium"},
+    {"id": "depth", "label": "Depth < max?", "shape": "diamond"},
+    {"id": "accept", "label": "Accept harder\ninput", "shape": "stadium"},
+    {"id": "out", "label": "Evolved golden", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "base", "target": "evo"},
+    {"source": "evo", "target": "chk"},
+    {"source": "chk", "target": "revert", "label": "no: drifted"},
+    {"source": "revert", "target": "base"},
+    {"source": "chk", "target": "depth", "label": "yes"},
+    {"source": "depth", "target": "evo", "label": "yes: again"},
+    {"source": "depth", "target": "accept", "label": "no: stop"},
+    {"source": "accept", "target": "out"}
+  ]
+}
+```
+
+### Filtration as a quality gate
+
+Filtration scores each candidate and drops those below threshold. Set it too high and you starve the dataset; too low and you pollute it. This is a precision/recall dial, not a boolean — tune it against how the goldens perform on a known-weak model.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "cand", "label": "Candidate golden", "shape": "circle"},
+    {"id": "score", "label": "Critic-model\nquality score", "shape": "rect"},
+    {"id": "thr", "label": "≥ τ?", "shape": "diamond"},
+    {"id": "keep", "label": "Dataset", "shape": "stadium"},
+    {"id": "drop", "label": "Discard", "shape": "stadium"},
+    {"id": "tune", "label": "Tune τ vs\nknown-weak model", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "cand", "target": "score"},
+    {"source": "score", "target": "thr"},
+    {"source": "thr", "target": "keep", "label": "yes"},
+    {"source": "thr", "target": "drop", "label": "no"},
+    {"source": "keep", "target": "tune", "label": "too easy?"},
+    {"source": "drop", "target": "tune", "label": "starving?"},
+    {"source": "tune", "target": "thr", "label": "recalibrate"}
+  ]
+}
+```
+
+### Cost and concurrency
+
+Every generate/evolve/filter step is an LLM call, so a 1k-golden run is thousands of calls. The runtime concerns are the familiar [LLM serving](/llm-serving) ones — concurrency limits, retry/backoff, and caching context embeddings so a re-run does not re-pay the embedding cost.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "batch", "label": "Golden batch", "shape": "circle"},
+    {"id": "cache", "label": "Embeds\ncached?", "shape": "diamond"},
+    {"id": "embed", "label": "Embed\ncontext", "shape": "rect"},
+    {"id": "pool", "label": "Concurrency\nslot free?", "shape": "diamond"},
+    {"id": "call", "label": "gen/evolve/\nfilter call", "shape": "rect"},
+    {"id": "retry", "label": "Backoff", "shape": "stadium"},
+    {"id": "out", "label": "Goldens", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "batch", "target": "cache"},
+    {"source": "cache", "target": "embed", "label": "miss"},
+    {"source": "cache", "target": "pool", "label": "hit"},
+    {"source": "embed", "target": "pool"},
+    {"source": "pool", "target": "call", "label": "yes"},
+    {"source": "call", "target": "retry", "label": "429"},
+    {"source": "retry", "target": "call"},
+    {"source": "call", "target": "out", "label": "ok"}
+  ]
+}
 ```
 
 ## Choosing the Right Generation Method

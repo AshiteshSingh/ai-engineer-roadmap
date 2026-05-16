@@ -8,6 +8,43 @@ Pre-trained language models are trained to predict the next token, not to be hel
 
 The fundamental challenge is that "helpfulness" and "harmlessness" are not easily expressed as loss functions. We cannot write a differentiable objective that captures what makes a good response. Instead, we rely on human judgments: given two responses, which one is better? This preference signal, while noisy and subjective, turns out to be sufficient to dramatically improve model behavior.
 
+## Mental Model
+
+The mental model for preference optimization is **"you cannot write the loss, so you learn it from comparisons."** Helpfulness and harmlessness have no differentiable formula, but humans can reliably say *A is better than B*. Every method here is a different answer to one question: how do you turn a pile of (chosen, rejected) pairs into a gradient? Classic RLHF answers "train a reward model, then RL against it"; DPO/ORPO/KTO answer "skip the reward model — the preference pairs *are* the loss."
+
+So sort the zoo by **how much machinery sits between the preference data and the weight update**. PPO has the most (reward model + value head + RL loop, fragile but expressive); DPO collapses it to a single classification-style loss (stable, the modern default); GRPO drops the value model for group-relative advantages. The trade-off is the familiar one: more machinery buys expressiveness at the cost of stability and compute — the same axis you weigh when choosing [LoRA adapters](/lora-adapters) for the SFT stage, and one you can only judge with proper [benchmark design](/benchmark-design).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "pairs", "label": "(chosen, rejected) preference pairs", "shape": "circle"},
+    {"id": "noloss", "label": "No differentiable formula for helpful / harmless", "shape": "rect"},
+    {"id": "machinery", "label": "How much machinery between data and the gradient?", "shape": "diamond"},
+    {"id": "ppo", "label": "PPO: reward model + value head + RL loop", "shape": "rect"},
+    {"id": "fragile", "label": "Most expressive, least stable", "shape": "stadium"},
+    {"id": "grpo", "label": "GRPO: drop value head, group-relative advantage", "shape": "rect"},
+    {"id": "dpo", "label": "DPO/ORPO/KTO: the pairs ARE the loss", "shape": "rect"},
+    {"id": "stable", "label": "Single classification-style loss, stable default", "shape": "stadium"},
+    {"id": "tradeoff", "label": "Expressiveness vs stability/compute axis", "shape": "diamond"},
+    {"id": "pol", "label": "Updated policy", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "pairs", "target": "noloss"},
+    {"source": "noloss", "target": "machinery"},
+    {"source": "machinery", "target": "ppo", "label": "most"},
+    {"source": "ppo", "target": "fragile"},
+    {"source": "machinery", "target": "grpo", "label": "medium"},
+    {"source": "machinery", "target": "dpo", "label": "least"},
+    {"source": "dpo", "target": "stable"},
+    {"source": "fragile", "target": "tradeoff"},
+    {"source": "stable", "target": "tradeoff"},
+    {"source": "grpo", "target": "tradeoff"},
+    {"source": "tradeoff", "target": "pol"}
+  ]
+}
+```
+
 ## The RLHF Pipeline
 
 The standard RLHF pipeline, as described in Ouyang et al. (2022) "Training language models to follow instructions with human feedback" (the InstructGPT paper), consists of three stages:
@@ -404,6 +441,127 @@ Research suggests DPO has a lower alignment tax than PPO, likely because it stay
 - **Learning rate**: 5e-7 to 5e-6. DPO is sensitive to learning rate; err on the side of too low.
 - **Epochs**: Usually 1-3. Overfitting to preference data degrades generation quality.
 - **Warmup**: 10% of training steps. Critical for stable DPO training.
+
+## Runtime Internals
+
+The method zoo hides the runtime details that decide whether alignment training converges or collapses.
+
+### The PPO four-model dance
+
+Classic RLHF runs four models simultaneously: the policy (training), a frozen reference (KL anchor), the reward model (scores rollouts), and a value head (advantage estimate). The runtime fragility is the KL term — too weak and the policy reward-hacks; too strong and nothing moves. Most PPO instability is a KL-coefficient problem, not a code bug.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "prompt", "label": "Prompt", "shape": "circle"},
+    {"id": "pol", "label": "Policy (training, generates rollouts)", "shape": "rect"},
+    {"id": "ref", "label": "Frozen reference (KL anchor)", "shape": "rect"},
+    {"id": "rm", "label": "Reward model (scores rollout)", "shape": "rect"},
+    {"id": "val", "label": "Value head (advantage estimate)", "shape": "rect"},
+    {"id": "kl", "label": "KL coefficient beta well-tuned?", "shape": "diamond"},
+    {"id": "hack", "label": "Too weak: policy reward-hacks", "shape": "stadium"},
+    {"id": "stuck", "label": "Too strong: nothing moves", "shape": "stadium"},
+    {"id": "upd", "label": "PPO update: reward - beta*KL", "shape": "diamond"},
+    {"id": "next", "label": "Next iteration", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "prompt", "target": "pol"},
+    {"source": "pol", "target": "rm", "label": "rollout"},
+    {"source": "pol", "target": "ref", "label": "logprobs"},
+    {"source": "pol", "target": "val"},
+    {"source": "rm", "target": "upd"},
+    {"source": "val", "target": "upd", "label": "advantage"},
+    {"source": "ref", "target": "kl"},
+    {"source": "kl", "target": "hack", "label": "too weak"},
+    {"source": "kl", "target": "stuck", "label": "too strong"},
+    {"source": "kl", "target": "upd", "label": "balanced"},
+    {"source": "upd", "target": "next"},
+    {"source": "next", "target": "pol"}
+  ]
+}
+```
+
+### Why DPO is just a classifier
+
+DPO removes the reward model: its loss directly raises the policy's logprob on chosen vs rejected, scaled by divergence from the reference. Runtime consequence — you only need the policy and a frozen reference in memory, and the dominant failure mode is *reference drift*: if SFT and the DPO reference disagree, the implicit reward is mis-anchored.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "pair", "label": "chosen / rejected pair", "shape": "circle"},
+    {"id": "pol", "label": "Policy logprobs", "shape": "rect"},
+    {"id": "ref", "label": "Frozen reference logprobs", "shape": "rect"},
+    {"id": "match", "label": "DPO reference == the SFT checkpoint?", "shape": "diamond"},
+    {"id": "drift", "label": "Reference drift: implicit reward mis-anchored", "shape": "stadium"},
+    {"id": "loss", "label": "Logistic loss on logprob margin", "shape": "rect"},
+    {"id": "beta", "label": "Beta scales divergence from reference", "shape": "rect"},
+    {"id": "norm", "label": "Margin within a sane range?", "shape": "diamond"},
+    {"id": "collapse", "label": "Degenerate: policy collapses off-distribution", "shape": "stadium"},
+    {"id": "upd", "label": "Stable policy update (no RM in memory)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "pair", "target": "pol"},
+    {"source": "pair", "target": "ref"},
+    {"source": "ref", "target": "match"},
+    {"source": "match", "target": "drift", "label": "no"},
+    {"source": "match", "target": "loss", "label": "yes"},
+    {"source": "pol", "target": "loss"},
+    {"source": "loss", "target": "beta"},
+    {"source": "beta", "target": "norm"},
+    {"source": "norm", "target": "upd", "label": "ok"},
+    {"source": "norm", "target": "collapse", "label": "too aggressive"}
+  ]
+}
+```
+
+### Reward hacking and length bias
+
+The single most common production pathology: the reward model rewards *longer* answers, so the policy learns to ramble. Mitigations (length normalization, ORPO's odds-ratio term, response-length penalties) are all runtime patches on the same failure. Detecting it requires generation-time analysis, which is where [inference optimization](/inference-optimization) instrumentation (token counts, latency per response) doubles as an alignment monitor.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "rm", "label": "Reward model", "shape": "circle"},
+    {"id": "bias", "label": "Longer = higher?", "shape": "diamond"},
+    {"id": "hack", "label": "Policy rambles\n(reward hack)", "shape": "rect"},
+    {"id": "fix", "label": "Length norm /\nORPO penalty", "shape": "rect"},
+    {"id": "ok", "label": "Calibrated reward", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "rm", "target": "bias"},
+    {"source": "bias", "target": "hack", "label": "yes (unfixed)"},
+    {"source": "bias", "target": "ok", "label": "no"},
+    {"source": "hack", "target": "fix"},
+    {"source": "fix", "target": "ok"}
+  ]
+}
+```
+
+### GRPO: dropping the value model
+
+GRPO (used for reasoning RL) removes the value head: instead of a learned baseline, it normalizes reward *within a group* of sampled completions for the same prompt. Runtime win: one fewer model to host and tune. Runtime cost: variance now depends on group size, so a too-small group makes the advantage estimate noisy.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "p", "label": "Prompt", "shape": "circle"},
+    {"id": "grp", "label": "Sample group\nof N", "shape": "rect"},
+    {"id": "score", "label": "Score each", "shape": "rect"},
+    {"id": "norm", "label": "Group-relative\nadvantage", "shape": "rect"},
+    {"id": "upd", "label": "Policy update", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "p", "target": "grp"},
+    {"source": "grp", "target": "score"},
+    {"source": "score", "target": "norm"},
+    {"source": "norm", "target": "upd"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

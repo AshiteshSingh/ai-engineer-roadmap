@@ -2,6 +2,32 @@
 
 The benchmarks we use to evaluate language models shape research direction, influence deployment decisions, and define what "good" means for AI systems. Yet benchmark design is fraught with subtle pitfalls: training data contamination can inflate scores silently, popular benchmarks saturate and lose discriminative power, and off-the-shelf evaluations rarely capture domain-specific requirements. This article examines the science and craft of benchmark design, from detecting contamination to building evaluations that remain meaningful over time.
 
+## Mental Model
+
+The mental model for benchmark design is **a measuring instrument that decays the moment it is published**. A benchmark is only useful while it is a *valid, uncontaminated proxy* for the capability you care about — and three forces erode that validity over time: contamination (the test leaks into training data), saturation (everyone scores ~100%, so it no longer discriminates), and Goodhart gaming (optimizing the metric stops improving the underlying ability). Designing a benchmark is therefore not "write hard questions"; it is engineering *validity that survives contact with optimization pressure*.
+
+That reframes the whole field: a benchmark number is a claim with a shelf life and an error bar, never a fact. Trusting one is the same mistake as trusting a single [human evaluation](/human-evaluation) rater without inter-rater reliability, and agentic systems need execution-grounded variants for the same reason — see [agent evaluation](/agent-evaluation). A benchmark that ignores demographic slices silently encodes the failures studied in [bias & fairness](/bias-fairness).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "cap", "label": "Target capability", "shape": "circle"},
+    {"id": "bench", "label": "Benchmark\n(proxy)", "shape": "rect"},
+    {"id": "decay", "label": "Validity erodes:\ncontam / saturate / game", "shape": "diamond"},
+    {"id": "trust", "label": "Trustworthy signal", "shape": "circle"},
+    {"id": "refresh", "label": "Rotate / harden /\nredesign", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "cap", "target": "bench"},
+    {"source": "bench", "target": "decay"},
+    {"source": "decay", "target": "trust", "label": "still valid"},
+    {"source": "decay", "target": "refresh", "label": "eroded"},
+    {"source": "refresh", "target": "bench"}
+  ]
+}
+```
+
 ## The Contamination Problem
 
 ### What Is Benchmark Contamination?
@@ -325,6 +351,109 @@ The reproducibility problem has real consequences. When a model's benchmark scor
 The field has made some progress through standardization efforts. The Open LLM Leaderboard uses a consistent evaluation harness, and papers increasingly report the exact evaluation framework and parameters used. But standardization is far from complete, and new models frequently introduce evaluation complications (different chat templates, different special tokens, different context windows) that existing frameworks must accommodate.
 
 For practitioners, the takeaway is clear: never trust a single benchmark number in isolation. When comparing models, ensure evaluations use identical frameworks, prompts, and sampling parameters. When this is not possible, focus on large performance gaps that are unlikely to be artifacts, and validate with your own domain-specific evaluations. Evaluation methodology is as much a part of the result as the model itself. For multi-modal models, these reproducibility concerns are compounded by additional variables in image preprocessing and visual grounding, as explored in [Article 49: Vision-Language Models](/vision-language-models).
+
+## Runtime Internals
+
+The decay model hides the concrete mechanisms that detect and resist each failure mode.
+
+### Contamination detection
+
+You cannot assume a clean test set; you must measure overlap. The runtime is a pipeline: n-gram overlap against training corpora (fast, misses paraphrase), embedding similarity (catches semantic leakage), and the canary/perplexity test — a contaminated model shows abnormally low perplexity on verbatim test items. No single check suffices; contamination detection is layered.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "item", "label": "Test item", "shape": "circle"},
+    {"id": "ng", "label": "n-gram overlap", "shape": "rect"},
+    {"id": "emb", "label": "Embedding sim", "shape": "rect"},
+    {"id": "ppl", "label": "Perplexity anomaly", "shape": "rect"},
+    {"id": "v", "label": "Contaminated?", "shape": "diamond"},
+    {"id": "drop", "label": "Exclude / flag", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "item", "target": "ng"},
+    {"source": "ng", "target": "emb"},
+    {"source": "emb", "target": "ppl"},
+    {"source": "ppl", "target": "v"},
+    {"source": "v", "target": "drop", "label": "yes"},
+    {"source": "v", "target": "item", "label": "no: keep"}
+  ]
+}
+```
+
+### Prompt-format sensitivity
+
+The same MMLU question scored with two prompt formats yields different accuracy — sometimes by several points. The runtime consequence: a benchmark result is only comparable if prompt template, few-shot count, answer parsing, and sampling params are pinned and reported. Unreported prompt formatting is the silent reason "reproductions" disagree.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Same question", "shape": "circle"},
+    {"id": "f1", "label": "Format A", "shape": "rect"},
+    {"id": "f2", "label": "Format B", "shape": "rect"},
+    {"id": "diff", "label": "Score differs", "shape": "diamond"},
+    {"id": "pin", "label": "Pin + report\ntemplate", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "f1"},
+    {"source": "q", "target": "f2"},
+    {"source": "f1", "target": "diff"},
+    {"source": "f2", "target": "diff"},
+    {"source": "diff", "target": "pin", "label": "not comparable"}
+  ]
+}
+```
+
+### Statistical significance over leaderboard deltas
+
+A 0.3-point gap on 200 items is noise, yet leaderboards rank by it. The runtime needs paired significance testing (same items, both models) and confidence intervals via bootstrap; report "indistinguishable" when the CI overlaps. Treating point estimates as a strict order is the most common benchmark misuse.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "two", "label": "Model A vs B", "shape": "circle"},
+    {"id": "paired", "label": "Paired on\nsame items", "shape": "rect"},
+    {"id": "boot", "label": "Bootstrap CI", "shape": "rect"},
+    {"id": "ov", "label": "CI overlap?", "shape": "diamond"},
+    {"id": "tie", "label": "Report tie", "shape": "stadium"},
+    {"id": "rank", "label": "Report ranking", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "two", "target": "paired"},
+    {"source": "paired", "target": "boot"},
+    {"source": "boot", "target": "ov"},
+    {"source": "ov", "target": "tie", "label": "yes"},
+    {"source": "ov", "target": "rank", "label": "no"}
+  ]
+}
+```
+
+### Contamination-resistant construction
+
+The durable design pattern: hold out a private split, generate fresh items on a schedule (dynamic/live benchmarks), and use canary strings to detect future leakage. A benchmark with a rotation policy stays valid; a static public one is on a countdown the day it ships — the same arms race as [red teaming](/red-teaming).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "pub", "label": "Public split\n(decoy)", "shape": "rect"},
+    {"id": "priv", "label": "Private holdout", "shape": "rect"},
+    {"id": "live", "label": "Scheduled fresh\nitems", "shape": "rect"},
+    {"id": "canary", "label": "Canary leak\ndetector", "shape": "diamond"},
+    {"id": "valid", "label": "Durable benchmark", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "pub", "target": "valid", "label": "low trust"},
+    {"source": "priv", "target": "valid"},
+    {"source": "live", "target": "valid"},
+    {"source": "canary", "target": "live", "label": "leak → rotate"},
+    {"source": "valid", "target": "canary"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

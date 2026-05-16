@@ -10,6 +10,35 @@ Understanding what happens inside neural networks -- why they produce specific o
 - Automated circuit discovery (ACDC, attribution patching) has reduced the time to identify responsible subgraphs from months to hours.
 - For production systems, focus on practical explainability: source highlighting in RAG, counterfactual explanations, and transparent confidence communication.
 
+## Mental Model
+
+The mental model for interpretability is **reverse-engineering a program you have the weights for but no source code**. A trained model is a compiled artifact; interpretability is decompilation at varying resolutions: behavioral (treat it as a black box, probe inputs→outputs), representational (what does an activation vector encode?), and mechanistic (which circuit of weights *computes* a specific behavior?). The central obstacle is **superposition** — the model packs more features than it has neurons, so a single neuron is polysemantic and "just look at the neuron" fails. Sparse autoencoders exist to *un-mix* that superposition into monosemantic features.
+
+So treat interpretability as a measurement instrument with a resolution/cost trade, not a single technique. Coarse, cheap methods (attention maps, attribution) are explanations you can ship; fine, expensive ones (SAEs, circuit discovery) are research-grade. Crucially, an explanation is a *claim about the model* and must be validated like any other — faithfulness is a [benchmark design](/benchmark-design) and [eval fundamentals](/eval-fundamentals) problem, not something to assume; and the features you find scale and shift with model size, an explicit [scaling laws](/scaling-laws) effect.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "model", "label": "Trained weights\n(compiled)", "shape": "circle"},
+    {"id": "res", "label": "Resolution?", "shape": "diamond"},
+    {"id": "beh", "label": "Behavioral\n(black-box probe)", "shape": "rect"},
+    {"id": "rep", "label": "Representational\n(SAE features)", "shape": "rect"},
+    {"id": "mech", "label": "Mechanistic\n(circuits)", "shape": "rect"},
+    {"id": "claim", "label": "Validated\nexplanation", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "model", "target": "res"},
+    {"source": "res", "target": "beh", "label": "cheap/shippable"},
+    {"source": "res", "target": "rep", "label": "un-mix superposition"},
+    {"source": "res", "target": "mech", "label": "research-grade"},
+    {"source": "beh", "target": "claim"},
+    {"source": "rep", "target": "claim"},
+    {"source": "mech", "target": "claim"}
+  ]
+}
+```
+
 ## The Interpretability Spectrum
 
 Interpretability and explainability are often used interchangeably, but they represent different goals. Interpretability seeks to understand the internal mechanisms of a model -- what computations it performs and why. Explainability seeks to provide human-understandable reasons for a model's outputs, without necessarily understanding the internal mechanism. A faithful explanation describes what the model actually does; a plausible explanation is one that humans find convincing, whether or not it is faithful.
@@ -691,6 +720,114 @@ Several open problems define the frontier of interpretability research.
 **Faithfulness verification** -- how do we know our interpretations are correct? -- lacks a general solution. Causal interventions (ablating features and observing behavior changes) provide some validation, but comprehensive verification remains elusive.
 
 **Interpretability for safety** is the ultimate goal: can we use interpretability to verify that models are safe before deployment? This requires not just understanding what features exist, but verifying the absence of dangerous capabilities -- a fundamentally harder problem.
+
+## Runtime Internals
+
+The decompilation model hides the mechanics that make interpretability actionable rather than anecdotal.
+
+### SAEs un-mix superposition
+
+A sparse autoencoder is trained to reconstruct activations through a wide, sparse hidden layer, so each hidden unit fires for one human-interpretable feature. The runtime knobs are the sparsity penalty (too high → dead features, too low → polysemantic again) and dictionary size. The output is a feature dictionary you can then steer with — but a feature is only "real" if intervening on it reliably changes behavior.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "act", "label": "Dense activation\n(polysemantic)", "shape": "circle"},
+    {"id": "enc", "label": "SAE encoder", "shape": "rect"},
+    {"id": "sparse", "label": "Sparse features\n(monosemantic)", "shape": "rect"},
+    {"id": "dec", "label": "Reconstruct", "shape": "rect"},
+    {"id": "val", "label": "Intervention\nchanges behavior?", "shape": "diamond"},
+    {"id": "feat", "label": "Validated feature", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "act", "target": "enc"},
+    {"source": "enc", "target": "sparse"},
+    {"source": "sparse", "target": "dec"},
+    {"source": "sparse", "target": "val"},
+    {"source": "val", "target": "feat", "label": "yes"},
+    {"source": "val", "target": "enc", "label": "no: retune sparsity"}
+  ]
+}
+```
+
+### Activation patching for causal claims
+
+Correlation (a neuron lights up) is not causation. The runtime test is activation patching: run a clean and a corrupted prompt, then copy one component's activation from clean→corrupted and measure the output change. Only components whose patch *moves the output* are causally part of the circuit. This is how mechanistic claims become falsifiable rather than story-telling.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "clean", "label": "Clean run", "shape": "circle"},
+    {"id": "corr", "label": "Corrupted run", "shape": "rect"},
+    {"id": "patch", "label": "Patch component\nclean→corrupt", "shape": "rect"},
+    {"id": "eff", "label": "Output moves?", "shape": "diamond"},
+    {"id": "causal", "label": "Causal component", "shape": "circle"},
+    {"id": "drop", "label": "Not in circuit", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "clean", "target": "patch"},
+    {"source": "corr", "target": "patch"},
+    {"source": "patch", "target": "eff"},
+    {"source": "eff", "target": "causal", "label": "yes"},
+    {"source": "eff", "target": "drop", "label": "no"}
+  ]
+}
+```
+
+### Activation steering at inference
+
+Once a feature direction is found, you can add/subtract it from the residual stream at inference to steer behavior (more "honesty", less "sycophancy") with no fine-tuning. The runtime risks: a steering vector that also degrades fluency, and dose sensitivity (too strong → gibberish). Steering must be A/B-measured for capability regression, the same dual-axis discipline as [agent evaluation](/agent-evaluation).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "res", "label": "Residual stream", "shape": "circle"},
+    {"id": "vec", "label": "+ α·feature\nvector", "shape": "rect"},
+    {"id": "gen", "label": "Generate", "shape": "rect"},
+    {"id": "chk", "label": "Behavior shifted,\nfluency intact?", "shape": "diamond"},
+    {"id": "use", "label": "Deploy steering", "shape": "circle"},
+    {"id": "tune", "label": "Adjust dose α", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "res", "target": "vec"},
+    {"source": "vec", "target": "gen"},
+    {"source": "gen", "target": "chk"},
+    {"source": "chk", "target": "use", "label": "yes"},
+    {"source": "chk", "target": "tune", "label": "no"},
+    {"source": "tune", "target": "vec"}
+  ]
+}
+```
+
+### Production explainability vs research interpretability
+
+Most products do not need circuits; they need *defensible* explanations: source highlighting in RAG, counterfactuals ("change X → answer flips"), and calibrated confidence. The runtime trade is faithfulness vs cost vs UX — a cheap attribution that is unfaithful is worse than none because it manufactures false trust. Which method to ship is a measured [benchmark design](/benchmark-design) decision on explanation faithfulness, not a default.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "need", "label": "Product needs\nexplanation", "shape": "circle"},
+    {"id": "kind", "label": "Stakes?", "shape": "diamond"},
+    {"id": "src", "label": "Source highlight\n+ counterfactual", "shape": "rect"},
+    {"id": "deep", "label": "SAE / circuit\n(research)", "shape": "rect"},
+    {"id": "faith", "label": "Faithfulness\nmeasured?", "shape": "diamond"},
+    {"id": "ship", "label": "Ship explanation", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "need", "target": "kind"},
+    {"source": "kind", "target": "src", "label": "product"},
+    {"source": "kind", "target": "deep", "label": "safety audit"},
+    {"source": "src", "target": "faith"},
+    {"source": "deep", "target": "faith"},
+    {"source": "faith", "target": "ship", "label": "yes"},
+    {"source": "faith", "target": "kind", "label": "no: reject"}
+  ]
+}
+```
 
 ## Key Takeaways
 

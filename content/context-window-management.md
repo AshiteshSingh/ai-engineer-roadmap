@@ -4,6 +4,34 @@ Every interaction with a large language model is bounded by a hard constraint: t
 
 Understanding context window management builds on several foundational topics. Tokenization mechanics are covered in depth in [Tokenization](/tokenization), the broader discipline of assembling context is explored in [Context Engineering](/context-engineering), and static instruction design is covered in [System Prompts](/system-prompts). This article focuses specifically on the engineering challenge of fitting the right information into a finite window and handling the cases where it does not fit.
 
+## Mental Model
+
+The mental model for context window management is **a fixed-size budget allocated across competing claimants, with an eviction policy for overflow** — exactly like memory management in an OS. The window is RAM; system prompt, tool schemas, retrieved context, conversation history, and the user message are processes each demanding space; and when demand exceeds capacity you must *evict* something by an explicit policy, not crash. The engineering is not "use a bigger model" — bigger windows shift the numbers but the allocation-and-eviction problem is identical at every size.
+
+Two consequences drive everything below. First, allocation must be *priority-ordered and fail-safe*: some regions (system prompt, tool schemas) must never be truncated; others (history, low-relevance chunks) are evictable. Second, "it fits" is not "it works" — the lost-in-the-middle effect means *position* within the budget matters, so management is about placement, not just size. This is the operational core of [context engineering](/context-engineering), it shares its compaction toolkit with [context compression](/context-compression), and once history exceeds any window it becomes a [memory architectures](/memory-architectures) problem.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "win", "label": "Fixed window\n(budget)", "shape": "circle"},
+    {"id": "alloc", "label": "Priority allocation", "shape": "diamond"},
+    {"id": "keep", "label": "Never truncate\n(sys + tools)", "shape": "rect"},
+    {"id": "eet", "label": "Evictable\n(history, low-rel)", "shape": "rect"},
+    {"id": "over", "label": "Overflow?", "shape": "diamond"},
+    {"id": "evict", "label": "Apply eviction\npolicy", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "win", "target": "alloc"},
+    {"source": "alloc", "target": "keep"},
+    {"source": "alloc", "target": "eet"},
+    {"source": "eet", "target": "over"},
+    {"source": "over", "target": "evict", "label": "yes"},
+    {"source": "over", "target": "win", "label": "no: fits"}
+  ]
+}
+```
+
 ## Token Counting Fundamentals
 
 ### Why Characters and Words Are Not Tokens
@@ -1676,6 +1704,109 @@ Alert on:
 **6. Over-compressing conversation history.** Aggressive summarization can destroy information the model needs to maintain coherence. The user said "use the same format as before" -- but "before" was summarized away. Keep enough recent turns verbatim to support back-references.
 
 **7. Not adapting to model differences.** The same text produces different token counts on different tokenizers. Moving from GPT-4 (cl100k_base) to GPT-4o (o200k_base) changes your token counts. Moving from OpenAI to Claude changes them further. Budget calculations must be model-aware.
+
+## Runtime Internals
+
+The OS-budget model hides the mechanics that make the difference between a robust window manager and silent truncation bugs.
+
+### Model-aware token accounting
+
+The same string is a different token count per tokenizer (cl100k vs o200k vs Claude's). The runtime must compute budgets with the *target model's* tokenizer, with a safety margin for response tokens and chat-template overhead. Estimating with the wrong tokenizer is the top cause of "works in dev, 400s in prod at the boundary".
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "text", "label": "Assembled prompt", "shape": "circle"},
+    {"id": "tok", "label": "Target tokenizer", "shape": "rect"},
+    {"id": "calc", "label": "count + reply\nmargin", "shape": "rect"},
+    {"id": "fit", "label": "≤ window?", "shape": "diamond"},
+    {"id": "send", "label": "Send", "shape": "circle"},
+    {"id": "trim", "label": "Trim by policy", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "text", "target": "tok"},
+    {"source": "tok", "target": "calc"},
+    {"source": "calc", "target": "fit"},
+    {"source": "fit", "target": "send", "label": "yes"},
+    {"source": "fit", "target": "trim", "label": "no"}
+  ]
+}
+```
+
+### Priority-ordered truncation
+
+Overflow handling is a policy, not `text[:N]`. The runtime applies an ordered ruleset: system prompt and tool schemas are inviolable; retrieved chunks drop lowest-relevance-first; conversation history evicts FIFO (or summarized); the user message is never silently cut. Truncating the wrong region produces answers that are confidently wrong because a constraint vanished.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "over", "label": "Over budget by N", "shape": "circle"},
+    {"id": "chunks", "label": "Drop low-rel\nchunks", "shape": "rect"},
+    {"id": "still", "label": "Still over?", "shape": "diamond"},
+    {"id": "hist", "label": "Evict oldest\nhistory", "shape": "rect"},
+    {"id": "ok", "label": "Within budget", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "over", "target": "chunks"},
+    {"source": "chunks", "target": "still"},
+    {"source": "still", "target": "hist", "label": "yes"},
+    {"source": "hist", "target": "still"},
+    {"source": "still", "target": "ok", "label": "no"}
+  ]
+}
+```
+
+### Lost-in-the-middle placement
+
+Models attend most strongly to the start and end of the window; evidence buried in the middle is under-used even when present. The runtime mitigations: re-rank so the most relevant context sits at the edges, and keep the count of injected chunks low. This is why "fits" ≠ "works" and why naive concatenation underperforms placement-aware assembly.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ranked", "label": "Ranked chunks", "shape": "circle"},
+    {"id": "place", "label": "Place by\nattention curve", "shape": "rect"},
+    {"id": "edges", "label": "Top relevance\nat start/end", "shape": "rect"},
+    {"id": "mid", "label": "Filler in middle", "shape": "rect"},
+    {"id": "ctx", "label": "Assembled window", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ranked", "target": "place"},
+    {"source": "place", "target": "edges"},
+    {"source": "place", "target": "mid"},
+    {"source": "edges", "target": "ctx"},
+    {"source": "mid", "target": "ctx"}
+  ]
+}
+```
+
+### Compaction over hard truncation
+
+When history must shrink, summarizing it preserves information that FIFO eviction destroys — at the cost of an extra LLM call and summary drift. The runtime decision is *when* to compact (threshold), *what* to compact (old turns, not recent), and validating the summary did not drop a binding constraint. This is the same compute/fidelity trade as [context compression](/context-compression), and it is on the request critical path so it interacts with [LLM serving](/llm-serving) latency budgets.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "hist", "label": "Long history", "shape": "circle"},
+    {"id": "thr", "label": "Over threshold?", "shape": "diamond"},
+    {"id": "sum", "label": "Summarize old\nturns", "shape": "rect"},
+    {"id": "chk", "label": "Constraint kept?", "shape": "diamond"},
+    {"id": "use", "label": "Compact context", "shape": "circle"},
+    {"id": "keep", "label": "Keep verbatim", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "hist", "target": "thr"},
+    {"source": "thr", "target": "sum", "label": "yes"},
+    {"source": "thr", "target": "use", "label": "no"},
+    {"source": "sum", "target": "chk"},
+    {"source": "chk", "target": "use", "label": "yes"},
+    {"source": "chk", "target": "keep", "label": "no: risky"}
+  ]
+}
+```
 
 ## Connections to Other Topics
 

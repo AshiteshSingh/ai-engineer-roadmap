@@ -2,6 +2,39 @@
 
 Standard RAG pipelines follow a linear retrieve-then-generate pattern that works well for single-hop factual questions but breaks down for complex information needs requiring synthesis across multiple documents, reasoning over relationships, or dynamic retrieval strategies. This article examines the frontier of RAG research and practice -- agentic retrieval that makes iterative decisions, graph-structured knowledge retrieval, and self-correcting systems that detect and recover from retrieval failures.
 
+## Mental Model
+
+The mental model for advanced RAG is **turning a one-shot lookup into a control loop**. Naive RAG is a straight line: embed query → retrieve top-k → stuff into prompt → generate. Every advanced pattern in this article adds *feedback* somewhere on that line: agentic RAG lets the model decide *whether and what* to retrieve again; CRAG/Self-RAG grade the retrieved evidence and *recover* when it is weak; GraphRAG changes the retrieval *substrate* from flat chunks to a traversable structure; multi-hop iterates retrieval *driven by intermediate answers*. The unifying question is always the same: *where do you insert a decision point, and what signal drives it?*
+
+This reframes RAG as an orchestration problem, not an embedding problem. The retrieval substrate connects directly to [retrieval strategies](/retrieval-strategies) and the chunking choices in [chunking strategies](/chunking-strategies); once retrieval becomes a queryable, ranked service it is structurally the same problem as [search & recommendations](/search-recommendations). The skill is knowing which loop a given failure mode actually needs — most teams reach for GraphRAG when a reranker would have fixed it.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "embed", "label": "Embed + retrieve top-k", "shape": "rect"},
+    {"id": "stuff", "label": "Stuff prompt", "shape": "rect"},
+    {"id": "gen", "label": "Generate", "shape": "rect"},
+    {"id": "ans", "label": "Answer", "shape": "circle"},
+    {"id": "p_agentic", "label": "Agentic: whether/what to re-retrieve", "shape": "diamond"},
+    {"id": "p_grade", "label": "CRAG/Self-RAG: grade + recover", "shape": "diamond"},
+    {"id": "p_hop", "label": "Multi-hop: answer-driven iteration", "shape": "diamond"},
+    {"id": "p_sub", "label": "GraphRAG: swap retrieval substrate", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "q", "target": "embed"},
+    {"source": "embed", "target": "stuff"},
+    {"source": "stuff", "target": "gen"},
+    {"source": "gen", "target": "ans"},
+    {"source": "p_agentic", "target": "embed", "label": "decision point 1"},
+    {"source": "p_grade", "target": "stuff", "label": "decision point 2"},
+    {"source": "p_hop", "target": "q", "label": "feeds next sub-query"},
+    {"source": "p_sub", "target": "embed", "label": "replaces flat top-k"}
+  ]
+}
+```
+
 ## The Limitations of Naive RAG
 
 Before examining advanced patterns, it is worth understanding precisely where simple retrieve-then-generate fails.
@@ -728,6 +761,123 @@ The choice depends on what you are optimizing for:
 - **Simple pipelines** (retrieve-then-generate with minimal routing): Any framework works, or no framework at all -- a few dozen lines of Python with direct API calls is often sufficient
 
 In practice, many production systems combine elements: DSPy for prompt optimization during development, LangGraph or LlamaIndex for runtime orchestration, and custom code for domain-specific logic that no framework handles well.
+
+## Runtime Internals
+
+The "add a loop" model hides the mechanics that decide whether advanced RAG is an improvement or just added latency and cost.
+
+### The agentic retrieval loop's stopping problem
+
+Agentic RAG lets the model retrieve repeatedly — which means it can also loop forever or stop too early. The runtime must bound iterations, detect "no new information" (retrieved chunks overlap prior ones), and have a forced-answer fallback. An unbounded agentic loop is the most common way advanced RAG blows its latency and token budget.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Sub-query", "shape": "circle"},
+    {"id": "ret", "label": "Retrieve", "shape": "rect"},
+    {"id": "new", "label": "New info?", "shape": "diamond"},
+    {"id": "cap", "label": "Iter < max?", "shape": "diamond"},
+    {"id": "ans", "label": "Answer", "shape": "circle"},
+    {"id": "force", "label": "Forced answer", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "q", "target": "ret"},
+    {"source": "ret", "target": "new"},
+    {"source": "new", "target": "ans", "label": "enough"},
+    {"source": "new", "target": "cap", "label": "need more"},
+    {"source": "cap", "target": "q", "label": "yes"},
+    {"source": "cap", "target": "force", "label": "no: stop"}
+  ]
+}
+```
+
+### Corrective RAG's grader as a gate
+
+CRAG inserts a retrieval grader: score each retrieved doc as correct / ambiguous / wrong, then act (use as-is, refine the query, or fall back to web search). The runtime risk is grader calibration — a lenient grader passes garbage; a strict one triggers expensive fallbacks constantly. The grader threshold is the single most important CRAG knob.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "docs", "label": "Retrieved docs", "shape": "circle"},
+    {"id": "grade", "label": "Grader", "shape": "rect"},
+    {"id": "v", "label": "Verdict", "shape": "diamond"},
+    {"id": "use", "label": "Use", "shape": "rect"},
+    {"id": "refine", "label": "Refine query", "shape": "rect"},
+    {"id": "web", "label": "Web fallback", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "docs", "target": "grade"},
+    {"source": "grade", "target": "v"},
+    {"source": "v", "target": "use", "label": "correct"},
+    {"source": "v", "target": "refine", "label": "ambiguous"},
+    {"source": "v", "target": "web", "label": "wrong"}
+  ]
+}
+```
+
+### Graph traversal cost
+
+GraphRAG replaces top-k similarity with graph queries (community summaries, multi-hop traversal). The runtime cost shifts from one vector search to a traversal whose cost grows with hop depth and node degree. Unbounded traversal on a dense graph is a latency cliff; production GraphRAG caps hop depth and pre-computes community summaries offline.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "offline", "label": "Offline: community detection + summaries", "shape": "stadium"},
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "seed", "label": "Seed = entity-linked nodes", "shape": "rect"},
+    {"id": "depth", "label": "hop_depth < cap?", "shape": "diamond"},
+    {"id": "fanout", "label": "node_degree < fan_cap?", "shape": "diamond"},
+    {"id": "exp", "label": "Expand neighbors", "shape": "rect"},
+    {"id": "merge", "label": "Merge with precomputed summary", "shape": "rect"},
+    {"id": "ctx", "label": "Bounded context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "offline", "target": "merge", "label": "read-only lookup"},
+    {"source": "q", "target": "seed"},
+    {"source": "seed", "target": "depth"},
+    {"source": "depth", "target": "fanout", "label": "yes"},
+    {"source": "fanout", "target": "exp", "label": "yes"},
+    {"source": "exp", "target": "depth", "label": "++hop_depth"},
+    {"source": "fanout", "target": "merge", "label": "no: prune branch"},
+    {"source": "depth", "target": "merge", "label": "no: stop"},
+    {"source": "merge", "target": "ctx"}
+  ]
+}
+```
+
+### Multi-hop decomposition and error compounding
+
+Multi-hop RAG decomposes a question into a chain of sub-queries, each feeding the next. The runtime danger is *error compounding*: a wrong hop-1 answer poisons every subsequent hop. Robust implementations verify each hop's evidence before proceeding and can backtrack, rather than blindly chaining.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "cq", "label": "Complex question", "shape": "circle"},
+    {"id": "decomp", "label": "Decompose into hop chain", "shape": "rect"},
+    {"id": "h1", "label": "Hop 1: retrieve + answer", "shape": "rect"},
+    {"id": "v1", "label": "Hop 1 evidence verified?", "shape": "diamond"},
+    {"id": "h2", "label": "Hop 2: conditioned on h1", "shape": "rect"},
+    {"id": "v2", "label": "Hop 2 evidence verified?", "shape": "diamond"},
+    {"id": "h3", "label": "Hop 3: conditioned on h2", "shape": "rect"},
+    {"id": "synth", "label": "Synthesize final answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "cq", "target": "decomp"},
+    {"source": "decomp", "target": "h1"},
+    {"source": "h1", "target": "v1"},
+    {"source": "v1", "target": "h1", "label": "no: re-retrieve hop"},
+    {"source": "v1", "target": "h2", "label": "yes"},
+    {"source": "h2", "target": "v2"},
+    {"source": "v2", "target": "decomp", "label": "no: backtrack chain"},
+    {"source": "v2", "target": "h3", "label": "yes"},
+    {"source": "h3", "target": "synth"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

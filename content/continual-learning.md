@@ -10,6 +10,43 @@ Catastrophic forgetting -- the tendency of neural networks to abruptly lose prev
 - **LoRA adapters** eliminate forgetting of base model knowledge by design -- the base is never modified -- at the cost of single-domain inference per adapter.
 - **Model merging** (TIES, DARE, SLERP) offers an alternative: train specialists independently, then combine their weight deltas without any sequential fine-tuning.
 
+## Mental Model
+
+The mental model for continual learning is **the stability–plasticity dilemma**: a network must stay *plastic* enough to absorb new knowledge yet *stable* enough not to overwrite the old. Gradient descent on new data has no reason to preserve weights that mattered for previous tasks, so naive sequential fine-tuning catastrophically forgets. Every method here is a different answer to "how do I add a constraint that protects what already works?" — regularize the important weights (EWC), rehearse old data (replay), grow new capacity (adapters/progressive nets), or skip sequential training entirely (model merging).
+
+The decisive reframing: the cheapest way to "not forget" is often to **not modify the weights at all**. Externalizing new knowledge into retrieval or an adapter sidesteps forgetting by construction — which is exactly why continual learning blurs into [agent memory](/agent-memory) and [memory architectures](/memory-architectures): a frozen base model plus an external store *is* a continual-learning system with zero forgetting. When you must touch weights, understanding *which* weights encode *what* is an [interpretability](/interpretability) problem.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "new", "label": "New task data", "shape": "circle"},
+    {"id": "dilemma", "label": "Stability vs plasticity", "shape": "diamond"},
+    {"id": "touch", "label": "Must modify base weights?", "shape": "diamond"},
+    {"id": "reg", "label": "Regularize important weights (EWC)", "shape": "rect"},
+    {"id": "replay", "label": "Rehearse old data (replay)", "shape": "rect"},
+    {"id": "grow", "label": "Grow capacity (adapters / progressive)", "shape": "rect"},
+    {"id": "ext", "label": "Externalize: frozen base + store", "shape": "stadium"},
+    {"id": "merge", "label": "Skip sequential: model merging", "shape": "rect"},
+    {"id": "keep", "label": "Old knowledge preserved", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "new", "target": "dilemma"},
+    {"source": "dilemma", "target": "touch"},
+    {"source": "touch", "target": "reg", "label": "yes: constrain"},
+    {"source": "touch", "target": "replay", "label": "yes: rehearse"},
+    {"source": "touch", "target": "grow", "label": "yes: add capacity"},
+    {"source": "touch", "target": "ext", "label": "no: zero forgetting by construction"},
+    {"source": "dilemma", "target": "merge", "label": "train independently"},
+    {"source": "reg", "target": "keep"},
+    {"source": "replay", "target": "keep"},
+    {"source": "grow", "target": "keep"},
+    {"source": "ext", "target": "keep"},
+    {"source": "merge", "target": "keep"}
+  ]
+}
+```
+
 ## Why Neural Networks Forget
 
 ### The Stability-Plasticity Dilemma
@@ -509,6 +546,132 @@ Recent work on continual instruction tuning explores how to add new instruction-
 - Mixing 5-10% of data from previous instruction sets during new training significantly reduces forgetting
 - Task-specific tokens or system prompts can help the model maintain distinct behavioral modes
 - Evaluation should cover not just accuracy but also formatting, tone, and refusal behavior
+
+## Runtime Internals
+
+The stability–plasticity model hides the mechanics that decide whether a method actually retains knowledge at acceptable cost.
+
+### EWC: the Fisher-weighted anchor
+
+Elastic Weight Consolidation adds a penalty pulling each weight back toward its old value, scaled by that weight's importance (Fisher information) for prior tasks. The runtime cost is storing a Fisher diagonal and old weights per protected task; the failure mode is a mis-estimated Fisher (too small a sample) that protects the wrong weights and forgets anyway.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "old", "label": "Task A weights", "shape": "circle"},
+    {"id": "sample", "label": "Fisher sample size adequate?", "shape": "diamond"},
+    {"id": "misfisher", "label": "Mis-estimated Fisher: protects wrong weights", "shape": "stadium"},
+    {"id": "fisher", "label": "Fisher diagonal = per-weight importance", "shape": "rect"},
+    {"id": "penalty", "label": "Quadratic anchor penalty scaled by Fisher", "shape": "rect"},
+    {"id": "train", "label": "Train on B with penalty", "shape": "rect"},
+    {"id": "ok", "label": "A retained at acceptable B cost?", "shape": "diamond"},
+    {"id": "both", "label": "A + B both work", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "old", "target": "sample"},
+    {"source": "sample", "target": "misfisher", "label": "too small"},
+    {"source": "sample", "target": "fisher", "label": "adequate"},
+    {"source": "fisher", "target": "penalty"},
+    {"source": "penalty", "target": "train"},
+    {"source": "train", "target": "ok"},
+    {"source": "ok", "target": "both", "label": "yes"},
+    {"source": "ok", "target": "fisher", "label": "no: re-estimate"}
+  ]
+}
+```
+
+### Replay buffers and the privacy/storage tax
+
+Replay interleaves a sample of old data into new training — the most reliable anti-forgetting method, but it requires *keeping old data*, which is often the exact thing you cannot store (privacy, volume). Generative/pseudo-replay substitutes synthetic samples, trading fidelity for the ability to forget the raw data while retaining the skill.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "new", "label": "New batch", "shape": "circle"},
+    {"id": "store", "label": "Old raw data storable? (privacy / volume)", "shape": "diamond"},
+    {"id": "real", "label": "Interleave a real-data sample", "shape": "rect"},
+    {"id": "gen", "label": "Train a generator for pseudo-replay", "shape": "rect"},
+    {"id": "fidelity", "label": "Synthetic fidelity sufficient?", "shape": "diamond"},
+    {"id": "degrade", "label": "Low-fidelity replay forgets anyway", "shape": "stadium"},
+    {"id": "step", "label": "Mixed training step (most reliable anti-forgetting)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "new", "target": "store"},
+    {"source": "store", "target": "real", "label": "yes"},
+    {"source": "store", "target": "gen", "label": "no: cannot retain raw"},
+    {"source": "real", "target": "step"},
+    {"source": "gen", "target": "fidelity"},
+    {"source": "fidelity", "target": "step", "label": "ok"},
+    {"source": "fidelity", "target": "degrade", "label": "poor"}
+  ]
+}
+```
+
+### Adapters: forgetting-free by isolation
+
+Per-domain adapters (LoRA) freeze the base and add small trainable deltas. Forgetting is *structurally impossible* — the base is untouched and you load the right adapter at inference. The runtime cost moves to routing (which adapter for this request?) and memory (hosting many adapters), which is the same external-knowledge trade as [agent memory](/agent-memory).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "base", "label": "Frozen base (never updated)", "shape": "circle"},
+    {"id": "med", "label": "Medical LoRA delta", "shape": "rect"},
+    {"id": "legal", "label": "Legal LoRA delta", "shape": "rect"},
+    {"id": "fin", "label": "Finance LoRA delta", "shape": "rect"},
+    {"id": "route", "label": "Route: which adapter for this request?", "shape": "diamond"},
+    {"id": "host", "label": "Adapter in hot memory?", "shape": "diamond"},
+    {"id": "mis", "label": "Mis-route: wrong-domain answer", "shape": "stadium"},
+    {"id": "out", "label": "Domain answer (forgetting structurally impossible)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "base", "target": "route"},
+    {"source": "route", "target": "med", "label": "medical"},
+    {"source": "route", "target": "legal", "label": "legal"},
+    {"source": "route", "target": "fin", "label": "finance"},
+    {"source": "route", "target": "mis", "label": "ambiguous"},
+    {"source": "med", "target": "host"},
+    {"source": "legal", "target": "host"},
+    {"source": "fin", "target": "host"},
+    {"source": "host", "target": "out", "label": "loaded"},
+    {"source": "host", "target": "mis", "label": "cold miss"}
+  ]
+}
+```
+
+### Model merging instead of sequential training
+
+TIES/DARE/SLERP train specialists independently from a shared base, then combine weight *deltas* — no sequential order, so no order-dependent forgetting. The runtime concern is delta interference: conflicting task deltas cancel, so merging needs trimming/sign-resolution and a post-merge eval on every constituent task before shipping.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "base", "label": "Shared base", "shape": "circle"},
+    {"id": "sa", "label": "Specialist A delta (trained independently)", "shape": "rect"},
+    {"id": "sb", "label": "Specialist B delta (trained independently)", "shape": "rect"},
+    {"id": "interf", "label": "Conflicting deltas interfere?", "shape": "diamond"},
+    {"id": "trim", "label": "TIES / DARE: trim + sign-resolve", "shape": "rect"},
+    {"id": "merge", "label": "Merge deltas (order-independent)", "shape": "rect"},
+    {"id": "eval", "label": "Every constituent task still passes?", "shape": "diamond"},
+    {"id": "ship", "label": "Merged model", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "base", "target": "sa"},
+    {"source": "base", "target": "sb"},
+    {"source": "sa", "target": "interf"},
+    {"source": "sb", "target": "interf"},
+    {"source": "interf", "target": "trim", "label": "yes: resolve"},
+    {"source": "interf", "target": "merge", "label": "no: orthogonal"},
+    {"source": "trim", "target": "merge"},
+    {"source": "merge", "target": "eval"},
+    {"source": "eval", "target": "ship", "label": "all pass"},
+    {"source": "eval", "target": "trim", "label": "regression: re-resolve"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

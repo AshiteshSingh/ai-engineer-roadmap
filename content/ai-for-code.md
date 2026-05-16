@@ -2,6 +2,39 @@
 
 Code-specialized language models have evolved from academic curiosities to indispensable engineering tools, fundamentally altering how software is written, reviewed, and maintained. From GitHub Copilot's inline completions to SWE-bench-solving autonomous agents, AI for code represents one of the highest-impact applications of large language models. This article examines the training methodologies, architectural decisions, and production patterns that define the current state of code AI.
 
+## Mental Model
+
+The mental model for AI-for-code is **the model proposes, the toolchain disposes**. Unlike prose, code has a free, deterministic oracle: it compiles or it doesn't, tests pass or they don't, the type-checker is right. So every effective code-AI system is the LLM wrapped in a verification loop — generate, run the oracle, feed failures back, repeat. The capability ladder (completion → review → test-driven synthesis → autonomous issue-solving) is just *how much of that loop the system closes by itself*.
+
+This reframes the engineering: the differentiator is rarely the base model, it is the **context fed in** (relevant repo files, types, failing test) and the **oracle wired up** (sandboxed run, CI). That is why code-AI quality is fundamentally a [benchmark design](/benchmark-design) problem — SWE-bench-style execution gating — and why preference-tuning code models on *execution feedback* connects directly to [RLHF & preference optimization](/rlhf-preference). An autonomous coding agent is this loop with planning and memory, evaluated like any other [agent evaluation](/agent-evaluation) target.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ctx", "label": "Context: repo files + types + failing test", "shape": "circle"},
+    {"id": "gen", "label": "Model proposes code / diff", "shape": "rect"},
+    {"id": "oracle", "label": "Deterministic oracle: compile + types + tests", "shape": "diamond"},
+    {"id": "rung", "label": "How much of the loop is auto-closed?", "shape": "diamond"},
+    {"id": "manual", "label": "Completion: human closes loop", "shape": "rect"},
+    {"id": "auto", "label": "Autonomous: agent closes loop", "shape": "rect"},
+    {"id": "feed", "label": "Feed failures back", "shape": "stadium"},
+    {"id": "done", "label": "Accepted diff", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ctx", "target": "gen"},
+    {"source": "gen", "target": "oracle"},
+    {"source": "oracle", "target": "feed", "label": "fail"},
+    {"source": "feed", "target": "rung"},
+    {"source": "rung", "target": "manual", "label": "low rung"},
+    {"source": "rung", "target": "auto", "label": "high rung"},
+    {"source": "manual", "target": "gen"},
+    {"source": "auto", "target": "gen"},
+    {"source": "oracle", "target": "done", "label": "pass"}
+  ]
+}
+```
+
 ## Training Code LLMs
 
 ### Data Collection and Processing
@@ -706,6 +739,122 @@ The combination of code comprehension and documentation generation has a direct 
 - **Guided task completion**: For well-scoped onboarding tasks, an AI agent can walk the developer through the relevant files, explain the existing patterns, and suggest where to make changes
 
 This capability is closely related to the code agent architectures discussed in [Article 29: Code Generation Agents](/code-agents), where agents must build an understanding of a repository before making changes. The same comprehension mechanisms that enable an agent to solve a GitHub issue also enable a developer to understand unfamiliar code.
+
+## Runtime Internals
+
+The propose-and-verify model hides the mechanics that decide whether a code assistant is fast and correct or slow and wrong.
+
+### Fill-in-the-middle, not left-to-right
+
+Code completion is rarely "continue from the end" — the cursor is *inside* a file with code after it. Code models are trained with a fill-in-the-middle objective and served with prefix/suffix tokens so the completion respects both sides. Treating it as plain left-to-right generation produces completions that ignore the trailing context (wrong brace, duplicate function).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "cur", "label": "Cursor inside file (code after it)", "shape": "circle"},
+    {"id": "split", "label": "Split into prefix + suffix", "shape": "rect"},
+    {"id": "mode", "label": "FIM-trained or plain LM?", "shape": "diamond"},
+    {"id": "fim", "label": "Prefix/suffix sentinel tokens", "shape": "rect"},
+    {"id": "l2r", "label": "Left-to-right ignores suffix: wrong brace / dup fn", "shape": "stadium"},
+    {"id": "mid", "label": "Generate middle respecting both sides", "shape": "rect"},
+    {"id": "ins", "label": "Insert at cursor", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "cur", "target": "split"},
+    {"source": "split", "target": "mode"},
+    {"source": "mode", "target": "fim", "label": "FIM"},
+    {"source": "mode", "target": "l2r", "label": "plain LM"},
+    {"source": "fim", "target": "mid"},
+    {"source": "mid", "target": "ins"}
+  ]
+}
+```
+
+### The completion latency budget
+
+Inline completion competes with the developer's typing — useful only under ~few-hundred ms. The runtime tactics: a small fast model for completion (big model only for chat/agents), aggressive cancellation (every keystroke invalidates the in-flight request), and prefix caching of the file context. A "smarter but slower" completion model is often a worse product.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "key", "label": "Keystroke", "shape": "circle"},
+    {"id": "cancel", "label": "Cancel in-flight request", "shape": "rect"},
+    {"id": "debounce", "label": "Still typing?", "shape": "diamond"},
+    {"id": "cache", "label": "Prefix-cache file context", "shape": "rect"},
+    {"id": "route", "label": "Completion or chat/agent?", "shape": "diamond"},
+    {"id": "fast", "label": "Small fast model", "shape": "rect"},
+    {"id": "big", "label": "Big model (chat/agent only)", "shape": "rect"},
+    {"id": "ghost", "label": "Ghost text under ~200ms", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "key", "target": "cancel"},
+    {"source": "cancel", "target": "debounce"},
+    {"source": "debounce", "target": "key", "label": "yes: wait"},
+    {"source": "debounce", "target": "cache", "label": "settled"},
+    {"source": "cache", "target": "route"},
+    {"source": "route", "target": "fast", "label": "completion"},
+    {"source": "route", "target": "big", "label": "chat/agent"},
+    {"source": "fast", "target": "ghost"}
+  ]
+}
+```
+
+### Repo-level context retrieval
+
+A model's window cannot hold a large repo, so the system retrieves: relevant files via embeddings, the dependency/symbol graph, and the failing test. Retrieval precision dominates output quality — pulling the wrong module makes the model confidently edit the wrong place. This is RAG specialized to code structure, and getting it wrong is the top cause of plausible-but-incorrect diffs.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "task", "label": "Edit request", "shape": "circle"},
+    {"id": "emb", "label": "Embed + symbol\ngraph search", "shape": "rect"},
+    {"id": "rank", "label": "Rank files", "shape": "rect"},
+    {"id": "fit", "label": "Fits window?", "shape": "diamond"},
+    {"id": "ctx", "label": "Code context", "shape": "circle"},
+    {"id": "trim", "label": "Trim / summarize", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "task", "target": "emb"},
+    {"source": "emb", "target": "rank"},
+    {"source": "rank", "target": "fit"},
+    {"source": "fit", "target": "ctx", "label": "yes"},
+    {"source": "fit", "target": "trim", "label": "no"},
+    {"source": "trim", "target": "ctx"}
+  ]
+}
+```
+
+### Execution-gated acceptance
+
+For agentic code changes the oracle is mandatory: apply the diff in a sandbox, run the build and test suite, and only surface the change if it passes (or iterate on failure). Skipping the sandbox turns a helpful agent into an automated way to merge broken code; this gate is the code-specific instance of the [agent evaluation](/agent-evaluation) outcome metric.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "diff", "label": "Agent-proposed diff", "shape": "circle"},
+    {"id": "skip", "label": "Sandbox skipped?", "shape": "diamond"},
+    {"id": "broken", "label": "Automated merge of broken code", "shape": "stadium"},
+    {"id": "box", "label": "Apply diff in sandbox", "shape": "rect"},
+    {"id": "suite", "label": "Build + full test suite pass?", "shape": "diamond"},
+    {"id": "cap", "label": "Iteration budget left?", "shape": "diamond"},
+    {"id": "pr", "label": "Surface as PR", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "diff", "target": "skip"},
+    {"source": "skip", "target": "broken", "label": "yes: anti-pattern"},
+    {"source": "skip", "target": "box", "label": "no"},
+    {"source": "box", "target": "suite"},
+    {"source": "suite", "target": "pr", "label": "pass"},
+    {"source": "suite", "target": "cap", "label": "fail"},
+    {"source": "cap", "target": "diff", "label": "yes: feed errors back"},
+    {"source": "cap", "target": "broken", "label": "no: give up"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

@@ -2,6 +2,31 @@
 
 Vector databases have evolved from niche academic tools into critical infrastructure for AI applications, serving as the backbone for retrieval-augmented generation, semantic search, and recommendation systems. This article provides a deep technical examination of approximate nearest neighbor algorithms, production database architectures, and the operational patterns that determine success or failure when deploying vector search at scale. It builds on the embedding representations covered in [Article 13: Embedding Models](/embedding-models) and connects directly to the chunking decisions discussed in [Article 15: Chunking Strategies](/chunking-strategies) -- how you split your documents determines the size, number, and quality of vectors your database must index and search.
 
+## Mental Model
+
+The mental model for a vector database is **trade exactness for speed, on purpose, and make that trade tunable**. Exact nearest-neighbor over millions of high-dimensional vectors is O(N) per query — unusable at scale. So every vector DB is fundamentally an *approximate* nearest-neighbor (ANN) index that accepts "almost the right neighbors" in exchange for sub-linear query time, with a knob (HNSW `ef`, IVF `nprobe`) that slides between recall and latency. A vector database is not "a database with embeddings"; it is an ANN index with durability, metadata filtering, and operations bolted on.
+
+That reframes every design decision as "where on the recall/latency/cost surface am I, and what moves me?". Index choice (HNSW vs IVF-PQ) sets the baseline trade; quantization buys memory at a recall cost; metadata filtering interacts with the graph traversal in non-obvious ways. It is the storage layer beneath RAG and [search & recommendations](/search-recommendations); the vectors it stores come from [embedding models](/embedding-models); and how documents were split via [chunking strategies](/chunking-strategies) determines the number and quality of what it must index.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "exact", "label": "Exact kNN\nO(N) — too slow", "shape": "circle"},
+    {"id": "ann", "label": "ANN index\n(HNSW/IVF)", "shape": "rect"},
+    {"id": "knob", "label": "Recall vs latency\nknob", "shape": "diamond"},
+    {"id": "fast", "label": "Fast approx\nneighbors", "shape": "rect"},
+    {"id": "ops", "label": "+ durability,\nfilter, scale", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "exact", "target": "ann", "label": "approximate"},
+    {"source": "ann", "target": "knob"},
+    {"source": "knob", "target": "fast", "label": "tune ef/nprobe"},
+    {"source": "fast", "target": "ops"}
+  ]
+}
+```
+
 ## The Nearest Neighbor Problem
 
 At its core, a vector database solves the nearest neighbor problem: given a query vector q and a collection of N vectors, find the k vectors most similar to q. Exact nearest neighbor search (brute-force) computes similarity between the query and every vector in the collection -- O(N*d) for N vectors of dimension d. This becomes prohibitive at scale: scanning 100 million 768-dimensional vectors requires ~300 billion floating-point operations per query.
@@ -668,6 +693,104 @@ Practical implementations use a two-stage approach:
 Dedicated ColBERT storage engines like **RAGatouille** (wrapping ColBERTv2) and **Vespa's native ColBERT support** handle the multi-vector complexity internally. Among general-purpose vector databases, **Milvus** supports multi-vector fields with per-document token-level storage and retrieval. **Qdrant** can store multi-vectors via its multi-vector feature, enabling late-interaction patterns without external tooling.
 
 For most applications, the practical recommendation is to evaluate whether the recall improvement from multi-vector representations justifies the storage and complexity cost. In domains with precise terminology requirements (legal, medical, technical documentation), the token-level matching often provides meaningful gains over single-vector search. For general-purpose semantic search, a single high-quality embedding with hybrid BM25 retrieval (detailed in [Article 16: Retrieval Strategies](/retrieval-strategies)) typically provides a better complexity-to-quality ratio.
+
+## Runtime Internals
+
+The "tunable approximate index" model hides the mechanics that decide production recall, latency, and cost.
+
+### HNSW: a navigable small-world graph
+
+HNSW builds a layered proximity graph; search greedily descends from a sparse top layer to dense lower layers, keeping a candidate list of size `ef`. Bigger `ef` → more of the graph explored → higher recall, higher latency. Build-time `M` (edges per node) sets the memory/quality floor. The runtime lesson: recall is a *search-time* dial (`ef`) on top of a *build-time* structure you cannot cheaply change later.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Query vector", "shape": "circle"},
+    {"id": "top", "label": "Top sparse layer", "shape": "rect"},
+    {"id": "desc", "label": "Greedy descend\n(beam = ef)", "shape": "rect"},
+    {"id": "ef", "label": "ef large enough?", "shape": "diamond"},
+    {"id": "knn", "label": "Approx top-k", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "top"},
+    {"source": "top", "target": "desc"},
+    {"source": "desc", "target": "ef"},
+    {"source": "ef", "target": "desc", "label": "no: widen"},
+    {"source": "ef", "target": "knn", "label": "yes"}
+  ]
+}
+```
+
+### IVF + PQ: cluster then compress
+
+IVF partitions vectors into clusters; a query probes only `nprobe` nearest clusters (sub-linear). Product Quantization compresses each vector into a few bytes so the index fits in RAM. The trade: PQ introduces quantization error, so results are re-scored against full vectors (re-ranking). `nprobe` is the recall/latency knob; PQ bits are the memory/recall knob.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "probe", "label": "Probe nprobe\nclusters", "shape": "rect"},
+    {"id": "pq", "label": "PQ-approx scan", "shape": "rect"},
+    {"id": "re", "label": "Re-rank vs\nfull vectors", "shape": "rect"},
+    {"id": "out", "label": "Top-k", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "probe"},
+    {"source": "probe", "target": "pq"},
+    {"source": "pq", "target": "re"},
+    {"source": "re", "target": "out"}
+  ]
+}
+```
+
+### Filtered search: pre- vs post-filter
+
+Combining a metadata filter with vector search has a trap. Post-filtering (search then drop non-matching) can return *zero* results if the top-k all fail the filter. Pre-filtering (restrict the candidate set first) is correct but can wreck HNSW graph connectivity. Production engines do filtering *during* traversal — the runtime detail that determines whether "find docs from 2024 similar to X" actually works.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Query + filter", "shape": "circle"},
+    {"id": "mode", "label": "Filter strategy?", "shape": "diamond"},
+    {"id": "post", "label": "Post-filter\n(may return 0)", "shape": "rect"},
+    {"id": "during", "label": "Filter during\ntraversal", "shape": "rect"},
+    {"id": "res", "label": "Correct top-k", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "mode"},
+    {"source": "mode", "target": "post", "label": "naive"},
+    {"source": "mode", "target": "during", "label": "production"},
+    {"source": "post", "target": "res", "label": "risky"},
+    {"source": "during", "target": "res"}
+  ]
+}
+```
+
+### Re-embedding migrations and freshness
+
+A vector index is bound to one embedding model + chunking config; changing either invalidates every vector — a full re-embed and re-index, not a migration you can do in place. The runtime needs blue/green index swap, and for freshness, a strategy for incremental upserts vs periodic rebuilds. This is the operational cost the [search & recommendations](/search-recommendations) layer inherits whenever relevance is "improved".
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "chg", "label": "Model/chunk\nchange", "shape": "circle"},
+    {"id": "inval", "label": "Index invalid", "shape": "diamond"},
+    {"id": "re", "label": "Re-embed +\nbuild new index", "shape": "rect"},
+    {"id": "bg", "label": "Blue/green swap", "shape": "rect"},
+    {"id": "live", "label": "Serve new index", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "chg", "target": "inval"},
+    {"source": "inval", "target": "re", "label": "always"},
+    {"source": "re", "target": "bg"},
+    {"source": "bg", "target": "live"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

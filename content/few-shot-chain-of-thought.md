@@ -2,6 +2,35 @@
 
 In-context learning -- the ability of large language models to perform tasks from a handful of examples without parameter updates -- remains one of the most striking and theoretically puzzling capabilities of modern AI systems. This article traces the development from basic few-shot prompting through chain-of-thought reasoning to advanced techniques like self-consistency and tree-of-thought, grounding each in the research that introduced it. We examine not just how these techniques work but why they work, drawing on emerging theoretical understanding to guide practical application.
 
+## Mental Model
+
+The mental model for few-shot and chain-of-thought prompting is **steering, not teaching**. The weights are frozen; nothing is learned. Examples and reasoning instructions just *condition the model's distribution* so it lands in the region of behavior you want. Few-shot demonstrates the *format and task* ("outputs look like this"); chain-of-thought allocates *more serial computation* ("think before answering") by making intermediate steps explicit tokens. Both are inference-time levers that trade tokens (cost/latency) for accuracy — no training, just a sharper prompt.
+
+That reframes the whole technique tree as a *compute-vs-accuracy dial*: zero-shot is cheapest, few-shot adds format anchoring, CoT adds serial depth, self-consistency adds parallel sampling, tree-of-thought adds search. Picking the right rung is an [eval fundamentals](/eval-fundamentals) measurement, the extra tokens are an [inference optimization](/inference-optimization) cost you must budget, and the same conditioning power that steers toward good reasoning is what [adversarial prompting](/adversarial-prompting) exploits to steer toward bad behavior.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "task", "label": "Task", "shape": "circle"},
+    {"id": "zs", "label": "Zero-shot\n(cheapest)", "shape": "rect"},
+    {"id": "fs", "label": "Few-shot\n(format anchor)", "shape": "rect"},
+    {"id": "cot", "label": "CoT\n(serial depth)", "shape": "rect"},
+    {"id": "sc", "label": "Self-consistency /\nToT (search)", "shape": "rect"},
+    {"id": "acc", "label": "Accuracy ↑\nCost ↑", "shape": "diamond"},
+    {"id": "ship", "label": "Chosen rung", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "zs"},
+    {"source": "zs", "target": "fs"},
+    {"source": "fs", "target": "cot"},
+    {"source": "cot", "target": "sc"},
+    {"source": "sc", "target": "acc"},
+    {"source": "acc", "target": "ship", "label": "measure trade-off"}
+  ]
+}
+```
+
 ## In-Context Learning: The Foundation
 
 When Brown et al. (2020) demonstrated in "Language Models are Few-Shot Learners" that GPT-3 could perform new tasks simply by prepending a few examples to the input, it challenged prevailing assumptions about how neural networks learn. Traditional machine learning requires updating model parameters through gradient descent on training examples. In-context learning achieves task adaptation purely through the input, with no parameter changes at all.
@@ -451,6 +480,106 @@ Every advanced prompting technique increases cost (more tokens generated, more A
 - **Medical diagnosis support**: Self-consistency with CoT, prioritizing accuracy
 - **Code generation**: Few-shot CoT with program-of-thought, balancing both
 - **Research analysis**: Tree-of-thought, where cost is secondary to depth
+
+## Runtime Internals
+
+The "steering dial" model hides the mechanics that decide whether these techniques help or just burn tokens.
+
+### Few-shot selection and ordering effects
+
+Which examples you pick and the order you place them measurably change the answer (recency/primacy bias, label imbalance). The runtime is not "hardcode 3 examples" — it is dynamic selection (retrieve examples similar to the query) plus order/label-balance control. Static, poorly chosen shots can underperform zero-shot.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "pool", "label": "Example pool", "shape": "rect"},
+    {"id": "sel", "label": "Retrieve similar\n+ balance labels", "shape": "rect"},
+    {"id": "ord", "label": "Order (mitigate\nrecency bias)", "shape": "rect"},
+    {"id": "prompt", "label": "Few-shot prompt", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "pool"},
+    {"source": "pool", "target": "sel"},
+    {"source": "sel", "target": "ord"},
+    {"source": "ord", "target": "prompt"}
+  ]
+}
+```
+
+### Self-consistency: parallel sample-and-vote
+
+Self-consistency samples N independent CoT paths at temperature > 0 and majority-votes the final answer. The runtime is an N× cost multiplier for a variance reduction — accuracy gains saturate (diminishing returns past ~5–10 samples), so N is a tunable budget knob, not "more is always better".
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Question", "shape": "circle"},
+    {"id": "samp", "label": "Sample N CoT\n(temp > 0)", "shape": "rect"},
+    {"id": "ans", "label": "N candidate\nanswers", "shape": "rect"},
+    {"id": "vote", "label": "Majority vote", "shape": "diamond"},
+    {"id": "final", "label": "Final answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "samp"},
+    {"source": "samp", "target": "ans"},
+    {"source": "ans", "target": "vote"},
+    {"source": "vote", "target": "final"}
+  ]
+}
+```
+
+### Tree-of-thought: search over reasoning
+
+ToT turns reasoning into explicit search: generate candidate steps, score them, expand the best, backtrack on dead ends. The runtime cost is a branching factor × depth blowup of LLM calls, so it needs an evaluator and pruning. It is the most expensive rung — justified only when correctness dominates cost (the [inference optimization](/inference-optimization) trade made explicit).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "root", "label": "Problem", "shape": "circle"},
+    {"id": "exp", "label": "Expand candidate\nsteps", "shape": "rect"},
+    {"id": "score", "label": "Evaluate states", "shape": "rect"},
+    {"id": "good", "label": "Promising?", "shape": "diamond"},
+    {"id": "deep", "label": "Go deeper", "shape": "rect"},
+    {"id": "back", "label": "Backtrack / prune", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "root", "target": "exp"},
+    {"source": "exp", "target": "score"},
+    {"source": "score", "target": "good"},
+    {"source": "good", "target": "deep", "label": "yes"},
+    {"source": "good", "target": "back", "label": "no"},
+    {"source": "deep", "target": "exp"}
+  ]
+}
+```
+
+### CoT faithfulness: the reasoning may be a story
+
+A critical runtime caveat: the verbalized chain is not guaranteed to be the model's actual computation — it can produce a plausible rationale that does not cause the answer. So CoT improves accuracy but its text is *not* a trustworthy explanation; using it as an audit trail is unsafe without separate verification, a property that must itself be measured via [eval fundamentals](/eval-fundamentals).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "cot", "label": "Verbalized CoT", "shape": "circle"},
+    {"id": "ask", "label": "Causes the answer?", "shape": "diamond"},
+    {"id": "faith", "label": "Faithful\n(usable signal)", "shape": "rect"},
+    {"id": "story", "label": "Post-hoc story\n(not an audit)", "shape": "stadium"},
+    {"id": "verify", "label": "Verify separately", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "cot", "target": "ask"},
+    {"source": "ask", "target": "faith", "label": "tested yes"},
+    {"source": "ask", "target": "story", "label": "assumed"},
+    {"source": "faith", "target": "verify"},
+    {"source": "story", "target": "verify"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

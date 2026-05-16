@@ -10,6 +10,40 @@ Parameter-efficient fine-tuning (PEFT) methods have fundamentally changed the ec
 - **vLLM** supports multi-LoRA serving natively: one base model in GPU memory, hundreds of adapters loaded on demand.
 - For 2024-2025, the practical default is QLoRA with rank 16, applied to all linear layers, using `paged_adamw_8bit`.
 
+## Mental Model
+
+The mental model for LoRA is **freeze the giant model, learn a tiny low-rank "diff," add it back at inference**. Full fine-tuning rewrites billions of weights; LoRA's bet is that the *update* a task needs is low-rank — expressible as the product of two skinny matrices (B·A) thousands of times smaller. You never touch the base weights; you train only A and B and add `B·A` to the frozen layer. That single idea explains every property: tiny checkpoints (~30 MB), no catastrophic forgetting (base is untouched), and many adapters can share one base in memory.
+
+So the whole family is variations on "where and how big is the low-rank diff." QLoRA quantizes the frozen base to 4-bit so it fits on one GPU while the small adapter stays high precision; DoRA splits magnitude/direction; IA3 scales activations instead of adding matrices. This is the parameter-efficient branch of [fine-tuning fundamentals](/fine-tuning-fundamentals), and adapter-per-customer is what makes multi-tenant [LLM serving](/llm-serving) economical; merging adapters connects to [distillation & compression](/distillation-compression).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "base", "label": "Frozen base W (billions, never updated)", "shape": "circle"},
+    {"id": "bet", "label": "Is the task update low-rank?", "shape": "diamond"},
+    {"id": "full", "label": "Full FT rewrites all weights (huge ckpt, forgets)", "shape": "stadium"},
+    {"id": "lr", "label": "Train skinny A and B only", "shape": "rect"},
+    {"id": "add", "label": "Inject delta: W + B*A", "shape": "rect"},
+    {"id": "ckpt", "label": "~30MB adapter checkpoint", "shape": "rect"},
+    {"id": "noforget", "label": "Base untouched: no catastrophic forgetting", "shape": "stadium"},
+    {"id": "share", "label": "Many adapters share one resident base?", "shape": "diamond"},
+    {"id": "out", "label": "Task-adapted model", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "base", "target": "bet"},
+    {"source": "bet", "target": "full", "label": "assume not"},
+    {"source": "bet", "target": "lr", "label": "yes: low-rank"},
+    {"source": "lr", "target": "add"},
+    {"source": "lr", "target": "ckpt", "label": "all you save"},
+    {"source": "add", "target": "noforget"},
+    {"source": "noforget", "target": "share"},
+    {"source": "share", "target": "out", "label": "yes: multi-tenant"},
+    {"source": "ckpt", "target": "out"}
+  ]
+}
+```
+
 ## The Motivation for Parameter Efficiency
 
 Full fine-tuning of a 70B parameter model requires updating 140GB of parameters in fp16, demanding multiple high-end GPUs and creating a separate copy of the entire model for each task. For organizations fine-tuning models for dozens of tasks or domains, this becomes prohibitively expensive in both compute and storage.
@@ -500,6 +534,122 @@ The choice of GGUF quantization level involves a quality-size tradeoff that mirr
 > **Note:** Quantizing after merging the LoRA adapter produces better results than quantizing the base model and applying the adapter at inference time. The merge-then-quantize approach avoids compounding quantization error with LoRA approximation error, and the resulting single-file model is simpler to deploy.
 
 For workloads where multiple adapters are needed at the GGUF level, llama.cpp also supports loading LoRA adapters at runtime on top of a quantized base model, applying the fp16 adapter math on the dequantized weights during inference. This avoids creating separate merged models for each adapter but does add latency overhead.
+
+## Runtime Internals
+
+The "tiny low-rank diff" model hides the mechanics that decide whether LoRA matches full fine-tuning or underperforms.
+
+### Rank and target-module selection
+
+Rank `r` is the capacity dial: too low underfits the task's update, too high wastes parameters and risks overfitting (typical sweet spot r=8–32). Equally important is *which* layers get adapters — applying to all linear projections (not just attention Q/V) consistently closes the gap to full fine-tuning. These two choices, not the optimizer, determine quality.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "task", "label": "Task", "shape": "circle"},
+    {"id": "r", "label": "Pick rank r", "shape": "diamond"},
+    {"id": "mod", "label": "Target all\nlinear layers", "shape": "rect"},
+    {"id": "fit", "label": "Matches full FT?", "shape": "diamond"},
+    {"id": "ok", "label": "Adapter", "shape": "circle"},
+    {"id": "tune", "label": "Raise r / add\nmodules", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "task", "target": "r"},
+    {"source": "r", "target": "mod"},
+    {"source": "mod", "target": "fit"},
+    {"source": "fit", "target": "ok", "label": "yes"},
+    {"source": "fit", "target": "tune", "label": "underfits"}
+  ]
+}
+```
+
+### QLoRA: 4-bit base, high-precision adapter
+
+QLoRA fits a huge model on one GPU by quantizing the *frozen* base to 4-bit (NF4) while keeping the trainable adapter and gradients in higher precision. The runtime detail: gradients flow *through* the dequantized base but only update A/B, and paged optimizers spill optimizer state to CPU to survive memory spikes. Quantizing the adapter too would destroy the signal — precision asymmetry is the whole trick.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "base", "label": "Frozen base quantized to 4-bit NF4", "shape": "circle"},
+    {"id": "asym", "label": "Adapter kept high-precision?", "shape": "diamond"},
+    {"id": "destroy", "label": "Quantizing the adapter destroys the signal", "shape": "stadium"},
+    {"id": "deq", "label": "Dequantize base for forward + backward", "shape": "rect"},
+    {"id": "grad", "label": "Gradients flow through base, update A/B only", "shape": "rect"},
+    {"id": "spike", "label": "Optimizer memory spike?", "shape": "diamond"},
+    {"id": "page", "label": "Paged optimizer spills state to CPU", "shape": "rect"},
+    {"id": "oom", "label": "Without paging: OOM on the spike", "shape": "stadium"},
+    {"id": "fit", "label": "Huge model fits one GPU", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "base", "target": "asym"},
+    {"source": "asym", "target": "destroy", "label": "no: symmetric"},
+    {"source": "asym", "target": "deq", "label": "yes: precision asymmetry"},
+    {"source": "deq", "target": "grad"},
+    {"source": "grad", "target": "spike"},
+    {"source": "spike", "target": "page", "label": "yes"},
+    {"source": "spike", "target": "fit", "label": "no"},
+    {"source": "page", "target": "fit"},
+    {"source": "spike", "target": "oom", "label": "no paging"}
+  ]
+}
+```
+
+### Merge vs keep-separate at deploy
+
+You can merge `B·A` into the base (zero inference overhead, but one model per task) or keep the adapter separate (swap per request, slight overhead). The runtime decision is set by serving topology: a single dedicated model → merge; many tenants on one GPU → keep separate and hot-swap. Merging is irreversible and recreates the multi-model storage problem.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "trained", "label": "Trained adapter (B*A)", "shape": "circle"},
+    {"id": "topo", "label": "Single dedicated model topology?", "shape": "diamond"},
+    {"id": "merge", "label": "Merge B*A into base weights", "shape": "rect"},
+    {"id": "zero", "label": "Zero inference overhead", "shape": "rect"},
+    {"id": "irrev", "label": "Irreversible; recreates multi-model storage", "shape": "stadium"},
+    {"id": "many", "label": "Many tenants on one GPU?", "shape": "diamond"},
+    {"id": "sep", "label": "Keep adapter separate", "shape": "rect"},
+    {"id": "swap", "label": "Hot-swap per request (slight overhead)", "shape": "rect"},
+    {"id": "serve", "label": "Deployed", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "trained", "target": "topo"},
+    {"source": "topo", "target": "merge", "label": "yes"},
+    {"source": "merge", "target": "zero"},
+    {"source": "merge", "target": "irrev"},
+    {"source": "zero", "target": "serve"},
+    {"source": "topo", "target": "many", "label": "no"},
+    {"source": "many", "target": "sep", "label": "yes"},
+    {"source": "sep", "target": "swap"},
+    {"source": "swap", "target": "serve"}
+  ]
+}
+```
+
+### Multi-adapter serving on one base
+
+A LoRA-aware server keeps one base resident and applies a different small adapter per request, so dozens of fine-tunes share a GPU. The runtime cost is adapter-switch overhead and a cap on concurrent distinct adapters; batching requests that share an adapter recovers throughput. This is the memory-amortization mechanism behind multi-tenant [LLM serving](/llm-serving).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Request\n(adapter id)", "shape": "circle"},
+    {"id": "base", "label": "Shared base", "shape": "rect"},
+    {"id": "grp", "label": "Group by adapter", "shape": "diamond"},
+    {"id": "apply", "label": "Apply B·A", "shape": "rect"},
+    {"id": "gen", "label": "Generate", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "grp"},
+    {"source": "grp", "target": "base"},
+    {"source": "base", "target": "apply"},
+    {"source": "apply", "target": "gen"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

@@ -2,6 +2,34 @@
 
 The AI Engineer has emerged as a distinct role at the intersection of software engineering and machine learning, responsible for building products and systems powered by foundation models, embeddings, and AI infrastructure. Unlike the ML engineer who focuses on training models or the data scientist who focuses on analysis, the AI engineer integrates pre-trained models into production applications, designs prompt architectures, builds retrieval systems, and ships AI-powered features to users. This article maps the skills, tools, career trajectory, and community resources that define this rapidly maturing discipline.
 
+## Mental Model
+
+The mental model for the AI engineer role is **a systems engineer whose most powerful component is non-deterministic and rented, not trained**. You do not build the intelligence; you compose it. The job is the scaffolding around a foundation model: shaping its input ([context engineering](/context-engineering), [prompt engineering fundamentals](/prompt-engineering-fundamentals)), grounding it ([advanced RAG](/advanced-rag)), constraining it (guardrails, [structured output](/structured-output)), and proving it works ([eval fundamentals](/eval-fundamentals)). The model is a probabilistic dependency with an API; everything that makes it a *product* is classic engineering applied to that dependency.
+
+So read this entire roadmap as one recurring loop, not a list of topics: **wrap the model → measure it → harden it → ship it → observe it → repeat**. Every phase (prompting, RAG, agents, evals, deployment) is the same loop at a higher level of capability. The skill that compounds is not "knowing the latest model" but mastering that loop — it transfers across every model generation and is what separates an AI engineer from someone who calls an API.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "model", "label": "Foundation model\n(rented, stochastic)", "shape": "circle"},
+    {"id": "wrap", "label": "Wrap\n(prompt/RAG/tools)", "shape": "rect"},
+    {"id": "measure", "label": "Measure (evals)", "shape": "rect"},
+    {"id": "harden", "label": "Harden\n(guardrails/structure)", "shape": "rect"},
+    {"id": "ship", "label": "Ship + observe", "shape": "rect"},
+    {"id": "loop", "label": "Improve", "shape": "diamond"}
+  ],
+  "edges": [
+    {"source": "model", "target": "wrap"},
+    {"source": "wrap", "target": "measure"},
+    {"source": "measure", "target": "harden"},
+    {"source": "harden", "target": "ship"},
+    {"source": "ship", "target": "loop"},
+    {"source": "loop", "target": "wrap", "label": "next iteration"}
+  ]
+}
+```
+
 ## Defining the AI Engineer Role
 
 ### AI Engineer vs. ML Engineer vs. Data Scientist
@@ -730,6 +758,126 @@ The differentiator is never the idea - it is the execution rigor. Every portfoli
 3. **Error handling and failure modes**: Document what happens when things go wrong. How does the system degrade gracefully?
 4. **A comparison**: Test multiple approaches (different models, different retrieval strategies, different prompt architectures) and show your reasoning for the final choice.
 5. **Clean, deployable code**: Not a notebook. A repository with tests, documentation, CI/CD, and clear instructions for running it.
+
+## Runtime Internals
+
+The "wrap-measure-harden-ship loop" model has concrete mechanics that define what the job actually looks like day to day.
+
+### The skill tree is a dependency graph, not a checklist
+
+The roadmap topics are not independent items to tick off; they depend on each other. Prompting is the prerequisite for RAG; RAG and tool use are prerequisites for agents; evals gate everything. Skipping a layer produces a brittle practitioner who can demo but not ship. Learn in dependency order, depth-first on what your current project needs.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "prompt", "label": "Prompting (prerequisite)", "shape": "circle"},
+    {"id": "rag", "label": "Embeddings + RAG", "shape": "rect"},
+    {"id": "tools", "label": "Tool use", "shape": "rect"},
+    {"id": "agents", "label": "Agents", "shape": "rect"},
+    {"id": "eval", "label": "Evals gate every layer", "shape": "diamond"},
+    {"id": "skip", "label": "Layer skipped?", "shape": "diamond"},
+    {"id": "brittle", "label": "Brittle: can demo, cannot ship", "shape": "stadium"},
+    {"id": "ship", "label": "Deploy + observe", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "prompt", "target": "rag"},
+    {"source": "prompt", "target": "tools"},
+    {"source": "rag", "target": "agents"},
+    {"source": "tools", "target": "agents"},
+    {"source": "prompt", "target": "eval"},
+    {"source": "rag", "target": "eval"},
+    {"source": "agents", "target": "eval"},
+    {"source": "eval", "target": "skip"},
+    {"source": "skip", "target": "brittle", "label": "yes"},
+    {"source": "skip", "target": "ship", "label": "no: depth-first, in order"}
+  ]
+}
+```
+
+### Framework vs raw API: a control decision
+
+A recurring runtime choice: a framework (LangChain, an SDK) gets you running fast but hides cost, retries, and the control loop; the raw API is more code but every token, error, and decision is visible. Senior AI engineers reach for the framework to prototype and the raw API where cost, latency, or debuggability is critical — the same control/ergonomics trade seen across [agent SDKs](/agent-sdks).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "feat", "label": "New feature", "shape": "circle"},
+    {"id": "stage", "label": "Prototype or production-critical?", "shape": "diamond"},
+    {"id": "fw", "label": "Framework: fast, hides cost/retries/loop", "shape": "rect"},
+    {"id": "raw", "label": "Raw API: more code, every token visible", "shape": "rect"},
+    {"id": "crit", "label": "Cost / latency / debuggability critical?", "shape": "diamond"},
+    {"id": "migrate", "label": "Migrate hot path to raw API", "shape": "stadium"},
+    {"id": "ship", "label": "Ship", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "feat", "target": "stage"},
+    {"source": "stage", "target": "fw", "label": "prototype"},
+    {"source": "stage", "target": "raw", "label": "critical path"},
+    {"source": "fw", "target": "crit"},
+    {"source": "crit", "target": "migrate", "label": "yes"},
+    {"source": "crit", "target": "ship", "label": "no"},
+    {"source": "raw", "target": "ship"},
+    {"source": "migrate", "target": "ship"}
+  ]
+}
+```
+
+### Evaluating new models without chasing hype
+
+Models ship weekly; the runtime discipline is a fixed harness: a private eval set representing *your* tasks, a cost/latency budget, and a non-inferiority gate against the incumbent. Swap the model behind the harness, not the harness behind the model. This is [eval fundamentals](/eval-fundamentals) applied to procurement — it immunizes you against leaderboard noise.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "drop", "label": "New model drops weekly", "shape": "circle"},
+    {"id": "harness", "label": "Fixed harness: private eval set on YOUR tasks", "shape": "rect"},
+    {"id": "budget", "label": "Cost + latency budget", "shape": "rect"},
+    {"id": "noninf", "label": "Non-inferior vs incumbent?", "shape": "diamond"},
+    {"id": "worth", "label": "Gain worth migration cost?", "shape": "diamond"},
+    {"id": "adopt", "label": "Swap model behind the harness", "shape": "rect"},
+    {"id": "keep", "label": "Keep incumbent; ignore leaderboard noise", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "drop", "target": "harness"},
+    {"source": "harness", "target": "budget"},
+    {"source": "budget", "target": "noninf"},
+    {"source": "noninf", "target": "worth", "label": "passes"},
+    {"source": "noninf", "target": "keep", "label": "regresses"},
+    {"source": "worth", "target": "adopt", "label": "yes"},
+    {"source": "worth", "target": "keep", "label": "no"}
+  ]
+}
+```
+
+### Portfolio = the loop, demonstrated end to end
+
+The hiring signal is not "used the latest API" but evidence of the full loop: a project with a real eval set, observable behavior, handled failure modes, and deployable code. A notebook demo shows you can call a model; a repo with tests, evals, and CI shows you can *ship* one — the difference the rest of this roadmap exists to teach, grounded in [production patterns](/production-patterns).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "idea", "label": "Project idea", "shape": "circle"},
+    {"id": "build", "label": "Build + real eval set", "shape": "rect"},
+    {"id": "depth", "label": "Notebook demo or shipped system?", "shape": "diamond"},
+    {"id": "weak", "label": "Notebook only: shows you can call a model", "shape": "stadium"},
+    {"id": "obs", "label": "Observable + failure modes handled", "shape": "rect"},
+    {"id": "repo", "label": "Deployable repo: tests + evals + CI", "shape": "rect"},
+    {"id": "signal", "label": "Hireable signal: you can ship one", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "idea", "target": "build"},
+    {"source": "build", "target": "depth"},
+    {"source": "depth", "target": "weak", "label": "notebook"},
+    {"source": "depth", "target": "obs", "label": "system"},
+    {"source": "obs", "target": "repo"},
+    {"source": "repo", "target": "signal"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

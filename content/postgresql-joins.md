@@ -2,7 +2,7 @@
 
 PostgreSQL JOINs are the fundamental mechanism for combining data from multiple tables into a single result set—the core operation that transforms normalized relational data into the denormalized views needed for analytics, feature engineering, and application logic. For AI engineers building data pipelines, training sets, or real-time inference systems, understanding JOINs is essential because they directly determine query performance, memory consumption, and the ability to express complex data relationships. This article covers every JOIN type PostgreSQL offers, explains how the query planner executes them under the hood, and provides production patterns for high-volume environments.
 
-For foundational database concepts, see [ACID Properties](/acid-properties); for advanced query optimization on managed infrastructure, see [AWS Databases RDS](/aws-databases-rds).
+For foundational database concepts, see [ACID Properties](/acid-properties).
 
 ## Mental Model
 
@@ -544,4 +544,3 @@ SELECT * FROM (SELECT * FROM a WHERE status = 'active') a JOIN b ON a.id = b.id;
 ### Related Articles
 
 - [ACID Properties](/acid-properties) — Understanding transaction guarantees for concurrent JOIN operations
-- [AWS Databases RDS](/aws-databases-rds) — Tuning PostgreSQL JOINs on managed RDS instances

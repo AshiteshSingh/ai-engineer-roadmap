@@ -2,6 +2,35 @@
 
 The landscape of large language model architectures has diversified significantly since GPT-3 demonstrated that scaling decoder-only transformers yields powerful general-purpose language systems. While the decoder-only transformer remains the dominant paradigm (see [Article 01: Transformer Architecture](/transformer-architecture) for foundational concepts), each major model family introduces architectural innovations — from Mixture-of-Experts routing in Mixtral to grouped-query attention in Llama 2 to multimodal fusion in Gemini. More recently, reasoning-focused architectures like OpenAI's o1/o3 and DeepSeek R1 have introduced test-time compute scaling as a new dimension of model design, while state-space models like Mamba challenge the transformer's monopoly on sequence modeling. This article provides a detailed comparative analysis of the architectural choices across leading LLM families, examining why specific design decisions were made and their implications for capability, efficiency, and deployment.
 
+## Mental Model
+
+The mental model for comparing LLM architectures is **one shared blueprint plus a handful of efficiency knobs**. Every major family is a decoder-only transformer; the differences are not paradigm shifts but answers to the same three pressures: *attention cost* (MHA → GQA → MLA trades KV-cache size for quality), *parameter efficiency* (dense vs Mixture-of-Experts: more total params, fewer active), and *where compute is spent* (train-time scaling vs test-time reasoning tokens). Read any model card as "which knob did they turn, and what did it buy?" rather than memorizing names.
+
+That reframes the comparison table as a deployment-decision tool, not trivia. The attention/MoE choices are the dominant lever on [LLM serving](/llm-serving) cost and on [memory architectures](/memory-architectures) (KV cache is the working-memory budget); reasoning architectures move cost to inference and demand harder evaluation, where synthetic stress sets from a [DeepEval synthesizer](/deepeval-synthesizer) matter. State-space models (Mamba) are the one genuine break from the blueprint — sub-quadratic sequence mixing instead of attention.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "base", "label": "Decoder-only\ntransformer", "shape": "circle"},
+    {"id": "attn", "label": "Attention knob\nMHA→GQA→MLA", "shape": "rect"},
+    {"id": "moe", "label": "Param knob\ndense vs MoE", "shape": "rect"},
+    {"id": "compute", "label": "Compute knob\ntrain vs test-time", "shape": "rect"},
+    {"id": "ssm", "label": "Break: SSM\n(Mamba)", "shape": "diamond"},
+    {"id": "model", "label": "A model family", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "base", "target": "attn"},
+    {"source": "base", "target": "moe"},
+    {"source": "base", "target": "compute"},
+    {"source": "base", "target": "ssm", "label": "non-attention"},
+    {"source": "attn", "target": "model"},
+    {"source": "moe", "target": "model"},
+    {"source": "compute", "target": "model"}
+  ]
+}
+```
+
 ## The Decoder-Only Consensus
 
 Before comparing individual architectures, it is worth noting the remarkable convergence. Every major frontier LLM as of 2025 — GPT-4, Claude, Llama 3, Gemini, Mistral, Qwen, DeepSeek — uses a decoder-only transformer architecture with causal (left-to-right) attention masking. This convergence was not inevitable; T5 (**Raffel et al., 2020**) showed competitive results with encoder-decoder architectures, and models like UL2 (**Tay et al., 2022**) explored hybrid approaches.
@@ -513,6 +542,132 @@ The small model landscape reveals an important insight: below ~7B parameters, **
 1. **Data curation**: Phi's synthetic "textbook" data, Gemma's web-filtered data
 2. **Distillation**: learning from larger models is consistently more efficient than training from scratch
 3. **Quantization-aware design**: architectures chosen to degrade gracefully under 4-bit and 8-bit quantization
+
+## Runtime Internals
+
+The "shared blueprint + knobs" model hides what each knob actually costs at inference.
+
+### Attention variants and the KV-cache bill
+
+MHA keeps a key/value pair per head; GQA shares KV across head groups; MLA (DeepSeek) compresses KV into a latent. The runtime consequence is direct: KV-cache memory ≈ layers × kv-heads × head-dim × context, and it grows linearly with sequence length. The attention variant *is* the deployment cost knob — it sets how long a context you can serve per GPU, the core [LLM serving](/llm-serving) constraint.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "mha", "label": "MHA\n(KV per head)", "shape": "circle"},
+    {"id": "gqa", "label": "GQA\n(grouped KV)", "shape": "rect"},
+    {"id": "mla", "label": "MLA\n(latent KV)", "shape": "rect"},
+    {"id": "kv", "label": "KV-cache size", "shape": "diamond"},
+    {"id": "ctx", "label": "Servable context\nper GPU", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "mha", "target": "gqa", "label": "shrink KV"},
+    {"source": "gqa", "target": "mla", "label": "compress KV"},
+    {"source": "mha", "target": "kv"},
+    {"source": "gqa", "target": "kv"},
+    {"source": "mla", "target": "kv"},
+    {"source": "kv", "target": "ctx"}
+  ]
+}
+```
+
+### MoE routing at inference
+
+A Mixture-of-Experts layer routes each token to the top-k of N experts, so total params are huge but *active* params per token are small. The runtime catch: every expert's weights must be resident in memory even though only a few fire, and routing imbalance (hot experts) creates latency variance. MoE trades memory footprint for compute, not the reverse.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "tok", "label": "Token", "shape": "circle"},
+    {"id": "router", "label": "Router scores all N experts", "shape": "rect"},
+    {"id": "topk", "label": "Select top-k experts", "shape": "diamond"},
+    {"id": "resident", "label": "All N experts must stay GPU-resident", "shape": "stadium"},
+    {"id": "e1", "label": "Expert 3 (active)", "shape": "rect"},
+    {"id": "e2", "label": "Expert 17 (active)", "shape": "rect"},
+    {"id": "hot", "label": "Routing imbalance: hot experts?", "shape": "diamond"},
+    {"id": "var", "label": "Latency variance from skewed load", "shape": "stadium"},
+    {"id": "out", "label": "Weighted combine (few active params)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "tok", "target": "router"},
+    {"source": "router", "target": "topk"},
+    {"source": "router", "target": "resident", "label": "memory footprint"},
+    {"source": "topk", "target": "e1", "label": "k=2"},
+    {"source": "topk", "target": "e2"},
+    {"source": "e1", "target": "hot"},
+    {"source": "e2", "target": "hot"},
+    {"source": "hot", "target": "var", "label": "yes: skewed"},
+    {"source": "hot", "target": "out", "label": "no: balanced"}
+  ]
+}
+```
+
+### Test-time compute scaling
+
+Reasoning architectures (o-series, R1) spend variable hidden "thinking" tokens before answering. The runtime consequence: latency and cost are no longer a function of output length alone but of an unbounded reasoning budget, so serving them needs a thinking-token cap and harder evaluation — easy tasks must not trigger expensive reasoning, a property best stressed with synthetic adversarial sets from a [DeepEval synthesizer](/deepeval-synthesizer).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "hard", "label": "Genuinely needs reasoning?", "shape": "diamond"},
+    {"id": "fast", "label": "Direct answer (cheap)", "shape": "rect"},
+    {"id": "think", "label": "Variable hidden thinking tokens", "shape": "rect"},
+    {"id": "cap", "label": "Thinking-token budget cap", "shape": "rect"},
+    {"id": "over", "label": "Cost no longer a function of output length alone", "shape": "stadium"},
+    {"id": "easy", "label": "Easy task triggered expensive reasoning?", "shape": "diamond"},
+    {"id": "adv", "label": "Stress with adversarial synthetic sets", "shape": "stadium"},
+    {"id": "ans", "label": "Answer within budget", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "hard"},
+    {"source": "hard", "target": "fast", "label": "no"},
+    {"source": "hard", "target": "think", "label": "yes"},
+    {"source": "think", "target": "cap"},
+    {"source": "cap", "target": "over", "label": "uncapped"},
+    {"source": "cap", "target": "easy", "label": "capped"},
+    {"source": "easy", "target": "adv", "label": "yes: misrouted"},
+    {"source": "easy", "target": "ans", "label": "no"},
+    {"source": "fast", "target": "ans"}
+  ]
+}
+```
+
+### State-space models: the non-attention path
+
+Mamba-style SSMs replace quadratic attention with a selective scan that is linear in sequence length and carries a fixed-size recurrent state — no growing KV cache. The runtime trade: constant memory and fast long-context, but weaker exact recall over very long ranges than attention. The fixed state behaves like a compressed working memory, connecting directly to [memory architectures](/memory-architectures).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "seq", "label": "Long sequence", "shape": "circle"},
+    {"id": "mixer", "label": "Token-mixer choice?", "shape": "diamond"},
+    {"id": "attn", "label": "Attention: O(n^2), KV grows", "shape": "rect"},
+    {"id": "ssm", "label": "Selective scan: O(n), fixed recurrent state", "shape": "rect"},
+    {"id": "recall", "label": "Needs exact long-range recall?", "shape": "diamond"},
+    {"id": "weak", "label": "SSM weaker at precise long-range lookup", "shape": "stadium"},
+    {"id": "cheap", "label": "Constant memory, fast long context", "shape": "rect"},
+    {"id": "hybrid", "label": "Hybrid: interleave attention + SSM blocks", "shape": "stadium"},
+    {"id": "out", "label": "Representation", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "seq", "target": "mixer"},
+    {"source": "mixer", "target": "attn", "label": "exact recall"},
+    {"source": "mixer", "target": "ssm", "label": "long + cheap"},
+    {"source": "ssm", "target": "recall"},
+    {"source": "recall", "target": "weak", "label": "yes: SSM-only"},
+    {"source": "recall", "target": "cheap", "label": "no"},
+    {"source": "weak", "target": "hybrid", "label": "mitigate"},
+    {"source": "cheap", "target": "out"},
+    {"source": "attn", "target": "out"},
+    {"source": "hybrid", "target": "out"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

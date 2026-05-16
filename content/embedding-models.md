@@ -2,6 +2,36 @@
 
 Text embeddings have become the foundational primitive powering modern search, retrieval-augmented generation, and recommendation systems. This article examines how embedding models transform variable-length text into fixed-dimensional vector representations, the training objectives that produce semantically meaningful spaces, and the practical considerations of selecting, evaluating, and fine-tuning embedding models for production AI systems.
 
+## Mental Model
+
+The mental model for an embedding model is **a learned compressor whose only job is to make "semantically close" equal "geometrically close"**. It maps variable-length text to a fixed vector such that a similarity metric (cosine/dot) on those vectors approximates human judgment of relatedness *for the task it was trained on*. That last clause is the whole game: an embedding space is not universal — it is shaped by its contrastive training objective, so a model tuned for symmetric similarity (sentence pairs) behaves differently from one tuned for asymmetric retrieval (short query → long passage).
+
+So choosing and tuning an embedding model is choosing *which notion of "similar" gets baked into the geometry*. Everything downstream — vector search, [RAG](/rag) retrieval quality, dedup, clustering — is just geometry on that space, and it is the same primitive that powers [search & recommendations](/search-recommendations). Selecting one is an [eval fundamentals](/eval-fundamentals) problem (MTEB on *your* task, not the leaderboard average), and the input you feed it is governed by [chunking strategies](/chunking-strategies).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "text", "label": "Text", "shape": "circle"},
+    {"id": "enc", "label": "Encoder", "shape": "rect"},
+    {"id": "pool", "label": "Pool → vector", "shape": "rect"},
+    {"id": "obj", "label": "Trained for\nwhich 'similar'?", "shape": "diamond"},
+    {"id": "sym", "label": "Symmetric\n(pair sim)", "shape": "rect"},
+    {"id": "asym", "label": "Asymmetric\n(query→doc)", "shape": "rect"},
+    {"id": "geo", "label": "Similarity = geometry", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "text", "target": "enc"},
+    {"source": "enc", "target": "pool"},
+    {"source": "pool", "target": "obj"},
+    {"source": "obj", "target": "sym", "label": "STS"},
+    {"source": "obj", "target": "asym", "label": "retrieval"},
+    {"source": "sym", "target": "geo"},
+    {"source": "asym", "target": "geo"}
+  ]
+}
+```
+
 ## From Words to Vectors: The Embedding Paradigm
 
 The central insight behind text embeddings is deceptively simple: map text into a continuous vector space where semantic similarity corresponds to geometric proximity. What makes modern embedding models powerful is the quality of this mapping -- the degree to which the resulting geometry captures nuanced relationships between concepts, intents, and meaning.
@@ -429,6 +459,130 @@ For most RAG applications, 768-1024 dimensions provide the best accuracy-cost tr
 ### Context Length Considerations
 
 Embedding models have maximum context lengths ranging from 512 tokens (older models) to 8192+ tokens (modern models). However, longer inputs don't always produce better embeddings -- the mean-pooling operation can dilute signal when averaging over many tokens. This is why chunking strategy is critical -- see [Article 15: Chunking Strategies](/chunking-strategies) for a full treatment of how splitting decisions interact with embedding quality.
+
+## Runtime Internals
+
+The "learned compressor" model hides the mechanics that decide whether embeddings work in production.
+
+### Contrastive training with in-batch negatives
+
+The space is shaped by pulling positive pairs together and pushing negatives apart. The efficiency trick is *in-batch negatives*: every other example in the batch is a negative, so a batch of N yields N×(N−1) negatives for free. The runtime consequence — embedding quality scales with batch size, which is why these models are trained on huge batches and why naive fine-tuning with tiny batches underperforms.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "batch", "label": "Batch of pairs", "shape": "circle"},
+    {"id": "enc", "label": "Encode all", "shape": "rect"},
+    {"id": "pos", "label": "Pull positive\ntogether", "shape": "rect"},
+    {"id": "neg", "label": "Push in-batch\nnegatives apart", "shape": "rect"},
+    {"id": "space", "label": "Shaped space", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "batch", "target": "enc"},
+    {"source": "enc", "target": "pos"},
+    {"source": "enc", "target": "neg"},
+    {"source": "pos", "target": "space"},
+    {"source": "neg", "target": "space"}
+  ]
+}
+```
+
+### Asymmetric retrieval and instruction prefixes
+
+Query and document are different distributions (short vs long), so modern models use instruction prefixes ("query: ..." vs raw passage) to put them in a comparable subspace. The runtime bug class: applying the wrong prefix (or none) at query time silently tanks recall while everything still "runs". Prefix discipline must match index time and query time exactly.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "User query (short distribution)", "shape": "circle"},
+    {"id": "doc", "label": "Document (long distribution)", "shape": "circle"},
+    {"id": "qpfx", "label": "Apply 'query:' instruction prefix", "shape": "rect"},
+    {"id": "dpfx", "label": "Apply 'passage:' prefix at index time", "shape": "rect"},
+    {"id": "emb", "label": "Encode into shared subspace", "shape": "rect"},
+    {"id": "match", "label": "Query prefix scheme == index prefix scheme?", "shape": "diamond"},
+    {"id": "runs", "label": "Everything still 'runs' (no error)", "shape": "stadium"},
+    {"id": "bad", "label": "Silent recall collapse", "shape": "stadium"},
+    {"id": "ok", "label": "Comparable query / doc vectors", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "qpfx"},
+    {"source": "doc", "target": "dpfx"},
+    {"source": "qpfx", "target": "emb"},
+    {"source": "dpfx", "target": "emb"},
+    {"source": "emb", "target": "match"},
+    {"source": "match", "target": "ok", "label": "exact match"},
+    {"source": "match", "target": "runs", "label": "mismatch / none"},
+    {"source": "runs", "target": "bad"}
+  ]
+}
+```
+
+### Matryoshka: truncatable dimensions
+
+Matryoshka Representation Learning trains so that the *first k* dimensions are themselves a usable embedding. The runtime payoff: store the full vector but search with a truncated prefix for a cheap first pass, then rerank with full dimensions — a coarse-to-fine speed/accuracy dial without re-embedding.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "train", "label": "MRL training: first-k dims are a usable embedding", "shape": "circle"},
+    {"id": "store", "label": "Store full-dimension vector once", "shape": "rect"},
+    {"id": "k", "label": "Truncate to first k dims", "shape": "rect"},
+    {"id": "coarse", "label": "Fast coarse search on k-dim prefix", "shape": "rect"},
+    {"id": "recall", "label": "Coarse candidate set large enough?", "shape": "diamond"},
+    {"id": "widen", "label": "Increase k or candidate count", "shape": "rect"},
+    {"id": "rerank", "label": "Rerank candidates with full dims", "shape": "rect"},
+    {"id": "dial", "label": "Speed/accuracy dial without re-embedding", "shape": "stadium"},
+    {"id": "top", "label": "Final top-k", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "train", "target": "store"},
+    {"source": "store", "target": "k"},
+    {"source": "k", "target": "coarse"},
+    {"source": "coarse", "target": "recall"},
+    {"source": "recall", "target": "widen", "label": "too few survivors"},
+    {"source": "widen", "target": "coarse"},
+    {"source": "recall", "target": "rerank", "label": "sufficient"},
+    {"source": "rerank", "target": "dial"},
+    {"source": "dial", "target": "top"}
+  ]
+}
+```
+
+### Dense vs learned-sparse, and re-embedding cost
+
+Dense vectors capture semantics but miss exact terms; learned-sparse (SPLADE) expands terms and stays lexically precise. Many production systems run both (hybrid). The dominant operational cost is versioning: any model or prefix change invalidates the entire index — a full re-embed — so embedding-model upgrades are migrations, evaluated like a [search & recommendations](/search-recommendations) relevance change, not config tweaks.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "need", "label": "Retrieval requirement", "shape": "circle"},
+    {"id": "kind", "label": "Semantic match or exact-term precision?", "shape": "diamond"},
+    {"id": "dense", "label": "Dense vectors (semantics, miss exact terms)", "shape": "rect"},
+    {"id": "splade", "label": "Learned-sparse SPLADE (term expansion, lexical)", "shape": "rect"},
+    {"id": "hybrid", "label": "Run both: hybrid retrieval", "shape": "rect"},
+    {"id": "change", "label": "Model or prefix changed?", "shape": "diamond"},
+    {"id": "reembed", "label": "Full corpus re-embed (index invalidated)", "shape": "rect"},
+    {"id": "migrate", "label": "Treat as a migration, not a config tweak", "shape": "stadium"},
+    {"id": "ship", "label": "A/B relevance, then promote", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "need", "target": "kind"},
+    {"source": "kind", "target": "dense", "label": "semantic"},
+    {"source": "kind", "target": "splade", "label": "exact-term"},
+    {"source": "dense", "target": "hybrid"},
+    {"source": "splade", "target": "hybrid"},
+    {"source": "hybrid", "target": "change"},
+    {"source": "change", "target": "reembed", "label": "yes: always invalidates"},
+    {"source": "reembed", "target": "migrate"},
+    {"source": "migrate", "target": "ship"},
+    {"source": "change", "target": "ship", "label": "no change"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

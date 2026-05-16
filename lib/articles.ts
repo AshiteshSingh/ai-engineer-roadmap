@@ -128,23 +128,11 @@ const LESSON_SLUGS = [
   "dataset-curation",
   "continual-learning",
   "distillation-compression",
-  // Appendix · Other Clouds & Platforms (80-84)
-  "aws",
-  "azure",
+  // Appendix · Other Clouds & Platforms (80-82)
   "gcp",
   "docker",
   "kubernetes",
-  // Appendix · AWS Deep Dives (85-93)
-  "aws-lambda-serverless",
-  "aws-api-gateway-networking",
-  "aws-iam-security",
-  "aws-compute-containers",
-  "aws-storage-s3",
-  "aws-cicd-devops",
-  "aws-architecture",
-  "aws-ai-ml-services",
-  "dynamodb-data-services",
-  // Appendix · Engineering & Communication (94-102)
+  // Appendix · Engineering & Communication (83-91)
   "microservices",
   "ci-cd",
   "nodejs",
@@ -171,9 +159,8 @@ export const CATEGORIES: [number, number, string][] = [
   [63, 73, "Phase 6 · Ship on Cloudflare"],
   // Appendix · Beyond the Edge — reachable, excluded from the flow spine
   [74, 79, "Appendix · Fine-tuning & Training"],
-  [80, 84, "Appendix · Other Clouds & Platforms"],
-  [85, 93, "Appendix · AWS Deep Dives"],
-  [94, 102, "Appendix · Engineering & Communication"],
+  [80, 82, "Appendix · Other Clouds & Platforms"],
+  [83, 91, "Appendix · Engineering & Communication"],
 ];
 
 // The cut-off lesson number for the continuous-play spine. Lessons numbered
@@ -240,16 +227,9 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
   "Appendix · Other Clouds & Platforms": {
     slug: "appendix-clouds",
     icon: "☁",
-    description: "Beyond the edge — AWS/Azure/GCP, containers and Kubernetes for comparison and context",
+    description: "Beyond the edge — GCP, containers and Kubernetes for comparison and context",
     gradient: ["var(--sky-9)", "var(--sky-11)"],
-    outcomes: ["Compare AWS, Azure and GCP", "Containerize with Docker", "Orchestrate with Kubernetes"],
-  },
-  "Appendix · AWS Deep Dives": {
-    slug: "appendix-aws",
-    icon: "📦",
-    description: "Beyond the edge — deep-dive reference guides for core AWS services",
-    gradient: ["var(--amber-9)", "var(--amber-11)"],
-    outcomes: ["Master Lambda, API Gateway and serverless", "Secure workloads with IAM/KMS/VPC", "Build CI/CD and IaC with CDK/CloudFormation"],
+    outcomes: ["Work with Google Cloud Platform", "Containerize with Docker", "Orchestrate with Kubernetes"],
   },
   "Appendix · Engineering & Communication": {
     slug: "appendix-engineering",
@@ -311,17 +291,9 @@ function extractExcerpt(content: string, maxLen = 120): string {
   return "";
 }
 
-export const AWS_DEEP_DIVE_SLUGS = new Set([
-  "aws-lambda-serverless",
-  "aws-api-gateway-networking",
-  "aws-iam-security",
-  "aws-compute-containers",
-  "aws-storage-s3",
-  "aws-cicd-devops",
-  "aws-architecture",
-  "aws-ai-ml-services",
-  "dynamodb-data-services",
-]);
+// AWS deep-dive lessons were removed from the roadmap; kept as an empty
+// export so existing imports (lib/data.ts, app/[slug]) keep compiling.
+export const AWS_DEEP_DIVE_SLUGS = new Set<string>([]);
 
 // Slugs that live in the Appendix ("Beyond the Edge") — reachable as normal
 // chapters but excluded from the continuous-play roadmap spine. Derived from

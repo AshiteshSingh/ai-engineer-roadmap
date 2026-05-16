@@ -2,6 +2,40 @@
 
 The proliferation of agent SDKs marks a decisive shift in AI engineering: building agents is no longer an exercise in low-level prompt plumbing but an SDK-level concern. In 2024-2025, every major model provider and framework vendor shipped dedicated agent SDKs -- Anthropic released the Claude Agent SDK, OpenAI shipped the Agents SDK (evolving from Swarm), Vercel expanded its AI SDK with multi-step agent primitives, and the framework ecosystem (LangChain/LangGraph, LlamaIndex) continued refining their agent abstractions. This article provides a deep technical comparison of these SDKs: their architectures, primitives, tradeoffs, and the practical question of when to use which. For foundational concepts on how agents reason and act, see [Agent Architectures](/agent-architectures); for tool integration mechanics, see [Function Calling](/function-calling); for stateful graph-based orchestration, see [LangGraph](/langgraph).
 
+## Mental Model
+
+The mental model for agent SDKs is **they all wrap the same loop; they differ only in which parts they hide and which they expose**. Underneath every SDK is the identical primitive: call model → if it requests tools, execute them → feed results back → repeat until done. An SDK is an opinion about *where the seams are*: Claude's SDK keeps the loop explicit and you own it; OpenAI's Agents SDK abstracts handoffs/guardrails as first-class objects; Vercel's hides the loop behind `generateText`/`streamText`; LangGraph exposes it as an editable state machine. None adds capability the raw API lacks — they trade control for ergonomics.
+
+So SDK selection is choosing *how much of the loop you want to own*, not "which is most powerful." More abstraction = faster start, less control when you need to customize termination, retries, or state; less abstraction = more boilerplate, total control. The loop body is the [agent architectures](/agent-architectures) pattern; "execute tools" is [function calling](/function-calling) with validated args; production-grade control over state and permissions is what a full [agent harnesses](/agent-harnesses) layer adds on top of any SDK.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "prim", "label": "Identical primitive: call model, exec tools, feed back, repeat", "shape": "stadium"},
+    {"id": "seam", "label": "Where are the seams cut?", "shape": "diamond"},
+    {"id": "claude", "label": "Claude SDK: loop explicit, you own it", "shape": "rect"},
+    {"id": "openai", "label": "OpenAI: handoffs/guardrails as objects", "shape": "rect"},
+    {"id": "vercel", "label": "Vercel: loop hidden behind generateText", "shape": "rect"},
+    {"id": "lg", "label": "LangGraph: loop = editable state machine", "shape": "rect"},
+    {"id": "axis", "label": "Trades control for ergonomics, no new capability", "shape": "diamond"},
+    {"id": "agent", "label": "Same agent, different ownership", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "prim", "target": "seam"},
+    {"source": "seam", "target": "claude", "label": "max control"},
+    {"source": "seam", "target": "openai"},
+    {"source": "seam", "target": "vercel", "label": "max speed"},
+    {"source": "seam", "target": "lg", "label": "inspectable"},
+    {"source": "claude", "target": "axis"},
+    {"source": "openai", "target": "axis"},
+    {"source": "vercel", "target": "axis"},
+    {"source": "lg", "target": "axis"},
+    {"source": "axis", "target": "agent"}
+  ]
+}
+```
+
 ## Why Agent SDKs Exist
 
 ### The Abstraction Gap
@@ -1756,6 +1790,127 @@ Production agents require tracing at multiple levels:
 3. **Token-level**: Input/output token counts per step for cost attribution
 
 The OpenAI Agents SDK provides built-in tracing. LangGraph integrates with LangSmith. The Claude and Vercel AI SDKs require external instrumentation (LangSmith, Langfuse, Datadog, or custom solutions). See [Observability](/observability) for a broader treatment of LLM application monitoring.
+
+## Runtime Internals
+
+The "same loop, different seams" model hides the mechanics that matter when you pick and operate an SDK.
+
+### The loop is identical; ownership differs
+
+Every SDK's runtime is: send messages + tool schemas → receive either text (done) or tool_use blocks → execute, append tool results, resend. The decision point is *who runs the loop body*: with a low-level SDK you write the `while` loop and own termination; with a high-level one the SDK runs it and you only get the final result. Customizing stop conditions is trivial in the former, often impossible in the latter.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "msg", "label": "Messages + tool schemas", "shape": "circle"},
+    {"id": "resp", "label": "Model response", "shape": "rect"},
+    {"id": "kind", "label": "tool_use blocks or text?", "shape": "diamond"},
+    {"id": "owner", "label": "Who runs the loop body?", "shape": "diamond"},
+    {"id": "you", "label": "Low-level: you write the while loop", "shape": "rect"},
+    {"id": "sdk", "label": "High-level: SDK runs it, returns final only", "shape": "rect"},
+    {"id": "stop", "label": "Custom stop condition reachable?", "shape": "diamond"},
+    {"id": "done", "label": "Final text", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "msg", "target": "resp"},
+    {"source": "resp", "target": "kind"},
+    {"source": "kind", "target": "owner", "label": "tool_use"},
+    {"source": "owner", "target": "you", "label": "low-level SDK"},
+    {"source": "owner", "target": "sdk", "label": "high-level SDK"},
+    {"source": "you", "target": "stop"},
+    {"source": "sdk", "target": "stop"},
+    {"source": "stop", "target": "resp", "label": "continue"},
+    {"source": "kind", "target": "done", "label": "text"}
+  ]
+}
+```
+
+### Handoffs as a routing primitive
+
+OpenAI's SDK models multi-agent flow as handoffs: an agent can transfer control to another, optionally transforming the context it passes. The runtime detail is the handoff *description* — it is shown to the model and effectively becomes a routing prompt, so a vague description causes misrouting. Handoff = a tool whose effect is "switch active agent."
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "triage", "label": "Triage agent", "shape": "circle"},
+    {"id": "tool", "label": "Handoff = tool whose effect is switch active agent", "shape": "rect"},
+    {"id": "desc", "label": "Handoff description = routing prompt shown to model", "shape": "diamond"},
+    {"id": "vague", "label": "Vague description causes misrouting", "shape": "stadium"},
+    {"id": "bill", "label": "Billing agent", "shape": "rect"},
+    {"id": "tech", "label": "Tech agent", "shape": "rect"},
+    {"id": "ctx", "label": "Transform passed context", "shape": "rect"},
+    {"id": "out", "label": "Response", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "triage", "target": "tool"},
+    {"source": "tool", "target": "desc"},
+    {"source": "desc", "target": "vague", "label": "ambiguous"},
+    {"source": "desc", "target": "bill", "label": "matches billing"},
+    {"source": "desc", "target": "tech", "label": "matches technical"},
+    {"source": "bill", "target": "ctx"},
+    {"source": "tech", "target": "ctx"},
+    {"source": "ctx", "target": "out"}
+  ]
+}
+```
+
+### Guardrails as pre/post hooks
+
+SDKs expose input and output guardrails — synchronous checks that can halt the run before/after the agent acts. The runtime trade is latency vs safety: every guardrail is on the critical path. They are the SDK's hook point for the same two-gate model as standalone safety layers, and a tripped guardrail must surface a clear refusal, not a silent empty result.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "in", "label": "User input", "shape": "circle"},
+    {"id": "ig", "label": "Input guardrail", "shape": "diamond"},
+    {"id": "agent", "label": "Agent loop", "shape": "rect"},
+    {"id": "og", "label": "Output guardrail", "shape": "diamond"},
+    {"id": "resp", "label": "Response", "shape": "circle"},
+    {"id": "stop", "label": "Halt + refuse", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "in", "target": "ig"},
+    {"source": "ig", "target": "agent", "label": "pass"},
+    {"source": "ig", "target": "stop", "label": "block"},
+    {"source": "agent", "target": "og"},
+    {"source": "og", "target": "resp", "label": "pass"},
+    {"source": "og", "target": "stop", "label": "block"}
+  ]
+}
+```
+
+### MCP: tools as a discovered protocol
+
+The Model Context Protocol turns tools into a runtime-discovered capability: the SDK connects to MCP servers (stdio/SSE/HTTP) and their tools appear as regular tools to the model. The runtime consequence is decoupling — tools can be added/removed without changing agent code — at the cost of a transport layer and dynamic schema validation. It makes [function calling](/function-calling) pluggable across SDKs.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "sdk", "label": "Agent SDK", "shape": "circle"},
+    {"id": "client", "label": "MCP client", "shape": "rect"},
+    {"id": "transport", "label": "Transport: stdio / SSE / HTTP", "shape": "diamond"},
+    {"id": "srvA", "label": "MCP server A", "shape": "rect"},
+    {"id": "srvB", "label": "MCP server B", "shape": "rect"},
+    {"id": "valid", "label": "Dynamic schema valid?", "shape": "diamond"},
+    {"id": "reject", "label": "Reject malformed tool", "shape": "stadium"},
+    {"id": "native", "label": "Tools appear native to the model", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "sdk", "target": "client"},
+    {"source": "client", "target": "transport"},
+    {"source": "transport", "target": "srvA", "label": "connect"},
+    {"source": "transport", "target": "srvB", "label": "connect"},
+    {"source": "srvA", "target": "valid"},
+    {"source": "srvB", "target": "valid"},
+    {"source": "valid", "target": "native", "label": "ok: tools decoupled from code"},
+    {"source": "valid", "target": "reject", "label": "bad schema"}
+  ]
+}
+```
 
 ## Where the Ecosystem Is Heading
 

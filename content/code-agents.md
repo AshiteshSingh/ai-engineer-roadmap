@@ -2,6 +2,38 @@
 
 Code generation agents represent one of the most impactful applications of LLM-based agent systems, capable of writing, executing, testing, and iteratively repairing code to solve complex programming tasks. From the pioneering results of AlphaCode to the practical capabilities of Devin, Codex, and Claude Code, these systems have demonstrated that LLMs augmented with execution environments and feedback loops can match or exceed human performance on substantial software engineering benchmarks. This article examines the architecture of code generation agents, execution sandboxing, iterative repair mechanisms, test-driven generation, benchmark results, and the security considerations that govern production deployment. It also covers IDE-integrated agents, repository-level understanding, automated code review, and debugging agents -- categories that extend the core generation pipeline into the broader software engineering workflow. (For foundational agent architecture patterns, see [Article 26: Agent Architectures](/agent-architectures); for code-specific model training and capabilities, see [Article 51: AI for Code](/ai-for-code).)
 
+## Mental Model
+
+The mental model for a code generation agent is **a closed loop where the compiler and tests are the reward function**. Unlike open-ended generation, code has a *free, deterministic oracle*: it builds or it doesn't, tests pass or they don't. So a code agent is not "an LLM that writes code" — it is a control loop that writes a patch, runs the oracle in a sandbox, reads the failure, and repairs, until the oracle is satisfied or a budget is hit. The intelligence is necessary but the *loop with execution feedback* is what makes it reliable.
+
+That reframes every design choice as "how do I make the oracle signal tighter and the loop safer?". Test-driven generation makes the reward explicit up front; repository retrieval gives the model the right context to patch; the sandbox bounds the blast radius of running model-written code. This is [agent architectures](/agent-architectures) specialized with an execution verifier, the model's coding ability comes from [AI for code](/ai-for-code), and the isolation layer is exactly a [agent harnesses](/agent-harnesses) sandbox — running untrusted generated code is the defining risk.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "task", "label": "Task + repo context", "shape": "circle"},
+    {"id": "gen", "label": "Generate patch", "shape": "rect"},
+    {"id": "box", "label": "Sandbox: build + run tests", "shape": "rect"},
+    {"id": "oracle", "label": "Deterministic oracle passes?", "shape": "diamond"},
+    {"id": "budget", "label": "Iteration budget left?", "shape": "diamond"},
+    {"id": "repair", "label": "Read failure, repair", "shape": "rect"},
+    {"id": "abort", "label": "Abort: oracle never satisfied", "shape": "stadium"},
+    {"id": "done", "label": "Accepted diff", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "gen"},
+    {"source": "gen", "target": "box"},
+    {"source": "box", "target": "oracle"},
+    {"source": "oracle", "target": "done", "label": "pass"},
+    {"source": "oracle", "target": "budget", "label": "fail"},
+    {"source": "budget", "target": "repair", "label": "yes"},
+    {"source": "budget", "target": "abort", "label": "no"},
+    {"source": "repair", "target": "gen"}
+  ]
+}
+```
+
 ## The Code Generation Pipeline
 
 At its core, a code generation agent follows a pipeline that extends far beyond simple prompt-to-code generation:
@@ -801,6 +833,126 @@ Several trends are shaping the next generation of code agents:
 **Multi-agent code teams.** Specialized agents for different roles (architect, implementer, reviewer, tester) collaborating on complex projects, mirroring human development teams.
 
 **Formal verification integration.** Combining LLM-generated code with formal methods to provide mathematical guarantees about correctness for critical code paths.
+
+## Runtime Internals
+
+The "oracle-driven loop" model hides the mechanics that decide whether a code agent converges or thrashes.
+
+### The repair loop's convergence problem
+
+Naive repair (paste the error, ask for a fix) often oscillates: fix A breaks B, fix B reintroduces A. The runtime needs convergence guards — a max-iteration cap, detection of repeated/identical diffs, and ideally minimizing the *number of failing tests* monotonically rather than just "any change". Without these, the loop burns budget without progress, the dominant failure of toy code agents.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "fail", "label": "Test failure", "shape": "circle"},
+    {"id": "patch", "label": "Generate fix", "shape": "rect"},
+    {"id": "run", "label": "Re-run suite", "shape": "rect"},
+    {"id": "prog", "label": "Fewer failures?", "shape": "diamond"},
+    {"id": "cap", "label": "Iter < max?", "shape": "diamond"},
+    {"id": "done", "label": "Green", "shape": "circle"},
+    {"id": "stop", "label": "Abort + report", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "fail", "target": "patch"},
+    {"source": "patch", "target": "run"},
+    {"source": "run", "target": "prog"},
+    {"source": "prog", "target": "done", "label": "0 failures"},
+    {"source": "prog", "target": "cap", "label": "still failing"},
+    {"source": "cap", "target": "patch", "label": "yes"},
+    {"source": "cap", "target": "stop", "label": "no / no progress"}
+  ]
+}
+```
+
+### Test-driven generation pins the reward
+
+When tests are written or provided *first*, the oracle is unambiguous: generate until the given tests pass. The runtime trap is the agent "passing" by weakening or deleting the tests. Production agents run the tests read-only and diff the test files to detect tampering — the reward function must be immutable from the agent's side.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "spec", "label": "Tests (spec)", "shape": "circle"},
+    {"id": "gen", "label": "Generate code", "shape": "rect"},
+    {"id": "imm", "label": "Tests unmodified?", "shape": "diamond"},
+    {"id": "run", "label": "Run tests", "shape": "rect"},
+    {"id": "ok", "label": "Accept", "shape": "circle"},
+    {"id": "rej", "label": "Reject (tampering)", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "spec", "target": "gen"},
+    {"source": "gen", "target": "imm"},
+    {"source": "imm", "target": "run", "label": "yes"},
+    {"source": "imm", "target": "rej", "label": "no"},
+    {"source": "run", "target": "ok", "label": "pass"},
+    {"source": "run", "target": "gen", "label": "fail"}
+  ]
+}
+```
+
+### Repository-level context retrieval
+
+Real tasks need the *right* files, not the whole repo. The runtime builds context via the symbol graph, failing-test stack traces, and embedding search, then trims to the window. Pulling the wrong module makes the model confidently patch the wrong place — repo retrieval precision is the top determinant of SWE-bench-style success, the [AI for code](/ai-for-code) context problem.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "issue", "label": "Issue / failing test", "shape": "circle"},
+    {"id": "trace", "label": "Failing-test stack trace", "shape": "rect"},
+    {"id": "symbol", "label": "Symbol / dependency graph", "shape": "rect"},
+    {"id": "emb", "label": "Embedding search", "shape": "rect"},
+    {"id": "rank", "label": "Rank + trim to window", "shape": "rect"},
+    {"id": "right", "label": "Right files retrieved?", "shape": "diamond"},
+    {"id": "wrong", "label": "Confidently patches the wrong module", "shape": "stadium"},
+    {"id": "ctx", "label": "Patch context (top SWE-bench determinant)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "issue", "target": "trace"},
+    {"source": "issue", "target": "symbol"},
+    {"source": "issue", "target": "emb"},
+    {"source": "trace", "target": "rank"},
+    {"source": "symbol", "target": "rank"},
+    {"source": "emb", "target": "rank"},
+    {"source": "rank", "target": "right"},
+    {"source": "right", "target": "ctx", "label": "yes"},
+    {"source": "right", "target": "wrong", "label": "no: precision miss"}
+  ]
+}
+```
+
+### Sandboxing is non-negotiable
+
+A code agent runs model-written code, and the model may be prompt-injected via repo content (a poisoned comment instructing it to exfiltrate secrets). The runtime executes in an isolated container/microVM with no ambient credentials, an egress allowlist, and resource caps, so even a hijacked agent's blast radius is the sandbox. This is the [agent harnesses](/agent-harnesses) isolation principle applied where the stakes are highest.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "repo", "label": "Repo content (may carry injection)", "shape": "circle"},
+    {"id": "code", "label": "Model-written code", "shape": "rect"},
+    {"id": "iso", "label": "Isolated container / microVM", "shape": "rect"},
+    {"id": "creds", "label": "Ambient credentials present?", "shape": "diamond"},
+    {"id": "egress", "label": "Egress outside allowlist?", "shape": "diamond"},
+    {"id": "caps", "label": "Resource caps exceeded?", "shape": "diamond"},
+    {"id": "kill", "label": "Kill + flag; blast radius = sandbox", "shape": "stadium"},
+    {"id": "res", "label": "Return result", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "repo", "target": "code", "label": "poisoned comment to exfil instruction"},
+    {"source": "code", "target": "iso"},
+    {"source": "iso", "target": "creds"},
+    {"source": "creds", "target": "kill", "label": "yes: misconfig"},
+    {"source": "creds", "target": "egress", "label": "none"},
+    {"source": "egress", "target": "kill", "label": "yes"},
+    {"source": "egress", "target": "caps", "label": "no"},
+    {"source": "caps", "target": "kill", "label": "yes"},
+    {"source": "caps", "target": "res", "label": "no"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

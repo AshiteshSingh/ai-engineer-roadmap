@@ -1,10 +1,10 @@
-LangGraph in Production: How Lead-Gen Orchestrates 75+ Agentic Graphs
+# LangGraph in Production: How Lead-Gen Orchestrates 75+ Agentic Graphs
 
 Lead-gen is a sales-intelligence backend built almost entirely on LangGraph. It runs seventy-five-plus specialized StateGraph instances spread across five Cloudflare Container backends (leadgen-langgraph, leadgen-ml, leadgen-scrape, leadgen-outreach, leadgen-research) — discovery, enrichment, scoring, email composition, outreach, research, classification, recruitment intent, ICP fit — all sharing one Neon-hosted AsyncPostgresSaver checkpoint store and one LangSmith tracing pipeline. This page is a guided tour of how that machinery is wired so you can apply the same patterns in your own systems. For framework fundamentals, see LangGraph first.
 
 The tour is structured as a complexity ramp. It opens with the simplest atomic graph in the fleet and walks through seven stages, each one adding a layer of machinery on top of the last. The order is deliberate so the article can be read or narrated linearly — every stage's machinery is grounded in the simpler one before it, and nothing more advanced is referenced until the stage that introduces it.
 
-Mental Model
+## Mental Model
 
 Most LangGraph tutorials show a single graph with three nodes. Lead-gen shows the opposite end of the spectrum: dozens of graphs that compose, fan out, fan in, and call each other across container boundaries — while every node still writes to a Postgres-backed shared state and every LLM call lands in LangSmith with a cost in US dollars attached.
 
@@ -17,7 +17,60 @@ The system is structured around four loose layers:
 
 Picture the dataflow simply. A single FastAPI handler — the runs-wait endpoint — receives every request and dispatches to the registered graph by assistant id. Two service planes sit alongside every run: Neon for the Postgres checkpoint store, and LangSmith for telemetry. Everything reads and writes through those two services regardless of which layer the work happens in.
 
-Stage A: One Graph, One Node
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "api", "label": "FastAPI\nruns-wait", "shape": "circle"},
+    {"id": "atomic", "label": "Atomic graphs", "shape": "rect"},
+    {"id": "pipe", "label": "Pipeline graphs\nfan-out / merge", "shape": "rect"},
+    {"id": "sup", "label": "Supervisor graphs\nsubgraphs", "shape": "rect"},
+    {"id": "remote", "label": "Remote graphs\n(other containers)", "shape": "rect"},
+    {"id": "neon", "label": "Neon\ncheckpoint store", "shape": "stadium"},
+    {"id": "ls", "label": "LangSmith\ntelemetry", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "api", "target": "atomic"},
+    {"source": "api", "target": "pipe"},
+    {"source": "api", "target": "sup"},
+    {"source": "sup", "target": "remote"},
+    {"source": "atomic", "target": "neon"},
+    {"source": "pipe", "target": "neon"},
+    {"source": "sup", "target": "neon"},
+    {"source": "remote", "target": "neon"},
+    {"source": "api", "target": "ls", "label": "every run"}
+  ]
+}
+```
+
+This is, at its core, an [LangGraph](/langgraph) deployment scaled to a fleet — the orchestration discipline of [agent orchestration](/agent-orchestration) applied across container boundaries rather than within a single process.
+
+## Stage A: One Graph, One Node
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "state", "label": "State\ntitle/abstract/venue", "shape": "circle"},
+    {"id": "guard", "label": "Title missing?", "shape": "diamond"},
+    {"id": "llm", "label": "classify\n(flash, T=0)", "shape": "rect"},
+    {"id": "out", "label": "is_sales_leadgen\nconfidence / reasons", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "state", "target": "guard"},
+    {"source": "guard", "target": "out", "label": "yes → off-topic"},
+    {"source": "guard", "target": "llm", "label": "no"},
+    {"source": "llm", "target": "out"}
+  ]
+}
+```
+
+The atomic graph's output contract is a fixed JSON shape — and crucially, a crashed model call returns the *same* shape as a confident off-topic verdict (failure-as-data):
+
+```json
+{ "is_sales_leadgen": false, "confidence": 0.0, "reasons": ["missing title"] }
+```
+
 
 Anatomy of classify-paper: The Smallest Atomic Graph
 
@@ -51,7 +104,10 @@ The refine node also runs a small marker-detection retry loop. After the first r
 
 Telemetry from both LLM calls accumulates into the graph-meta slot under node names — "draft" and "refine" — so the cost-per-node breakdown shows operators exactly how much polish actually costs versus the initial draft.
 
-Stage B: Single Graphs With State
+## Stage B: Single Graphs With State
+
+These single-graph-with-state designs are the concrete realization of the patterns covered abstractly in [agent architectures](/agent-architectures) — a tool-use loop and a deterministic pipeline, each with a Postgres-backed state slot.
+
 
 Those three graphs share a property: their state is small enough to fit on one screen. Once state grows — once a node has to call a tool, branch on confidence, or stream progress to a UI — the graph needs more machinery. The next six examples add exactly that.
 
@@ -151,7 +207,31 @@ Three invariants matter. First, exceptions inside one graph's build_graph(checkp
 
 The pre-compiled escape hatch (builder_attr=None) handles the handful of graphs that build their CompiledGraph at module import time with no checkpointer ever wired. The runtime grabs getattr(mod, spec.compiled_attr) directly. These graphs cannot be made resumable retroactively without a builder, but in exchange they pay zero compile cost on every cold start beyond the import itself.
 
-Stage C: Production Engineering Patterns
+## Stage C: Production Engineering Patterns
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "seed", "label": "pipeline\nentry", "shape": "circle"},
+    {"id": "send", "label": "Send() fan-out", "shape": "diamond"},
+    {"id": "w1", "label": "worker", "shape": "rect"},
+    {"id": "w2", "label": "worker", "shape": "rect"},
+    {"id": "w3", "label": "worker", "shape": "rect"},
+    {"id": "merge", "label": "reducer-merged\nstate slot", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "seed", "target": "send"},
+    {"source": "send", "target": "w1"},
+    {"source": "send", "target": "w2"},
+    {"source": "send", "target": "w3"},
+    {"source": "w1", "target": "merge"},
+    {"source": "w2", "target": "merge"},
+    {"source": "w3", "target": "merge"}
+  ]
+}
+```
+
 
 Every graph so far has been one cleanly-bounded unit. Production reality breaks that boundary in two ways: connections die mid-run and the workload itself wants to fan out across dozens of parallel workers. The next four sections are the engineering that keeps both honest.
 
@@ -217,7 +297,34 @@ The downstream email-outreach graph itself is not interrupt-gated. It is a pure 
 
 When the pipeline runs in auto_confirm=True mode (used for synthetic load tests, the dispatch/lead-gen-teams background path, and any cron-driven invocation), the outreach_queue node still builds the queue but short-circuits the interrupt() call and treats every candidate as approved. Both modes live in the same graph — a feature flag, not a separate graph — because the approval bookkeeping (approved_outreach_ids, the outreach_gate stage report) needs to land in state either way for downstream telemetry.
 
-Stage D: Multi-Graph Supervision
+## Stage D: Multi-Graph Supervision
+
+This is [multi-agent systems](/multi-agent-systems) in production form: a supervisor `ainvoke`s compiled subgraphs and degrades gracefully by recording per-subgraph errors instead of crashing the whole run.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "sup", "label": "product-intel\nsupervisor", "shape": "circle"},
+    {"id": "icp", "label": "deep_icp", "shape": "rect"},
+    {"id": "price", "label": "pricing", "shape": "rect"},
+    {"id": "gtm", "label": "gtm", "shape": "rect"},
+    {"id": "comp", "label": "deep-competitor", "shape": "rect"},
+    {"id": "merge", "label": "merge +\nsubgraph_errors", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "sup", "target": "icp"},
+    {"source": "sup", "target": "price"},
+    {"source": "sup", "target": "gtm"},
+    {"source": "sup", "target": "comp"},
+    {"source": "icp", "target": "merge"},
+    {"source": "price", "target": "merge"},
+    {"source": "gtm", "target": "merge"},
+    {"source": "comp", "target": "merge", "label": "error tolerated"}
+  ]
+}
+```
+
 
 A pipeline that fans out is still one graph. The harder move is composition — one supervisor graph invoking other compiled graphs as subgraphs, each able to fail without crashing the parent. The next five examples are the fleet's supervisor patterns.
 
@@ -289,7 +396,38 @@ Three deduplication rules guard the loop against double-submitting. First, an al
 
 The submitter layer is structured as a per-ATS adapter — greenhouse, lever, workable, plus a generic fallback — each implementing a small contract: parse the application form, fill the required fields from a static profile, attach the resume and the generated cover letter, and submit. Playwright drives the page; cookie-consent dismissals are handled with an explicit evaluate-and-click pattern because the standard wait-for-selector approach times out on cookie banners that ship behind a CSS animation. The ATS adapter pattern is the auto-apply loop's contribution to the broader system architecture: when a new ATS shows up, you drop in a new module and register it; no other graph code changes.
 
-Stage E: Cross-Container Composition
+## Stage E: Cross-Container Composition
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "main", "label": "leadgen-langgraph", "shape": "circle"},
+    {"id": "cb", "label": "circuit breaker", "shape": "diamond"},
+    {"id": "rg", "label": "RemoteGraph\nadapter", "shape": "rect"},
+    {"id": "ml", "label": "leadgen-ml", "shape": "stadium"},
+    {"id": "res", "label": "leadgen-research", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "main", "target": "cb"},
+    {"source": "cb", "target": "rg", "label": "closed"},
+    {"source": "cb", "target": "main", "label": "open → fallback"},
+    {"source": "rg", "target": "ml"},
+    {"source": "rg", "target": "res"}
+  ]
+}
+```
+
+Every cross-container call goes through one adapter with a breaker in front:
+
+```python
+async def call_remote(graph_id: str, state: dict) -> dict:
+    if breaker.is_open(graph_id):
+        return {"error": "circuit_open", "graph": graph_id}
+    rg = RemoteGraph(graph_id, url=CONTAINER_URLS[graph_id])
+    return await rg.ainvoke(state)
+```
+
 
 Subgraphs in the same process share memory, a checkpointer, and a deploy cadence. Cross-container composition gives up all three in exchange for independent deploys. The patterns in this stage are what make that trade survivable.
 
@@ -332,7 +470,7 @@ max_retries=0 is non-negotiable on every constructed client. The OpenAI SDK's de
 
 Pricing is wired through MODEL_PRICING, a dict[str, dict[str, float]] keyed by model name with input_per_1m and output_per_1m slots. DeepSeek entries are derived from a DEEPSEEK_MODELS catalog earlier in the same file so a price change updates one source of truth; other providers (CF Workers email-llm) are listed as literals. Cache-hit and off-peak discounts are not factored in — _cost_usd() returns the pessimistic price, which means real billed spend is always ≤ the computed cost_usd field in telemetry. Close enough for "which node is expensive" questions; not close enough for invoicing.
 
-Stage F: Deployment and Operations
+## Runtime Internals: Deployment and Operations
 
 Every pattern so far runs inside a request. The next stage is everything that wraps the request — how containers boot, how runs are dispatched, how webhooks fire, how cron schedules trigger, and what the whole system costs to operate.
 

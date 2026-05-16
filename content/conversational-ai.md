@@ -10,6 +10,38 @@ Conversational AI has moved well beyond simple FAQ bots into systems capable of 
 - **Personality drift is real**: LLMs will deviate from the defined persona over long conversations without explicit reinforcement in the system prompt
 - **Omnichannel deployment** requires separating dialogue state from channel rendering — the same brain must serve web, mobile, SMS, WhatsApp, and voice with very different constraints
 
+## Mental Model
+
+The mental model for conversational AI is **a stateful loop wrapped around a stateless model**. The LLM itself has no memory between turns; the *dialogue manager* is the real system — it owns conversation state, decides what context to assemble for the next turn, calls the model, parses intent/actions, updates state, and renders to the channel. Confusing "the chatbot remembers" with "my dialogue manager reconstructs context every turn" is the root of nearly every multi-turn bug (lost slots, personality drift, context overflow).
+
+So design the manager, not the prompt. The per-turn context is a [system prompts](/system-prompts) contract plus a curated slice of history; the quality of that assembly is just [prompt engineering fundamentals](/prompt-engineering-fundamentals) applied per turn; and because dialogue success is multi-turn and non-deterministic, it must be measured with trajectory-style [agent evaluation](/agent-evaluation), not single-response scoring.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "user", "label": "User turn", "shape": "circle"},
+    {"id": "mgr", "label": "Dialogue manager (the real system)", "shape": "rect"},
+    {"id": "state", "label": "Owns conversation state (slots + history)", "shape": "rect"},
+    {"id": "asm", "label": "Reconstruct per-turn context", "shape": "rect"},
+    {"id": "model", "label": "Stateless LLM (no memory between turns)", "shape": "rect"},
+    {"id": "parse", "label": "Parsed intent / actions valid?", "shape": "diamond"},
+    {"id": "bug", "label": "Lost slots / personality drift / overflow", "shape": "stadium"},
+    {"id": "resp", "label": "Render to channel", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "user", "target": "mgr"},
+    {"source": "mgr", "target": "state"},
+    {"source": "state", "target": "asm"},
+    {"source": "asm", "target": "model"},
+    {"source": "model", "target": "parse"},
+    {"source": "parse", "target": "state", "label": "yes: persist update"},
+    {"source": "parse", "target": "bug", "label": "no: 'chatbot remembers' fallacy"},
+    {"source": "state", "target": "resp"}
+  ]
+}
+```
+
 ## Foundations of Conversation Design
 
 ### The Conversational Contract
@@ -1082,6 +1114,122 @@ This means the dialogue engine should produce channel-agnostic structured output
 Latency requirements also vary dramatically. Web chat users tolerate two to three seconds. Voice callers perceive anything over 800 milliseconds of silence as a system failure. This means voice channels may need streaming token delivery and partial response strategies, while SMS can afford to run a full retrieval-augmented generation pipeline before responding.
 
 > **Tip:** Build latency budgets per channel into your architecture from day one. A single dialogue engine serving both voice and SMS with the same pipeline will either be too slow for voice or over-engineered for SMS.
+
+## Runtime Internals
+
+The stateful-loop model hides the mechanics that separate a demo chatbot from a production one.
+
+### Slot-filling state machine
+
+Task-oriented dialogue tracks *slots* (required parameters) and the runtime drives toward filling them: each turn, extract slot values, detect what is still missing, and ask the next question — never re-ask a filled slot, never proceed with a missing required one. A pure-LLM bot without an explicit slot tracker silently loses parameters across turns.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "turn", "label": "User turn", "shape": "circle"},
+    {"id": "ext", "label": "Extract slot values", "shape": "rect"},
+    {"id": "filled", "label": "Slot already filled?", "shape": "diamond"},
+    {"id": "skip", "label": "Never re-ask a filled slot", "shape": "rect"},
+    {"id": "req", "label": "Required slot still missing?", "shape": "diamond"},
+    {"id": "ask", "label": "Ask for the next missing slot", "shape": "rect"},
+    {"id": "drift", "label": "No tracker: parameter silently lost", "shape": "stadium"},
+    {"id": "act", "label": "Execute intent", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "turn", "target": "ext"},
+    {"source": "ext", "target": "filled"},
+    {"source": "filled", "target": "skip", "label": "yes"},
+    {"source": "filled", "target": "req", "label": "no"},
+    {"source": "skip", "target": "req"},
+    {"source": "req", "target": "ask", "label": "yes"},
+    {"source": "req", "target": "act", "label": "no: all required filled"},
+    {"source": "ask", "target": "turn"},
+    {"source": "ext", "target": "drift", "label": "untracked"}
+  ]
+}
+```
+
+### History compaction per turn
+
+Every turn the manager must fit growing history into the window. The runtime keeps recent turns verbatim, summarizes older ones, and *always* pins slot state and the system prompt outside the compressible region. Summarizing the slots themselves is the classic bug — the summary reads fine but the booking date silently changes.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "hist", "label": "Growing history", "shape": "circle"},
+    {"id": "pin", "label": "Pin slot state + system prompt", "shape": "rect"},
+    {"id": "outside", "label": "Pinned outside the compressible region?", "shape": "diamond"},
+    {"id": "bug", "label": "Slots summarized: booking date silently changes", "shape": "stadium"},
+    {"id": "split", "label": "Recent or old turns?", "shape": "diamond"},
+    {"id": "verb", "label": "Recent turns verbatim", "shape": "rect"},
+    {"id": "sum", "label": "Summarize older turns", "shape": "rect"},
+    {"id": "ctx", "label": "Turn context fits window", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "hist", "target": "pin"},
+    {"source": "pin", "target": "outside"},
+    {"source": "outside", "target": "bug", "label": "no: inside region"},
+    {"source": "outside", "target": "split", "label": "yes: protected"},
+    {"source": "split", "target": "verb", "label": "recent"},
+    {"source": "split", "target": "sum", "label": "old"},
+    {"source": "verb", "target": "ctx"},
+    {"source": "sum", "target": "ctx"}
+  ]
+}
+```
+
+### Error recovery and repair
+
+Misunderstandings are inevitable; the runtime needs explicit repair: detect low confidence or a user correction ("no, I meant..."), roll back the affected slot, confirm, and continue — without restarting the whole dialogue. Bots that cannot localize a repair force the user to start over, the top driver of abandonment.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "resp", "label": "Bot response", "shape": "circle"},
+    {"id": "sig", "label": "Low confidence or user correction?", "shape": "diamond"},
+    {"id": "loc", "label": "Localizable to a specific slot?", "shape": "diamond"},
+    {"id": "restart", "label": "Forced full restart: top abandonment driver", "shape": "stadium"},
+    {"id": "roll", "label": "Roll back only the affected slot", "shape": "rect"},
+    {"id": "conf", "label": "Confirm corrected value", "shape": "rect"},
+    {"id": "cont", "label": "Continue dialogue (state intact)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "resp", "target": "sig"},
+    {"source": "sig", "target": "cont", "label": "no: proceed"},
+    {"source": "sig", "target": "loc", "label": "yes"},
+    {"source": "loc", "target": "restart", "label": "no: cannot localize"},
+    {"source": "loc", "target": "roll", "label": "yes"},
+    {"source": "roll", "target": "conf"},
+    {"source": "conf", "target": "cont"}
+  ]
+}
+```
+
+### Channel-decoupled rendering
+
+One dialogue brain serves web, SMS, voice, WhatsApp — each with different latency budgets and rendering (buttons vs plain text vs speech). The runtime separates *decision* (channel-agnostic state + intent) from *presentation* (channel adapter). Coupling them means a voice latency requirement over-constrains the SMS path, or rich UI logic leaks into the core.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "brain", "label": "Dialogue core\n(channel-agnostic)", "shape": "circle"},
+    {"id": "intent", "label": "Decision + intent", "shape": "rect"},
+    {"id": "ad", "label": "Channel adapter", "shape": "diamond"},
+    {"id": "web", "label": "Web (rich UI)", "shape": "rect"},
+    {"id": "voice", "label": "Voice (low latency)", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "brain", "target": "intent"},
+    {"source": "intent", "target": "ad"},
+    {"source": "ad", "target": "web"},
+    {"source": "ad", "target": "voice"}
+  ]
+}
+```
 
 ## Key Takeaways
 

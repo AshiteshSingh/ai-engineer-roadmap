@@ -2,6 +2,35 @@
 
 Function calling has emerged as the foundational mechanism through which large language models interact with external systems, transforming LLMs from text generators into capable agents. This article examines the design of function calling APIs across major providers, the role of JSON Schema in tool definitions, parallel execution strategies, sandboxing considerations, and patterns for building reliable tool pipelines that handle errors gracefully and scale to complex workflows.
 
+## Mental Model
+
+The mental model for function calling is **the model never runs anything — it only emits a structured intent, and your code decides whether and how to execute it.** A "tool call" is just JSON the model produces because its prompt advertised a schema; the runtime loop is your responsibility: parse the call, validate arguments, execute (or refuse), feed the result back, and let the model continue. Confusing "the model called the API" with "the model asked me to call the API" is the root of most function-calling bugs and every security incident.
+
+From that one idea everything follows. The tool schema is a contract written in the [system prompts](/system-prompts) layer; argument validation is a trust boundary, not a formality; and multi-step tool use is just this request→intent→execute→feed-back loop iterated — the same loop that, with memory and planning bolted on, becomes a [code agent](/code-agents). The model is a planner that speaks JSON; the executor is always you.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "prompt", "label": "Prompt +\ntool schemas", "shape": "circle"},
+    {"id": "model", "label": "Model emits\ntool_call JSON", "shape": "rect"},
+    {"id": "val", "label": "Validate args", "shape": "diamond"},
+    {"id": "exec", "label": "Your code\nexecutes", "shape": "rect"},
+    {"id": "feed", "label": "Result → model", "shape": "rect"},
+    {"id": "ans", "label": "Final answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "prompt", "target": "model"},
+    {"source": "model", "target": "val"},
+    {"source": "val", "target": "exec", "label": "valid"},
+    {"source": "val", "target": "model", "label": "reject → retry"},
+    {"source": "exec", "target": "feed"},
+    {"source": "feed", "target": "model", "label": "loop"},
+    {"source": "model", "target": "ans", "label": "no more calls"}
+  ]
+}
+```
+
 ## The Evolution of Function Calling
 
 Before dedicated function calling APIs existed, developers resorted to prompt engineering: instructing the model to output JSON in a particular format, then parsing the result with fragile regex or string matching. This approach was error-prone, with models frequently producing malformed output, hallucinating function names, or embedding function calls within conversational text that resisted reliable extraction (see also [Article 10: Structured Output](/structured-output) for how constrained decoding solves the output formatting problem more broadly).
@@ -669,6 +698,140 @@ Several significant efforts have produced open training datasets and fine-tuned 
 These training approaches explain common failure modes. Models struggle with tools whose schemas differ significantly from patterns seen in training: unusual parameter names, deeply nested objects, or unconventional description formats. When a model repeatedly misuses a tool, the fix is often to redesign the schema to match patterns the model has been trained on -- shorter descriptions, flatter parameter structures, and conventional naming.
 
 Models also exhibit training-data biases in tool selection. A model trained primarily on single-tool examples may under-utilize parallel calling. One trained on ReAct-style traces may add unnecessary reasoning steps before straightforward tool calls. Recognizing these biases helps when designing evaluation suites for tool-use accuracy, as discussed in [Article 30: Agent Evaluation](/agent-evaluation).
+
+## Runtime Internals
+
+The intent-vs-execution model hides the mechanics that make tool calling reliable instead of a liability.
+
+### Argument validation as a trust boundary
+
+The model emits arguments as a JSON string; it can hallucinate fields, wrong types, or injection payloads. The runtime must validate against the tool's JSON Schema *before* execution and treat a validation failure as a recoverable signal (feed the error back so the model can retry) — never as a crash. Skipping this is how a "get_file" tool becomes an arbitrary-read primitive.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "call", "label": "Model emits tool_call args (JSON string)", "shape": "circle"},
+    {"id": "parse", "label": "Parse JSON", "shape": "rect"},
+    {"id": "parseok", "label": "Well-formed JSON?", "shape": "diamond"},
+    {"id": "schema", "label": "Validate against tool JSON Schema", "shape": "rect"},
+    {"id": "valid", "label": "Types + required fields + bounds valid?", "shape": "diamond"},
+    {"id": "inj", "label": "Unvalidated: get_file becomes an arbitrary-read primitive", "shape": "stadium"},
+    {"id": "err", "label": "Return validation error to the model", "shape": "rect"},
+    {"id": "retry", "label": "Recoverable: model corrects and retries", "shape": "stadium"},
+    {"id": "exec", "label": "Execute tool", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "call", "target": "parse"},
+    {"source": "parse", "target": "parseok"},
+    {"source": "parseok", "target": "err", "label": "malformed"},
+    {"source": "parseok", "target": "schema", "label": "ok"},
+    {"source": "schema", "target": "valid"},
+    {"source": "valid", "target": "exec", "label": "yes"},
+    {"source": "valid", "target": "err", "label": "no"},
+    {"source": "valid", "target": "inj", "label": "validation skipped"},
+    {"source": "err", "target": "retry"},
+    {"source": "retry", "target": "call"}
+  ]
+}
+```
+
+### Parallel tool calls and ordering
+
+Modern models emit several tool calls in one turn. The runtime can execute independent ones concurrently, but must (a) pair every result back to its `tool_call_id`, and (b) detect data dependencies it should *not* parallelize. Mismatched ids or out-of-order results corrupt the model's world state silently.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "turn", "label": "Turn emits N tool calls", "shape": "circle"},
+    {"id": "graph", "label": "Build data-dependency graph", "shape": "rect"},
+    {"id": "indep", "label": "Calls independent?", "shape": "diamond"},
+    {"id": "par", "label": "Execute concurrently", "shape": "rect"},
+    {"id": "seq", "label": "Execute in dependency order", "shape": "rect"},
+    {"id": "pair", "label": "Each result paired to its tool_call_id?", "shape": "diamond"},
+    {"id": "corrupt", "label": "Mismatched ids silently corrupt world state", "shape": "stadium"},
+    {"id": "join", "label": "Join results in stable order", "shape": "rect"},
+    {"id": "cont", "label": "Model continues with consistent state", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "turn", "target": "graph"},
+    {"source": "graph", "target": "indep"},
+    {"source": "indep", "target": "par", "label": "yes"},
+    {"source": "indep", "target": "seq", "label": "data dependency"},
+    {"source": "par", "target": "pair"},
+    {"source": "seq", "target": "pair"},
+    {"source": "pair", "target": "join", "label": "yes"},
+    {"source": "pair", "target": "corrupt", "label": "no"},
+    {"source": "join", "target": "cont"}
+  ]
+}
+```
+
+### Execution sandboxing
+
+Any tool that runs code or shells out is an attack surface. The runtime isolates execution (container, microVM, restricted subprocess) with no ambient credentials, a timeout, and an output size cap. The sandbox is also where prompt-injection-via-tool-output is contained — untrusted tool results must not be able to escalate privileges, a concern shared with [code agents](/code-agents).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "tool", "label": "Code / shell tool invocation", "shape": "circle"},
+    {"id": "iso", "label": "Isolate: container / microVM / restricted subprocess", "shape": "rect"},
+    {"id": "creds", "label": "Ambient credentials present?", "shape": "diamond"},
+    {"id": "leak", "label": "Tool-output injection can escalate privileges", "shape": "stadium"},
+    {"id": "timeout", "label": "Within timeout?", "shape": "diamond"},
+    {"id": "cap", "label": "Output within size cap?", "shape": "diamond"},
+    {"id": "kill", "label": "Kill + flag", "shape": "stadium"},
+    {"id": "trunc", "label": "Truncate output", "shape": "rect"},
+    {"id": "ret", "label": "Return contained result", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "tool", "target": "iso"},
+    {"source": "iso", "target": "creds"},
+    {"source": "creds", "target": "leak", "label": "yes: misconfig"},
+    {"source": "creds", "target": "timeout", "label": "none"},
+    {"source": "timeout", "target": "kill", "label": "exceeded"},
+    {"source": "timeout", "target": "cap", "label": "ok"},
+    {"source": "cap", "target": "ret", "label": "yes"},
+    {"source": "cap", "target": "trunc", "label": "no"},
+    {"source": "trunc", "target": "ret"}
+  ]
+}
+```
+
+### Tool-result context management
+
+Every tool result is appended to the context window; verbose results (a 50KB API dump) blow the budget within a few turns. The runtime must summarize or window tool outputs before reinjection — the same [dynamic context assembly](/dynamic-context-assembly) discipline, and the reason long agent runs need [memory architectures](/memory-architectures) rather than an ever-growing transcript.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "res", "label": "Raw tool result", "shape": "circle"},
+    {"id": "size", "label": "Result over per-call size cap?", "shape": "diamond"},
+    {"id": "sum", "label": "Summarize / window before reinjection", "shape": "rect"},
+    {"id": "inj", "label": "Append to context window", "shape": "rect"},
+    {"id": "budget", "label": "Cumulative transcript over budget?", "shape": "diamond"},
+    {"id": "blow", "label": "50KB dumps blow the budget in a few turns", "shape": "stadium"},
+    {"id": "evict", "label": "Evict oldest results, keep pinned schemas", "shape": "rect"},
+    {"id": "mem", "label": "Offload to memory architecture", "shape": "rect"},
+    {"id": "model", "label": "Model continues within budget", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "res", "target": "size"},
+    {"source": "size", "target": "sum", "label": "yes"},
+    {"source": "size", "target": "inj", "label": "no: small"},
+    {"source": "sum", "target": "inj"},
+    {"source": "inj", "target": "budget"},
+    {"source": "budget", "target": "model", "label": "within"},
+    {"source": "budget", "target": "blow", "label": "exceeded"},
+    {"source": "blow", "target": "evict"},
+    {"source": "evict", "target": "mem"},
+    {"source": "mem", "target": "model"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

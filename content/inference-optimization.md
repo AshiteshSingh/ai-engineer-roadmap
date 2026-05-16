@@ -2,6 +2,33 @@
 
 Serving large language models at production scale is fundamentally an inference optimization problem. While training a frontier model may cost hundreds of millions of dollars, the cumulative cost of inference — serving billions of requests across the model's lifetime — typically dwarfs training cost by an order of magnitude (see [Article 39: Cost Optimization](/cost-optimization) for the economic analysis). This article examines the core techniques that make LLM inference practical: KV cache management, prefix caching, quantization methods, speculative decoding, disaggregated serving, continuous batching, and attention optimization. Each technique addresses a different bottleneck in the inference pipeline — rooted in the transformer's attention mechanism and autoregressive decode loop covered in [Article 01: Transformer Architecture](/transformer-architecture) — and understanding their interactions is essential for building efficient serving systems.
 
+## Mental Model
+
+The mental model for inference optimization is **two phases with opposite bottlenecks, and every technique targets one of them**. *Prefill* (process the prompt) is a matrix-matrix multiply — compute-bound, GPU-saturating. *Decode* (generate tokens one at a time) is a matrix-vector multiply — memory-bandwidth-bound, leaving the GPU ~99% idle at batch size 1. Almost all serving inefficiency is the decode phase wasting hardware. So the unifying question for any optimization is: *which phase, and which resource (compute, memory bandwidth, or memory capacity) does it relieve?*
+
+That classification organizes the whole field: KV cache trades memory *capacity* to avoid recomputing decode; continuous batching fills the idle decode GPU by serving many requests at once; quantization cuts both memory and bandwidth; speculative decoding attacks decode's serial latency. The KV cache lives in the [memory architectures](/memory-architectures) budget; quantization is the [distillation & compression](/distillation-compression) toolkit applied at serve time; and the economic endpoint — tokens per dollar — is the [cost optimization](/cost-optimization) metric.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Request", "shape": "circle"},
+    {"id": "pre", "label": "Prefill\n(compute-bound)", "shape": "rect"},
+    {"id": "dec", "label": "Decode\n(bandwidth-bound)", "shape": "rect"},
+    {"id": "phase", "label": "Which bottleneck?", "shape": "diamond"},
+    {"id": "batch", "label": "Batching fills\nidle decode GPU", "shape": "rect"},
+    {"id": "out", "label": "Tokens / $", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "pre"},
+    {"source": "pre", "target": "dec"},
+    {"source": "dec", "target": "phase"},
+    {"source": "phase", "target": "batch", "label": "decode idle"},
+    {"source": "batch", "target": "out"}
+  ]
+}
+```
+
 ## The Inference Pipeline
 
 LLM inference proceeds in two distinct phases, each with different computational characteristics:
@@ -482,6 +509,133 @@ Response Stream (token-by-token via SSE)
 - **Time Between Tokens (TBT)**: latency between successive generated tokens. Dominated by decode speed.
 - **Throughput**: total tokens generated per second across all requests. Maximized by large batch sizes and high GPU utilization.
 - **Tokens per Dollar**: the economic metric that ultimately matters, combining hardware cost with throughput.
+
+## Runtime Internals
+
+The "two phases, opposite bottlenecks" model hides the mechanics that make a serving stack fast.
+
+### KV cache: trade memory to skip recompute
+
+Without a KV cache, each decode step re-attends over the entire sequence — O(n²) recompute. The cache stores past keys/values so each new token is O(n). The cost moves to *memory capacity*: cache size = layers × kv-heads × head-dim × seq-len × batch, and it grows every token. Running out of KV memory, not compute, is what caps concurrent requests.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "tok", "label": "New token", "shape": "circle"},
+    {"id": "cache", "label": "Reuse cached\nK/V", "shape": "rect"},
+    {"id": "attn", "label": "Attend (O(n))", "shape": "rect"},
+    {"id": "grow", "label": "Cache grows\nper token", "shape": "diamond"},
+    {"id": "cap", "label": "KV memory caps\nconcurrency", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "tok", "target": "cache"},
+    {"source": "cache", "target": "attn"},
+    {"source": "attn", "target": "grow"},
+    {"source": "grow", "target": "cap"}
+  ]
+}
+```
+
+### PagedAttention: KV cache as virtual memory
+
+Naive contiguous KV allocation wastes 60–80% to fragmentation and over-reservation. vLLM's PagedAttention pages the cache into fixed blocks (like OS virtual memory), allocating on demand and sharing identical prefix blocks across requests. The runtime payoff: far higher batch size from the same VRAM — the single biggest throughput lever in modern serving.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "naive", "label": "Contiguous KV allocation", "shape": "circle"},
+    {"id": "waste", "label": "60-80% lost to fragmentation + over-reservation", "shape": "stadium"},
+    {"id": "page", "label": "Page KV into fixed-size blocks", "shape": "rect"},
+    {"id": "demand", "label": "Allocate blocks on demand", "shape": "rect"},
+    {"id": "shared", "label": "Identical prefix blocks shareable?", "shape": "diamond"},
+    {"id": "share", "label": "Share prefix blocks across requests", "shape": "rect"},
+    {"id": "copy", "label": "Copy-on-write per private block", "shape": "rect"},
+    {"id": "vram", "label": "VRAM headroom recovered?", "shape": "diamond"},
+    {"id": "batch", "label": "Far higher batch size, same VRAM", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "naive", "target": "waste"},
+    {"source": "waste", "target": "page"},
+    {"source": "page", "target": "demand"},
+    {"source": "demand", "target": "shared"},
+    {"source": "shared", "target": "share", "label": "yes"},
+    {"source": "shared", "target": "copy", "label": "no: private"},
+    {"source": "share", "target": "vram"},
+    {"source": "copy", "target": "vram"},
+    {"source": "vram", "target": "batch", "label": "yes"},
+    {"source": "vram", "target": "page", "label": "no: smaller blocks"}
+  ]
+}
+```
+
+### Continuous batching fills the idle GPU
+
+Static batching waits for the slowest request in a batch to finish; the GPU idles on finished slots. Continuous (in-flight) batching swaps a completed request out and a queued one in *per decode step*, keeping the GPU saturated. The runtime effect is order-of-magnitude throughput gains on the memory-bound decode phase — it directly attacks the "99% idle" problem.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "queue", "label": "Request queue", "shape": "circle"},
+    {"id": "mode", "label": "Static or continuous batching?", "shape": "diamond"},
+    {"id": "static", "label": "Static: waits for slowest request in batch", "shape": "stadium"},
+    {"id": "idle", "label": "Finished slots idle the GPU (99% idle)", "shape": "stadium"},
+    {"id": "step", "label": "Per-decode-step scheduler", "shape": "rect"},
+    {"id": "done", "label": "Any slot completed this step?", "shape": "diamond"},
+    {"id": "qwait", "label": "Queued request waiting?", "shape": "diamond"},
+    {"id": "swap", "label": "Evict finished, admit queued request", "shape": "rect"},
+    {"id": "sat", "label": "GPU stays saturated on decode", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "queue", "target": "mode"},
+    {"source": "mode", "target": "static", "label": "static"},
+    {"source": "static", "target": "idle"},
+    {"source": "mode", "target": "step", "label": "continuous"},
+    {"source": "step", "target": "done"},
+    {"source": "done", "target": "qwait", "label": "yes"},
+    {"source": "done", "target": "step", "label": "no: continue"},
+    {"source": "qwait", "target": "swap", "label": "yes"},
+    {"source": "qwait", "target": "step", "label": "no: shrink batch"},
+    {"source": "swap", "target": "sat"},
+    {"source": "sat", "target": "step", "label": "next step"}
+  ]
+}
+```
+
+### Prefix caching across requests
+
+Many requests share a long system prompt. A radix tree over KV blocks lets request B reuse request A's cached prefix, paying prefill only for the unique suffix. The runtime detail: the prefix must be *byte-identical* — one changing token (a timestamp) busts the shared prefix, the same fragility as provider prompt caching in [cost optimization](/cost-optimization).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "req", "label": "Incoming request", "shape": "circle"},
+    {"id": "radix", "label": "Walk radix tree of cached KV blocks", "shape": "rect"},
+    {"id": "match", "label": "Longest byte-identical prefix found?", "shape": "diamond"},
+    {"id": "bust", "label": "One changed token (timestamp) busts the prefix", "shape": "stadium"},
+    {"id": "reuse", "label": "Reuse cached KV for the matched prefix", "shape": "rect"},
+    {"id": "suffix", "label": "Prefill only the unique suffix", "shape": "rect"},
+    {"id": "full", "label": "Full prefill (cold)", "shape": "rect"},
+    {"id": "evict", "label": "Tree over capacity?", "shape": "diamond"},
+    {"id": "dec", "label": "Decode", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "radix"},
+    {"source": "radix", "target": "match"},
+    {"source": "match", "target": "reuse", "label": "hit"},
+    {"source": "match", "target": "bust", "label": "near-miss"},
+    {"source": "bust", "target": "full", "label": "treated as miss"},
+    {"source": "match", "target": "full", "label": "miss"},
+    {"source": "reuse", "target": "suffix"},
+    {"source": "suffix", "target": "dec"},
+    {"source": "full", "target": "evict"},
+    {"source": "evict", "target": "dec", "label": "LRU-evict cold blocks"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

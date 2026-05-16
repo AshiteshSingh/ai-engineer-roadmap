@@ -4,6 +4,37 @@ Context engineering has emerged as the defining discipline of applied AI enginee
 
 The term gained wide adoption after Andrej Karpathy's observation that "the hottest new programming language is English" evolved into a more precise framing: the real skill is not writing prompts but engineering the full context that surrounds them. Tobi Lutke (Shopify CEO) and others have described context engineering as "the art of providing all the information and tools an LLM needs to successfully accomplish a task." This reflects a maturation of the field -- from crafting clever single-shot prompts to designing information systems that dynamically assemble the right context for each interaction.
 
+## Mental Model
+
+The mental model for context engineering is **the model is a fixed function; the only thing you control is its input, so the input *is* the program**. You cannot change the weights at request time. Everything that determines output quality — instructions, retrieved knowledge, tools, history, examples — is just the argument you pass. Context engineering is the discipline of *designing that argument under a hard token budget*: deciding what information earns a place in the window, in what order, with what structure, for this specific request.
+
+This subsumes "prompting" and reframes it as systems design. Prompting is the static instruction slice; the rest is dynamic — which makes context engineering the umbrella over [dynamic context assembly](/dynamic-context-assembly) (build it per request), [context window management](/context-window-management) (fit it to the budget), and [context compression](/context-compression) (shrink it without losing signal). The recurring judgment is *signal density per token*: more context is not better, the right context in the right place is.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "fixed", "label": "Fixed model\n(weights frozen)", "shape": "circle"},
+    {"id": "design", "label": "Design the input", "shape": "diamond"},
+    {"id": "instr", "label": "Instructions", "shape": "rect"},
+    {"id": "know", "label": "Retrieved knowledge", "shape": "rect"},
+    {"id": "hist", "label": "History + tools", "shape": "rect"},
+    {"id": "budget", "label": "Fit budget,\nmax signal density", "shape": "rect"},
+    {"id": "out", "label": "Quality output", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "fixed", "target": "design"},
+    {"source": "design", "target": "instr"},
+    {"source": "design", "target": "know"},
+    {"source": "design", "target": "hist"},
+    {"source": "instr", "target": "budget"},
+    {"source": "know", "target": "budget"},
+    {"source": "hist", "target": "budget"},
+    {"source": "budget", "target": "out"}
+  ]
+}
+```
+
 ## Why Context Engineering Matters
 
 ### Beyond Prompt Engineering
@@ -536,6 +567,124 @@ A common question: should you engineer better context or fine-tune the model?
 - The task requires specialized reasoning patterns the model doesn't exhibit with context alone
 
 In practice, the most effective systems combine both: a fine-tuned model for base behavior and style, augmented with dynamic context for specific knowledge and current information.
+
+## Runtime Internals
+
+The "input is the program" model hides the mechanics that decide whether a context is well-engineered or just large.
+
+### Budget allocation before assembly
+
+The first runtime step is arithmetic, not retrieval: reserve space for the system prompt and the expected output, then divide the remainder across knowledge, history, and tools by priority. Skipping this is why systems "work in dev, 400 at the boundary" — the budget must be planned, not discovered when the request overflows. This is the entry point to [context window management](/context-window-management).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "win", "label": "Window size", "shape": "circle"},
+    {"id": "reserve", "label": "Reserve sys +\noutput margin", "shape": "rect"},
+    {"id": "alloc", "label": "Allocate rest\nby priority", "shape": "rect"},
+    {"id": "ok", "label": "Within budget?", "shape": "diamond"},
+    {"id": "asm", "label": "Proceed to assemble", "shape": "circle"},
+    {"id": "trim", "label": "Compress / drop", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "win", "target": "reserve"},
+    {"source": "reserve", "target": "alloc"},
+    {"source": "alloc", "target": "ok"},
+    {"source": "ok", "target": "asm", "label": "yes"},
+    {"source": "ok", "target": "trim", "label": "no"}
+  ]
+}
+```
+
+### Structure and delimiting
+
+The same tokens perform differently depending on layout. Clearly delimited sections (XML-ish tags, headers) and instruction-after-context ordering measurably beat an unstructured "soup". The runtime principle: the model attends to boundaries and recency, so structure is not cosmetic — it is a correctness lever, and it is why naive concatenation underperforms a deliberate template.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "parts", "label": "Context parts (system, knowledge, history, tools)", "shape": "circle"},
+    {"id": "layout", "label": "Deliberate template or naive concat?", "shape": "diamond"},
+    {"id": "delim", "label": "Delimit sections (XML-ish tags / headers)", "shape": "rect"},
+    {"id": "order", "label": "Place instruction after referenced context", "shape": "rect"},
+    {"id": "attn", "label": "Model attends to boundaries + recency", "shape": "rect"},
+    {"id": "soup", "label": "Unstructured soup: measurably degrades", "shape": "stadium"},
+    {"id": "good", "label": "Reliably parseable context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "parts", "target": "layout"},
+    {"source": "layout", "target": "delim", "label": "deliberate"},
+    {"source": "layout", "target": "soup", "label": "naive concat"},
+    {"source": "delim", "target": "order"},
+    {"source": "order", "target": "attn"},
+    {"source": "attn", "target": "good"}
+  ]
+}
+```
+
+### Measuring context quality
+
+You cannot tune what you cannot measure. The runtime instruments context: token utilization, source mix, drop rate, and — critically — task accuracy with vs without each context component (ablation). A component that does not move the metric is wasted budget; one that hurts it is active noise. This is [eval fundamentals](/eval-fundamentals) applied to the input rather than the model.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "ctx", "label": "Candidate context", "shape": "circle"},
+    {"id": "instr", "label": "Instrument: token utilization / source mix / drop rate", "shape": "rect"},
+    {"id": "abl", "label": "Ablate each component (with vs without)", "shape": "rect"},
+    {"id": "delta", "label": "Effect on task accuracy?", "shape": "diamond"},
+    {"id": "keep", "label": "Keep: earns its budget", "shape": "rect"},
+    {"id": "waste", "label": "Wasted budget (no movement)", "shape": "stadium"},
+    {"id": "noise", "label": "Active noise (hurts accuracy)", "shape": "stadium"},
+    {"id": "tuned", "label": "Budget-efficient context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ctx", "target": "instr"},
+    {"source": "instr", "target": "abl"},
+    {"source": "abl", "target": "delta"},
+    {"source": "delta", "target": "keep", "label": "improves"},
+    {"source": "delta", "target": "waste", "label": "no change"},
+    {"source": "delta", "target": "noise", "label": "degrades"},
+    {"source": "keep", "target": "tuned"},
+    {"source": "waste", "target": "tuned", "label": "drop it"},
+    {"source": "noise", "target": "tuned", "label": "drop it"}
+  ]
+}
+```
+
+### Context engineering vs fine-tuning
+
+A recurring runtime decision: encode behavior in *weights* (fine-tune) or in the *input* (context). Context is dynamic, inspectable, instantly updatable, and cheap to change; fine-tuning bakes in style and base behavior but is slow and opaque. Mature systems do both — a fine-tuned base for behavior, dynamic context for current knowledge — the same split discussed in [fine-tuning fundamentals](/fine-tuning-fundamentals).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "gap", "label": "Capability gap", "shape": "circle"},
+    {"id": "kind", "label": "Stable behavior or current knowledge?", "shape": "diamond"},
+    {"id": "ft", "label": "Fine-tune: encode in weights", "shape": "rect"},
+    {"id": "ftc", "label": "Slow, opaque, baked-in style", "shape": "stadium"},
+    {"id": "ce", "label": "Context-engineer: encode in input", "shape": "rect"},
+    {"id": "cec", "label": "Dynamic, inspectable, instantly updatable", "shape": "stadium"},
+    {"id": "mature", "label": "Mature: fine-tuned base + dynamic context?", "shape": "diamond"},
+    {"id": "sys", "label": "Combined system", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "gap", "target": "kind"},
+    {"source": "kind", "target": "ft", "label": "stable behavior"},
+    {"source": "kind", "target": "ce", "label": "current knowledge"},
+    {"source": "ft", "target": "ftc"},
+    {"source": "ce", "target": "cec"},
+    {"source": "ftc", "target": "mature"},
+    {"source": "cec", "target": "mature"},
+    {"source": "mature", "target": "sys", "label": "yes: both"},
+    {"source": "mature", "target": "kind", "label": "no: reassess"}
+  ]
+}
+```
 
 ## Connections to Other Topics
 

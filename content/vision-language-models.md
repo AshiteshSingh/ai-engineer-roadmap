@@ -2,6 +2,33 @@
 
 Vision-language models (VLMs) represent one of the most consequential advances in AI engineering, enabling systems that jointly reason over images and text. From CLIP's contrastive pretraining to GPT-4V's multimodal reasoning capabilities, these models have transformed how we build applications that understand visual content. This article explores the architectural patterns, training methodologies, and practical applications that define the current VLM landscape.
 
+## Mental Model
+
+The mental model for a VLM is **"project pixels into the LLM's token space, then it's just an LLM."** A vision encoder turns an image into a grid of feature vectors; a connector (linear, MLP, or resampler) maps those into the same embedding space the language model already understands; from there generation is ordinary next-token prediction over a sequence that happens to contain visual tokens. Almost every VLM design question reduces to one of three knobs: *which encoder*, *how the connector bridges modalities*, and *how many visual tokens* you can afford to inject.
+
+That last knob is the one with system-wide consequences. Visual tokens are expensive — a single image can cost hundreds of tokens — so VLM engineering is largely [context engineering](/context-engineering) applied to pixels. The connector choice is a [model architecture](/model-architectures) decision, and getting reliable machine-readable answers out of a VLM is the same [structured output](/structured-output) problem as with any LLM, just with images in the prompt.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "img", "label": "Image", "shape": "circle"},
+    {"id": "enc", "label": "Vision encoder\n(ViT)", "shape": "rect"},
+    {"id": "conn", "label": "Connector\n(MLP/resampler)", "shape": "rect"},
+    {"id": "tok", "label": "Visual tokens", "shape": "rect"},
+    {"id": "llm", "label": "LLM\n(next-token)", "shape": "rect"},
+    {"id": "out", "label": "Text answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "img", "target": "enc"},
+    {"source": "enc", "target": "conn"},
+    {"source": "conn", "target": "tok"},
+    {"source": "tok", "target": "llm", "label": "prepend to prompt"},
+    {"source": "llm", "target": "out"}
+  ]
+}
+```
+
 ## The Foundation: Contrastive Vision-Language Pretraining
 
 ### CLIP and the Contrastive Paradigm
@@ -505,6 +532,135 @@ VLMs are increasingly being integrated into robotics and embodied AI:
 ### World Models
 
 The frontier of VLM research is moving toward world models that don't just describe what they see but can predict what will happen next. Models like Sora and Genie demonstrate that visual generation models trained at scale develop implicit physical understanding, suggesting a path toward VLMs that truly understand the visual world rather than merely describing it.
+
+## Runtime Internals
+
+The "just an LLM" abstraction hides where VLMs actually get expensive and brittle.
+
+### The visual token budget
+
+A 336px image at patch size 14 is ~576 tokens *before* the text prompt. High-resolution or tiled images multiply that. The runtime consequence: image count and resolution, not text length, usually dominate context cost — so token-budget accounting in a VLM app is dominated by the image side, a direct [context engineering](/context-engineering) problem.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "img", "label": "Image (HxW)", "shape": "circle"},
+    {"id": "patch", "label": "Patchify", "shape": "rect"},
+    {"id": "n", "label": "~HW/p² tokens", "shape": "diamond"},
+    {"id": "ctx", "label": "Eats LLM\ncontext window", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "img", "target": "patch"},
+    {"source": "patch", "target": "n"},
+    {"source": "n", "target": "ctx", "label": "100s of tokens/image"}
+  ]
+}
+```
+
+### Token compression / resampling
+
+Because of that budget, production VLMs compress visual tokens — a Perceiver-style resampler or learned pooling reduces 576 → 64 tokens at a small accuracy cost. The runtime dial is the compression ratio: too aggressive and fine detail (small text, dense charts) is lost; too light and throughput collapses.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "raw", "label": "576 raw visual tokens", "shape": "circle"},
+    {"id": "res", "label": "Perceiver-style resampler / learned pooling", "shape": "rect"},
+    {"id": "ratio", "label": "Compression ratio choice", "shape": "diamond"},
+    {"id": "aggr", "label": "Too aggressive: drop most tokens", "shape": "rect"},
+    {"id": "light", "label": "Too light: negligible reduction", "shape": "rect"},
+    {"id": "detail", "label": "Fine detail (small text, dense charts) preserved?", "shape": "diamond"},
+    {"id": "loss", "label": "Misses small text / chart values", "shape": "stadium"},
+    {"id": "thru", "label": "Throughput collapses (budget unsaved)", "shape": "stadium"},
+    {"id": "task", "label": "Tune ratio per task (OCR vs caption)", "shape": "rect"},
+    {"id": "ok", "label": "~64 tokens, fast and adequate", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "raw", "target": "res"},
+    {"source": "res", "target": "ratio"},
+    {"source": "ratio", "target": "aggr", "label": "high ratio"},
+    {"source": "ratio", "target": "light", "label": "low ratio"},
+    {"source": "aggr", "target": "detail"},
+    {"source": "detail", "target": "ok", "label": "yes"},
+    {"source": "detail", "target": "loss", "label": "no"},
+    {"source": "light", "target": "thru"},
+    {"source": "loss", "target": "task"},
+    {"source": "thru", "target": "task"},
+    {"source": "task", "target": "ratio", "label": "retune"}
+  ]
+}
+```
+
+### Vision-encoder output caching
+
+The vision encoder is deterministic for a given image, so its output should be cached: repeated questions about the same image must not re-run the ViT. This is the highest-leverage VLM latency optimization and turns multi-turn image chat from O(turns × encode) into O(encode).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Question about the same image", "shape": "circle"},
+    {"id": "key", "label": "Cache key = image content hash", "shape": "rect"},
+    {"id": "hit", "label": "Encoder features cached?", "shape": "diamond"},
+    {"id": "reuse", "label": "Reuse cached ViT features", "shape": "rect"},
+    {"id": "enc", "label": "Run ViT once", "shape": "rect"},
+    {"id": "store", "label": "Store features (deterministic per image)", "shape": "rect"},
+    {"id": "naive", "label": "No cache: O(turns x encode)", "shape": "stadium"},
+    {"id": "evict", "label": "Feature cache full?", "shape": "diamond"},
+    {"id": "lru", "label": "LRU-evict cold images", "shape": "stadium"},
+    {"id": "llm", "label": "LLM answers at O(encode)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "key"},
+    {"source": "key", "target": "hit"},
+    {"source": "hit", "target": "reuse", "label": "hit"},
+    {"source": "hit", "target": "enc", "label": "miss"},
+    {"source": "enc", "target": "store"},
+    {"source": "store", "target": "evict"},
+    {"source": "evict", "target": "lru", "label": "yes"},
+    {"source": "evict", "target": "llm", "label": "no"},
+    {"source": "reuse", "target": "llm"},
+    {"source": "hit", "target": "naive", "label": "caching skipped"}
+  ]
+}
+```
+
+### Independent quantization of the two towers
+
+The vision encoder and the LLM are separate networks with different sensitivity, so they are quantized independently — the LLM often tolerates 4-bit while the vision encoder needs higher precision to preserve detail. Treating the VLM as one monolithic model for quantization is a common cause of silent accuracy loss on OCR-heavy tasks.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "vlm", "label": "VLM (two-tower model)", "shape": "circle"},
+    {"id": "mono", "label": "Quantize as one monolith?", "shape": "diamond"},
+    {"id": "silent", "label": "Silent accuracy loss on OCR-heavy tasks", "shape": "stadium"},
+    {"id": "split", "label": "Split into vision tower + LLM tower", "shape": "rect"},
+    {"id": "ve", "label": "Vision encoder: detail-sensitive", "shape": "rect"},
+    {"id": "veq", "label": "Keep higher precision (8-bit / fp16)", "shape": "rect"},
+    {"id": "lm", "label": "LLM tower: tolerates 4-bit", "shape": "rect"},
+    {"id": "ocr", "label": "OCR / chart benchmark holds?", "shape": "diamond"},
+    {"id": "raise", "label": "Raise vision-tower precision", "shape": "stadium"},
+    {"id": "dep", "label": "Deployable VLM, detail preserved", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "vlm", "target": "mono"},
+    {"source": "mono", "target": "silent", "label": "yes"},
+    {"source": "mono", "target": "split", "label": "no: independent"},
+    {"source": "split", "target": "ve"},
+    {"source": "split", "target": "lm"},
+    {"source": "ve", "target": "veq"},
+    {"source": "veq", "target": "ocr"},
+    {"source": "lm", "target": "ocr"},
+    {"source": "ocr", "target": "dep", "label": "yes"},
+    {"source": "ocr", "target": "raise", "label": "no"},
+    {"source": "raise", "target": "ocr"}
+  ]
+}
+```
 
 ## Cross-References
 

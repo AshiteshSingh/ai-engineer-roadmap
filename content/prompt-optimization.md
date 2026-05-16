@@ -12,6 +12,34 @@ Manually crafting prompts is labor-intensive, brittle across model versions, and
 - **Prompt compression** (LLMLingua) can reduce token count by 50%+ with minimal quality loss -- valuable after you've optimized prompt quality.
 - Multi-objective optimization maps the Pareto frontier across accuracy, cost, and latency so product teams can make informed trade-offs.
 
+## Mental Model
+
+The mental model for prompt optimization is **compile, don't handcraft**. A prompt is a parameter you can search, not prose you polish by intuition. Once you have (a) a *metric* that scores outputs and (b) a *training set* of inputs, finding the best instruction + few-shot examples becomes an optimization problem an algorithm solves better than a human. DSPy makes this literal: you write a declarative *signature* (inputs → outputs), pick an optimizer, and it searches the prompt space against your metric — the prompt becomes a compiled artifact, not a hand-tuned string.
+
+That reframes the whole field as "what is the search space, and what is the gradient signal?". APE/OPRO search instructions, few-shot selection searches demonstrations, TextGrad backpropagates *textual* feedback, prompt compression searches a shorter equivalent. The non-negotiable prerequisite is a trustworthy metric — optimizing against a bad metric overfits to it (Goodhart). The instruction half is a [system prompts](/system-prompts) contract; demanding a parseable result makes it a [structured output](/structured-output) problem; and optimizing a *frozen* model's prompt is the cheaper cousin of changing its weights via [RLHF & preference optimization](/rlhf-preference).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "sig", "label": "Signature\n(in → out)", "shape": "circle"},
+    {"id": "train", "label": "Trainset + metric", "shape": "rect"},
+    {"id": "opt", "label": "Optimizer\n(search prompt space)", "shape": "diamond"},
+    {"id": "cand", "label": "Candidate prompt", "shape": "rect"},
+    {"id": "score", "label": "Metric improved?", "shape": "diamond"},
+    {"id": "comp", "label": "Compiled prompt", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "sig", "target": "opt"},
+    {"source": "train", "target": "opt"},
+    {"source": "opt", "target": "cand"},
+    {"source": "cand", "target": "score"},
+    {"source": "score", "target": "opt", "label": "no: search again"},
+    {"source": "score", "target": "comp", "label": "yes"}
+  ]
+}
+```
+
 ## The Case for Prompt Optimization
 
 Manual prompt engineering suffers from several structural problems:
@@ -772,6 +800,112 @@ For teams adopting prompt optimization, DSPy offers the most complete framework.
 6. Evaluate on a held-out test set
 7. Iterate on the Signature and Module design based on failure analysis
 8. Consider prompt compression as a post-optimization step if token cost or latency is a concern
+
+## Runtime Internals
+
+The "compile the prompt" model hides the search mechanics that decide whether optimization improves or overfits.
+
+### DSPy compilation loop
+
+A DSPy optimizer (e.g. MIPROv2) proposes instruction + few-shot candidates, evaluates each on the trainset metric, and keeps the best — a bounded search, not infinite tuning. The runtime cost is *metric calls*: every candidate × every trainset example is an LLM call, so trainset size and candidate budget are the tunable cost knobs, and a held-out set must catch overfitting to the trainset.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "prog", "label": "DSPy program", "shape": "circle"},
+    {"id": "prop", "label": "Propose candidates", "shape": "rect"},
+    {"id": "eval", "label": "Score on trainset", "shape": "rect"},
+    {"id": "best", "label": "Best so far?", "shape": "diamond"},
+    {"id": "hold", "label": "Held-out check", "shape": "diamond"},
+    {"id": "ship", "label": "Compiled module", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "prog", "target": "prop"},
+    {"source": "prop", "target": "eval"},
+    {"source": "eval", "target": "best"},
+    {"source": "best", "target": "prop", "label": "no: iterate"},
+    {"source": "best", "target": "hold", "label": "yes"},
+    {"source": "hold", "target": "ship", "label": "generalizes"},
+    {"source": "hold", "target": "prop", "label": "overfit: continue"}
+  ]
+}
+```
+
+### OPRO: the LLM as its own optimizer
+
+OPRO feeds the model a trajectory of (prompt, score) pairs and asks it to propose a better prompt — gradient-free optimization where the LLM infers the improvement direction from history. The runtime risk is local optima and score noise: a lucky high-scoring prompt steers the search badly, so scores must be averaged over multiple samples before being trusted as the signal.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "hist", "label": "(prompt, score)\nhistory", "shape": "circle"},
+    {"id": "opt", "label": "LLM proposes\nnew prompt", "shape": "rect"},
+    {"id": "test", "label": "Eval (avg N)", "shape": "rect"},
+    {"id": "add", "label": "Append to history", "shape": "rect"},
+    {"id": "conv", "label": "Converged?", "shape": "diamond"},
+    {"id": "out", "label": "Best prompt", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "hist", "target": "opt"},
+    {"source": "opt", "target": "test"},
+    {"source": "test", "target": "add"},
+    {"source": "add", "target": "conv"},
+    {"source": "conv", "target": "hist", "label": "no"},
+    {"source": "conv", "target": "out", "label": "yes"}
+  ]
+}
+```
+
+### TextGrad: backprop through text
+
+TextGrad treats LLM-generated critique as a "textual gradient": run the prompt, get a loss-like critique, and apply that feedback to revise the prompt — an analog of gradient descent without numbers. The runtime needs a stable critic and a step size analog (how aggressively to rewrite); too aggressive and it oscillates, too timid and it stalls, exactly like a learning rate.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "p", "label": "Prompt", "shape": "circle"},
+    {"id": "run", "label": "Run + critic", "shape": "rect"},
+    {"id": "grad", "label": "Textual gradient\n(critique)", "shape": "rect"},
+    {"id": "upd", "label": "Apply (step size)", "shape": "rect"},
+    {"id": "stop", "label": "Improved?", "shape": "diamond"},
+    {"id": "done", "label": "Optimized prompt", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "p", "target": "run"},
+    {"source": "run", "target": "grad"},
+    {"source": "grad", "target": "upd"},
+    {"source": "upd", "target": "stop"},
+    {"source": "stop", "target": "run", "label": "no"},
+    {"source": "stop", "target": "done", "label": "yes"}
+  ]
+}
+```
+
+### Optimized prompts as pipeline artifacts
+
+A compiled prompt is brittle to model swaps — re-optimize when the base model changes. The runtime treats the optimization as a CI job: version the compiled prompt, gate promotion on a held-out metric (and a cost/latency budget), and roll back on regression. This is the same statistical merge gate as CI/CD for AI; the prompt is just another versioned artifact, validated like an [RLHF & preference optimization](/rlhf-preference) checkpoint.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "trig", "label": "Model/data change", "shape": "circle"},
+    {"id": "reopt", "label": "Re-optimize\n(CI job)", "shape": "rect"},
+    {"id": "gate", "label": "Held-out + cost\ngate?", "shape": "diamond"},
+    {"id": "ship", "label": "Promote version", "shape": "rect"},
+    {"id": "rb", "label": "Roll back", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "trig", "target": "reopt"},
+    {"source": "reopt", "target": "gate"},
+    {"source": "gate", "target": "ship", "label": "pass"},
+    {"source": "gate", "target": "rb", "label": "regress"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

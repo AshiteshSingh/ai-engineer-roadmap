@@ -14,6 +14,37 @@ Human evaluation provides three things that automated approaches cannot:
 
 The challenge is that human judgment is variable, expensive, and difficult to reproduce. Rigorous methodology is the solution.
 
+## Mental Model
+
+The mental model for human evaluation is a **measurement instrument you have to calibrate before you trust its readings**. Humans are the ground-truth sensor, but a noisy one: the same output gets different scores across raters and across time. So the real work is not "collect labels" — it is *reducing variance* (clear rubric, training, adjudication) and *measuring the variance you could not remove* (inter-rater reliability). A human eval without an IRR number is an unlabeled ruler.
+
+This positions human eval in the wider stack: it is the gold standard that calibrates everything cheaper. [LLM-as-judge](/llm-as-judge) is only trustworthy once validated against human labels, and the rubric itself is just [evaluation fundamentals](/eval-fundamentals) written precisely enough that two strangers agree. The instrument metaphor has a sharp practical edge: just as you would never report a sensor reading without its error bar, you never report a human-eval mean without its inter-rater coefficient and the adjudication policy that produced the gold labels. A study that quotes "82% preferred A" with no κ or α, no rater count, and no disagreement-resolution rule is not a measurement — it is an anecdote with a number attached, and it will not survive a second annotation round.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "out", "label": "Model outputs", "shape": "circle"},
+    {"id": "rub", "label": "Rubric +\nrater training", "shape": "rect"},
+    {"id": "rate", "label": "N raters score", "shape": "rect"},
+    {"id": "irr", "label": "IRR ≥ floor?", "shape": "diamond"},
+    {"id": "adj", "label": "Adjudicate\ndisagreements", "shape": "stadium"},
+    {"id": "trust", "label": "Gold labels", "shape": "stadium"},
+    {"id": "calib", "label": "Anchors cheaper\njudge?", "shape": "diamond"}
+  ],
+  "edges": [
+    {"source": "out", "target": "rub"},
+    {"source": "rub", "target": "rate"},
+    {"source": "rate", "target": "irr"},
+    {"source": "irr", "target": "adj", "label": "no: triage"},
+    {"source": "adj", "target": "rub", "label": "patch rubric"},
+    {"source": "irr", "target": "trust", "label": "yes"},
+    {"source": "trust", "target": "calib"},
+    {"source": "calib", "target": "trust", "label": "validate LLM-judge"}
+  ]
+}
+```
+
 ## Annotation Protocol Design
 
 ### Defining the Task
@@ -527,6 +558,118 @@ When scoping a human evaluation project, account for these commonly overlooked c
 4. **Qualification screening**: Pre-screening tasks to filter annotator quality. Budget $50-$200 per screening round.
 5. **Disagreement adjudication**: Expert review of annotator disagreements. Budget 5-10% of total.
 6. **Analysis time**: Your team's time to analyze results, compute IRR, and iterate. Often exceeds the annotation cost itself.
+
+## Runtime Internals
+
+The methodology is the *what*; running it at scale is where reliability is won or lost.
+
+### Inter-rater reliability computation
+
+IRR is not one number — the right coefficient depends on the scale. Nominal → Fleiss' κ; ordinal/interval → Krippendorff's α (which also tolerates missing labels). Reporting raw percent-agreement instead of a chance-corrected coefficient is the single most common methodological error.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "labels", "label": "Rater label matrix", "shape": "circle"},
+    {"id": "scale", "label": "Scale type?", "shape": "diamond"},
+    {"id": "kappa", "label": "Fleiss' κ", "shape": "rect"},
+    {"id": "alpha", "label": "Krippendorff's α", "shape": "rect"},
+    {"id": "miss", "label": "Missing\nlabels?", "shape": "diamond"},
+    {"id": "irr", "label": "Chance-corrected\nIRR", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "labels", "target": "scale"},
+    {"source": "scale", "target": "kappa", "label": "nominal"},
+    {"source": "scale", "target": "alpha", "label": "ordinal"},
+    {"source": "kappa", "target": "miss"},
+    {"source": "miss", "target": "alpha", "label": "yes: α tolerates"},
+    {"source": "kappa", "target": "irr"},
+    {"source": "alpha", "target": "irr"}
+  ]
+}
+```
+
+### Adjudication of disagreements
+
+Low IRR is signal, not noise to average away. The runtime is a triage: route disagreed items to a senior adjudicator, and feed the *reason* for disagreement back into the rubric. Skipping this just launders noise into a confident-looking mean.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "item", "label": "Scored item", "shape": "circle"},
+    {"id": "dis", "label": "Raters disagree?", "shape": "diamond"},
+    {"id": "adj", "label": "Senior adjudicator", "shape": "rect"},
+    {"id": "cause", "label": "Systematic\ncause?", "shape": "diamond"},
+    {"id": "rub", "label": "Patch rubric", "shape": "rect"},
+    {"id": "gold", "label": "Gold label", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "item", "target": "dis"},
+    {"source": "dis", "target": "gold", "label": "no: consensus"},
+    {"source": "dis", "target": "adj", "label": "yes"},
+    {"source": "adj", "target": "gold", "label": "decide"},
+    {"source": "adj", "target": "cause"},
+    {"source": "cause", "target": "rub", "label": "yes: fix instrument"},
+    {"source": "cause", "target": "item", "label": "no: one-off"}
+  ]
+}
+```
+
+### Statistical power before you spend
+
+Annotation is expensive, so the run is sized backwards from the effect you need to detect: pick the minimum detectable win-rate delta, the significance level, and power, then solve for N. Running first and computing significance later is how teams pay for inconclusive studies.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "eff", "label": "Min detectable\nΔ win-rate", "shape": "circle"},
+    {"id": "pow", "label": "Set α, power", "shape": "rect"},
+    {"id": "n", "label": "Solve for N", "shape": "rect"},
+    {"id": "budget", "label": "N within\nbudget?", "shape": "diamond"},
+    {"id": "relax", "label": "Loosen Δ /\naccept lower power", "shape": "rect"},
+    {"id": "run", "label": "Annotate N", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "eff", "target": "pow"},
+    {"source": "pow", "target": "n"},
+    {"source": "n", "target": "budget"},
+    {"source": "budget", "target": "run", "label": "yes"},
+    {"source": "budget", "target": "relax", "label": "no: too costly"},
+    {"source": "relax", "target": "eff"}
+  ]
+}
+```
+
+### Human-in-the-loop for preference data
+
+The highest-leverage use of human eval is producing preference pairs that train reward models — the labels become weights, so label noise becomes model bias. This is the upstream of [RLHF preference](/rlhf-preference): a sloppy annotation protocol here is silently baked into the aligned model forever.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "pair", "label": "Output A vs B", "shape": "circle"},
+    {"id": "pref", "label": "Human preference", "shape": "rect"},
+    {"id": "qc", "label": "Pass QC / IRR?", "shape": "diamond"},
+    {"id": "tie", "label": "Decisive\nmargin?", "shape": "diamond"},
+    {"id": "rm", "label": "Reward-model\ntraining pair", "shape": "stadium"},
+    {"id": "drop", "label": "Discard pair", "shape": "stadium"},
+    {"id": "bias", "label": "Label noise →\nmodel bias", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "pair", "target": "pref"},
+    {"source": "pref", "target": "qc"},
+    {"source": "qc", "target": "drop", "label": "no"},
+    {"source": "qc", "target": "tie", "label": "yes"},
+    {"source": "tie", "target": "rm", "label": "clear"},
+    {"source": "tie", "target": "drop", "label": "ambiguous"},
+    {"source": "rm", "target": "bias", "label": "propagates forever"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

@@ -2,6 +2,34 @@
 
 Scaling laws have fundamentally reshaped how the AI industry allocates resources, trains models, and forecasts capabilities. The discovery that language model performance follows predictable power-law relationships with compute, data, and parameters — and the subsequent debate over what "optimal" scaling means — has driven multi-billion-dollar infrastructure decisions. This article examines the key scaling results from Kaplan through Chinchilla, the contested phenomenon of emergent abilities, and the practical implications for engineering teams making model sizing decisions today.
 
+## Mental Model
+
+The mental model for scaling laws is **performance is a predictable function of three resources, and your job is to spend a fixed compute budget optimally across them**. Loss falls as a power law in parameters (N), data (D), and compute (C) — and crucially, for a *fixed C* there is an optimal (N, D) split. Kaplan first mapped the curve; Chinchilla corrected the split (most large models were under-trained on data). So "should I train a bigger model?" is the wrong question; "given my compute, what N and D minimize loss?" is the right one.
+
+Two consequences. First, the returns are *logarithmic*: halving loss costs ~100× compute, so past a point, better data or post-training beats raw scale — the practical sizing decision. Second, scale changes *behavior*, not just loss: capabilities, and the failures studied in [bias & fairness](/bias-fairness), shift with size, which is why scale is now a first-class variable in [AI governance](/ai-governance) risk tiering. The infrastructure to actually spend that compute is the [scaling & load balancing](/scaling-load-balancing) problem.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "C", "label": "Compute budget C", "shape": "circle"},
+    {"id": "split", "label": "Optimal N vs D?\n(Chinchilla)", "shape": "diamond"},
+    {"id": "N", "label": "Params N", "shape": "rect"},
+    {"id": "D", "label": "Data D", "shape": "rect"},
+    {"id": "loss", "label": "Predicted loss\n(power law)", "shape": "rect"},
+    {"id": "dim", "label": "Logarithmic\nreturns", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "C", "target": "split"},
+    {"source": "split", "target": "N"},
+    {"source": "split", "target": "D"},
+    {"source": "N", "target": "loss"},
+    {"source": "D", "target": "loss"},
+    {"source": "loss", "target": "dim", "label": "halve loss ≈ 100x C"}
+  ]
+}
+```
+
 ## The Kaplan Scaling Laws
 
 **Kaplan et al. (2020)** at OpenAI published the first systematic study of neural scaling laws for language models. Training a series of transformer language models ranging from 768 parameters to 1.5 billion, they found that cross-entropy loss $L$ follows a power law in three variables:
@@ -276,6 +304,110 @@ For engineering teams, the scaling laws literature provides actionable guidance:
 ### The Diminishing Returns Landscape
 
 Perhaps the most important takeaway from scaling laws is quantitative: improvements are **logarithmic** in compute. Cutting loss by half requires roughly 100x more compute. This means that the marginal value of each additional dollar of training compute decreases predictably, and at some point, investment in better data, algorithms, or post-training becomes more efficient than raw scaling.
+
+## Runtime Internals
+
+The "spend C optimally" model hides the practical mechanics of actually using scaling laws.
+
+### Fitting the scaling curve from small runs
+
+You do not train the big model to know its loss — you fit the power law from a ladder of *small* runs and extrapolate. The runtime is: train several (N, D) points cheaply, fit L(N, D, C), then predict the large config. The failure mode is extrapolating too far or fitting on too few points; the predicted loss has an error bar that widens with extrapolation distance.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ladder", "label": "Small (N,D) runs", "shape": "circle"},
+    {"id": "fit", "label": "Fit power law", "shape": "rect"},
+    {"id": "extrap", "label": "Extrapolate to\ntarget C", "shape": "rect"},
+    {"id": "pred", "label": "Predicted loss\n± error", "shape": "diamond"},
+    {"id": "go", "label": "Commit big run", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ladder", "target": "fit"},
+    {"source": "fit", "target": "extrap"},
+    {"source": "extrap", "target": "pred"},
+    {"source": "pred", "target": "go", "label": "tight band"},
+    {"source": "pred", "target": "ladder", "label": "wide: add points"}
+  ]
+}
+```
+
+### Chinchilla sizing in practice
+
+Given a compute budget (GPU-count × time × MFU → FLOPs), Chinchilla ratios (~20 tokens per parameter) set N and D. The runtime catch: the "optimal" point ignores *inference* cost. A smaller-than-Chinchilla model trained on extra data is often better in production because it is cheaper to serve forever — training-optimal ≠ deployment-optimal.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "flops", "label": "Compute budget\n(FLOPs)", "shape": "circle"},
+    {"id": "chin", "label": "Chinchilla\nN, D split", "shape": "rect"},
+    {"id": "infer", "label": "Heavy inference\nuse?", "shape": "diamond"},
+    {"id": "small", "label": "Smaller N +\nmore D", "shape": "rect"},
+    {"id": "opt", "label": "Train as sized", "shape": "rect"},
+    {"id": "ship", "label": "Deployment config", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "flops", "target": "chin"},
+    {"source": "chin", "target": "infer"},
+    {"source": "infer", "target": "small", "label": "yes: serve-cheap"},
+    {"source": "infer", "target": "opt", "label": "no"},
+    {"source": "small", "target": "ship"},
+    {"source": "opt", "target": "ship"}
+  ]
+}
+```
+
+### Emergence as a measurement artifact
+
+"Emergent abilities" often look like sharp phase transitions only because the metric is discontinuous (exact-match on a multi-token answer). Per-token accuracy improves smoothly and *predictably*; the jump is in the scoring, not the model. The runtime lesson: choose smooth metrics to forecast capability, or you will mis-predict when an ability "appears" — a [bias & fairness](/bias-fairness)-adjacent measurement-validity trap.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "scale", "label": "Increasing scale", "shape": "circle"},
+    {"id": "tok", "label": "Per-token acc\n(smooth)", "shape": "rect"},
+    {"id": "metric", "label": "Metric type?", "shape": "diamond"},
+    {"id": "sharp", "label": "Exact-match\n→ looks emergent", "shape": "rect"},
+    {"id": "smooth", "label": "Smooth metric\n→ predictable", "shape": "rect"},
+    {"id": "fore", "label": "Forecast", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "scale", "target": "tok"},
+    {"source": "tok", "target": "metric"},
+    {"source": "metric", "target": "sharp", "label": "discontinuous"},
+    {"source": "metric", "target": "smooth", "label": "continuous"},
+    {"source": "sharp", "target": "fore", "label": "mispredicts"},
+    {"source": "smooth", "target": "fore"}
+  ]
+}
+```
+
+### Where the marginal dollar goes
+
+Because returns are logarithmic, the runtime decision is continuous reallocation: at small scale, raw compute wins; past the knee, the marginal dollar is better spent on data quality, algorithmic efficiency, or post-training. Tracking the loss-vs-spend curve tells you *when* you have crossed that knee, and the infrastructure to keep scaling at all is the [scaling & load balancing](/scaling-load-balancing) layer.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "spend", "label": "Next $ of budget", "shape": "circle"},
+    {"id": "knee", "label": "Past the knee?", "shape": "diamond"},
+    {"id": "raw", "label": "More compute", "shape": "rect"},
+    {"id": "alt", "label": "Data quality /\npost-training", "shape": "rect"},
+    {"id": "gain", "label": "Max loss\nreduction", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "spend", "target": "knee"},
+    {"source": "knee", "target": "raw", "label": "no"},
+    {"source": "knee", "target": "alt", "label": "yes"},
+    {"source": "raw", "target": "gain"},
+    {"source": "alt", "target": "gain"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

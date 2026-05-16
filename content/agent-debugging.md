@@ -11,6 +11,33 @@ Debugging AI agents is fundamentally harder than debugging traditional software 
 - Cost and latency tracking per step is essential for production agents -- a single runaway loop can consume thousands of dollars in API costs before anyone notices.
 - Production monitoring must go beyond error rates to track trajectory-level anomalies: unusual step counts, cost spikes, repeated tool calls, and context window saturation.
 
+## Mental Model
+
+The mental model for agent debugging is **you cannot debug what you did not record — the trajectory is the program, and the trace is the only source you get**. A traditional bug is reproducible: same input, same crash, inspect the stack. An agent is non-deterministic, multi-step, and side-effecting, so the failure is in *the sequence of decisions*, not a line of code. Debugging is therefore reconstructing "what did the agent see, decide, and do at each step, and where did the trajectory diverge from a good one?" — which is impossible unless every step was captured as a structured span beforehand.
+
+That reframes debugging as an *observability-first* discipline: instrument exhaustively, then replay. The trace substrate is the same data [agent evaluation](/agent-evaluation) scores; the failure modes map onto the chosen [agent architectures](/agent-architectures) (a ReAct loop fails differently than Plan-and-Execute); and the most insidious bugs are not crashes but a confidently wrong answer caused by a bad [memory architectures](/memory-architectures) recall — invisible unless the retrieval step was traced.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "run", "label": "Agent run", "shape": "circle"},
+    {"id": "span", "label": "Capture spans\n(think/act/obs)", "shape": "rect"},
+    {"id": "store", "label": "Trace store", "shape": "rect"},
+    {"id": "bad", "label": "Bad outcome?", "shape": "diamond"},
+    {"id": "replay", "label": "Replay + find\ndivergence step", "shape": "rect"},
+    {"id": "fix", "label": "Root cause", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "run", "target": "span"},
+    {"source": "span", "target": "store"},
+    {"source": "store", "target": "bad"},
+    {"source": "bad", "target": "replay", "label": "yes"},
+    {"source": "replay", "target": "fix"}
+  ]
+}
+```
+
 ## Why Agent Debugging Is Uniquely Hard
 
 Before diving into solutions, it is worth understanding precisely why agent debugging resists conventional approaches. These are not minor inconveniences -- they are structural properties of agent systems that require purpose-built tooling.
@@ -2042,6 +2069,105 @@ Based on the patterns and failure modes discussed, here are the design principle
 **6. Treat agent traces as a first-class data product.** Traces are not just debugging artifacts -- they are training data for evals, input for trajectory analysis, and evidence for compliance. Store them durably with rich metadata.
 
 **7. Test with injected failures.** Regularly run your agent against scenarios where tools fail, return unexpected data, or are slow. This is the agent equivalent of chaos engineering. The mock tool injector pattern described above is the foundation for this practice.
+
+## Runtime Internals
+
+The "trace is the program" model hides the mechanics that make agent debugging tractable.
+
+### Span tree structure
+
+An agent run is a *tree* of spans, not a flat log: a root run span, child spans per step, grandchildren per tool call and per LLM call, each carrying inputs, outputs, tokens, and latency. The runtime requirement is correct parent/child linkage (propagated context) — a broken link turns one debuggable trajectory into disconnected fragments where the divergence point is unrecoverable.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "root", "label": "Run span", "shape": "circle"},
+    {"id": "step", "label": "Step span", "shape": "rect"},
+    {"id": "llm", "label": "LLM call span", "shape": "rect"},
+    {"id": "tool", "label": "Tool call span", "shape": "rect"},
+    {"id": "view", "label": "Reconstructable\ntrajectory", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "root", "target": "step", "label": "child"},
+    {"source": "step", "target": "llm"},
+    {"source": "step", "target": "tool"},
+    {"source": "llm", "target": "view"},
+    {"source": "tool", "target": "view"}
+  ]
+}
+```
+
+### Deterministic replay
+
+Replay re-runs a recorded trajectory with LLM and tool calls served from the recording instead of live — so you can step through the exact decision path that failed. The runtime needs every external interaction keyed and stored at record time; a single un-recorded nondeterministic call makes the replay diverge and the bug vanish. This is the agent equivalent of a core dump.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "rec", "label": "Recorded run", "shape": "circle"},
+    {"id": "step", "label": "Step", "shape": "rect"},
+    {"id": "src", "label": "Call source?", "shape": "diamond"},
+    {"id": "cache", "label": "Replay from\nrecording", "shape": "rect"},
+    {"id": "div", "label": "Divergence\n(missing record)", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "rec", "target": "step"},
+    {"source": "step", "target": "src"},
+    {"source": "src", "target": "cache", "label": "recorded"},
+    {"source": "src", "target": "div", "label": "un-recorded"},
+    {"source": "cache", "target": "step", "label": "next"}
+  ]
+}
+```
+
+### Fault injection (chaos for agents)
+
+You cannot wait for production to discover how an agent handles a failing tool. The runtime pattern is a mock injector that forces tools to error, time out, or return garbage, then observes: does the agent retry, give up, or *hallucinate* a result? The last is the dangerous one — it means a tool failure becomes a confident wrong answer with no error surfaced.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "inj", "label": "Inject tool\nfailure", "shape": "circle"},
+    {"id": "agent", "label": "Agent reaction", "shape": "diamond"},
+    {"id": "retry", "label": "Retry / degrade\n(good)", "shape": "rect"},
+    {"id": "halluc", "label": "Hallucinate result\n(critical bug)", "shape": "stadium"},
+    {"id": "log", "label": "Record behavior", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "inj", "target": "agent"},
+    {"source": "agent", "target": "retry", "label": "robust"},
+    {"source": "agent", "target": "halluc", "label": "unsafe"},
+    {"source": "retry", "target": "log"},
+    {"source": "halluc", "target": "log"}
+  ]
+}
+```
+
+### Trajectory-level production monitoring
+
+Error rate is insufficient: agents fail by *succeeding badly* — taking 40 steps where 4 suffice, looping on a tool, saturating context. The runtime monitors trajectory anomalies (step count, repeated tool calls, cost spikes, context utilization) against a baseline and alarms on deviation. These signals feed the same regression set used by [agent evaluation](/agent-evaluation).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "prod", "label": "Prod trajectories", "shape": "circle"},
+    {"id": "feat", "label": "Step count / repeats\n/ cost / ctx%", "shape": "rect"},
+    {"id": "base", "label": "Beyond baseline?", "shape": "diamond"},
+    {"id": "alarm", "label": "Alarm + capture\ntrace", "shape": "stadium"},
+    {"id": "ok", "label": "Healthy", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "prod", "target": "feat"},
+    {"source": "feat", "target": "base"},
+    {"source": "base", "target": "alarm", "label": "yes"},
+    {"source": "base", "target": "ok", "label": "no"}
+  ]
+}
+```
 
 ## Cross-References
 

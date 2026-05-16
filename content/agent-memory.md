@@ -14,6 +14,34 @@ Every LLM interaction starts from scratch. The model has no recollection of prev
 
 These problems have driven the development of explicit memory architectures that augment LLMs with structured storage and retrieval capabilities.
 
+## Mental Model
+
+The mental model for agent memory is **a memory hierarchy, exactly like a CPU's**: a tiny, fast, expensive tier (the context window = registers/L1) backed by progressively larger, slower, cheaper tiers (vector store = RAM, archival/graph store = disk). The agent never "has" all its knowledge in working memory; a memory *manager* decides what to page in for the current step and what to evict or persist. Every technique in this article — summarization, vector recall, MemGPT-style paging, episodic replay — is a paging policy on that hierarchy.
+
+This reframes the design question from "how do I store everything?" to "what is my eviction and recall policy, and what does a miss cost?" The fast tier is governed by the same constraints as [memory architectures](/memory-architectures) generally; persisting useful experience across sessions is where memory blurs into [continual learning](/continual-learning); and a memory subsystem that silently recalls the wrong context is the single hardest thing to find in [agent debugging](/agent-debugging) — because the trace looks fine, only the retrieved memory was wrong.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "step", "label": "Agent step", "shape": "circle"},
+    {"id": "mgr", "label": "Memory manager", "shape": "diamond"},
+    {"id": "ctx", "label": "Context window\n(fast / tiny)", "shape": "rect"},
+    {"id": "vec", "label": "Vector store\n(recall on miss)", "shape": "rect"},
+    {"id": "arch", "label": "Archival / graph\n(cold)", "shape": "rect"},
+    {"id": "act", "label": "Act", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "step", "target": "mgr"},
+    {"source": "mgr", "target": "ctx", "label": "hot"},
+    {"source": "mgr", "target": "vec", "label": "page in"},
+    {"source": "vec", "target": "arch", "label": "deep miss"},
+    {"source": "ctx", "target": "act"},
+    {"source": "act", "target": "mgr", "label": "persist / evict"}
+  ]
+}
+```
+
 ## Working Memory: The Context Window
 
 ### The Context Window as RAM
@@ -885,6 +913,112 @@ async def measure_summarization_fidelity(original: str, summary: str,
 ### Evaluation Cadence
 
 Memory evaluation should not be a one-time exercise. As the agent's user base grows and usage patterns shift, memory system performance drifts. Establish a recurring evaluation cadence -- monthly retrieval quality benchmarks, quarterly task performance comparisons, and continuous monitoring of retrieval latency and memory store size. The cost of over-engineering memory is real (latency, storage, complexity), and regular evaluation is the only reliable way to know whether your memory system is earning its keep.
+
+## Runtime Internals
+
+The hierarchy model hides the policies that decide whether memory helps or quietly corrupts the agent.
+
+### The recall pipeline and its precision tax
+
+Long-term recall is retrieval: embed a cue, search the store, rerank, inject. Every injected memory costs context budget *and* risks distraction — an irrelevant but high-similarity memory actively degrades the next decision. So recall precision matters more than recall: the runtime tunes top-k and a similarity floor, and often a relevance reranker, accepting misses over false memories.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "cue", "label": "Current state\n(cue)", "shape": "circle"},
+    {"id": "emb", "label": "Embed + search", "shape": "rect"},
+    {"id": "rr", "label": "Rerank +\nsimilarity floor", "shape": "rect"},
+    {"id": "ok", "label": "Above floor?", "shape": "diamond"},
+    {"id": "inj", "label": "Inject memory", "shape": "rect"},
+    {"id": "skip", "label": "Recall nothing", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "cue", "target": "emb"},
+    {"source": "emb", "target": "rr"},
+    {"source": "rr", "target": "ok"},
+    {"source": "ok", "target": "inj", "label": "yes"},
+    {"source": "ok", "target": "skip", "label": "no (precision > recall)"}
+  ]
+}
+```
+
+### Write policy: what becomes a memory
+
+Persisting every turn floods the store with noise. The runtime needs a write filter — significance scoring, deduplication against existing memories, and consolidation (merge near-duplicates into a stronger summary). A store without a write policy degrades monotonically: more entries, worse recall precision.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "event", "label": "Turn / outcome", "shape": "circle"},
+    {"id": "sig", "label": "Significant?", "shape": "diamond"},
+    {"id": "dup", "label": "Duplicate?", "shape": "diamond"},
+    {"id": "merge", "label": "Consolidate", "shape": "rect"},
+    {"id": "store", "label": "Write memory", "shape": "rect"},
+    {"id": "drop", "label": "Discard", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "event", "target": "sig"},
+    {"source": "sig", "target": "drop", "label": "no"},
+    {"source": "sig", "target": "dup", "label": "yes"},
+    {"source": "dup", "target": "merge", "label": "yes"},
+    {"source": "dup", "target": "store", "label": "no"},
+    {"source": "merge", "target": "store"}
+  ]
+}
+```
+
+### Context paging (MemGPT pattern)
+
+OS-inspired memory treats the context window as paged RAM: when it fills, the manager evicts the least-relevant span to an external store and can page it back via a recall "syscall". The runtime hazards are thrash (evict→immediately recall the same thing) and a corrupted working set after a bad eviction — the same failure surface a [code agent](/code-agents) hits on long tasks.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "full", "label": "Context full", "shape": "circle"},
+    {"id": "evict", "label": "Evict LRU span", "shape": "rect"},
+    {"id": "ext", "label": "External store", "shape": "rect"},
+    {"id": "need", "label": "Needed later?", "shape": "diamond"},
+    {"id": "page", "label": "Page back in", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "full", "target": "evict"},
+    {"source": "evict", "target": "ext"},
+    {"source": "ext", "target": "need"},
+    {"source": "need", "target": "page", "label": "yes (recall)"},
+    {"source": "page", "target": "full", "label": "watch thrash"}
+  ]
+}
+```
+
+### Episodic replay vs continual learning
+
+Episodic memory stores past trajectories and replays relevant ones as in-context examples — improvement *without weight updates*. The runtime decision is replay selection (which past episode is analogous?) and staleness (an old strategy may now be wrong). Promoting episodic patterns into the weights is the boundary with [continual learning](/continual-learning); keeping them external keeps them inspectable and revertible.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "task", "label": "New task", "shape": "circle"},
+    {"id": "match", "label": "Analogous\nepisode?", "shape": "diamond"},
+    {"id": "stale", "label": "Still valid?", "shape": "diamond"},
+    {"id": "replay", "label": "Replay as\nin-context example", "shape": "rect"},
+    {"id": "fresh", "label": "Solve fresh", "shape": "rect"},
+    {"id": "store", "label": "Store new episode", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "match"},
+    {"source": "match", "target": "stale", "label": "yes"},
+    {"source": "match", "target": "fresh", "label": "no"},
+    {"source": "stale", "target": "replay", "label": "yes"},
+    {"source": "stale", "target": "fresh", "label": "no"},
+    {"source": "replay", "target": "store"},
+    {"source": "fresh", "target": "store"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

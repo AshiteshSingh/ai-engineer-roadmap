@@ -10,6 +10,34 @@ Deploying AI systems in production requires a fundamentally different mindset fr
 - **Prompt management needs version control, staging environments, and A/B testing** — treat prompts as deployable artifacts, not strings in your source code
 - **Testing non-deterministic systems requires property-based and statistical assertions** over multiple trials, not exact-match checks
 
+## Mental Model
+
+The mental model for production AI is **wrap a non-deterministic, sometimes-wrong, variable-latency component in deterministic engineering**. The model is the unreliable core; everything that makes it *productionizable* is the scaffolding around it: decompose work into bounded steps, route by difficulty, retry/fallback on failure, make side effects idempotent, gate changes with evals, and observe everything. None of that is AI-specific cleverness — it is classic distributed-systems discipline applied to a component whose failure mode is *plausible nonsense* rather than an exception.
+
+So read every pattern here as "which property of the unreliable core am I containing?": chaining/routing contains *capability variance*, retry/fallback contains *transient failure*, idempotency contains *at-least-once retries*, A/B + eval gates contain *quality regression*. The prompt itself is just one input governed by [prompt engineering fundamentals](/prompt-engineering-fundamentals) and assembled per request via [context engineering](/context-engineering); when a single model is not enough you reach for [multi-agent systems](/multi-agent-systems) — but the scaffolding obligations only grow.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Request", "shape": "circle"},
+    {"id": "decomp", "label": "Decompose +\nroute", "shape": "rect"},
+    {"id": "core", "label": "LLM\n(unreliable core)", "shape": "rect"},
+    {"id": "guard", "label": "Retry / fallback /\nvalidate", "shape": "diamond"},
+    {"id": "idem", "label": "Idempotent\nside effects", "shape": "rect"},
+    {"id": "ship", "label": "Reliable result", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "decomp"},
+    {"source": "decomp", "target": "core"},
+    {"source": "core", "target": "guard"},
+    {"source": "guard", "target": "core", "label": "fail: retry/fallback"},
+    {"source": "guard", "target": "idem", "label": "ok"},
+    {"source": "idem", "target": "ship"}
+  ]
+}
+```
+
 ## Core Production AI Patterns
 
 ### The Map-Reduce Pattern
@@ -1399,6 +1427,108 @@ class OutputValidator:
 ```
 
 The validate-and-repair pattern is essential because no single technique guarantees 100% schema compliance across all models, all inputs, and all edge cases. Instructor handles the common case; the validation layer catches the rest.
+
+## Runtime Internals
+
+The "wrap the unreliable core" model hides the mechanics that make production AI robust rather than fragile.
+
+### Prompt chaining vs single-call
+
+Decomposing a task into chained calls (extract → reason → format) is more reliable than one mega-prompt because each step is independently checkable and retryable — but every hop adds latency and a failure point. The runtime decision is granularity: chain only where you need an intermediate validation gate; collapse steps that always succeed together.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "task", "label": "Task", "shape": "circle"},
+    {"id": "s1", "label": "Step 1", "shape": "rect"},
+    {"id": "v1", "label": "Valid?", "shape": "diamond"},
+    {"id": "s2", "label": "Step 2", "shape": "rect"},
+    {"id": "out", "label": "Output", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "s1"},
+    {"source": "s1", "target": "v1"},
+    {"source": "v1", "target": "s1", "label": "no: retry step"},
+    {"source": "v1", "target": "s2", "label": "yes"},
+    {"source": "s2", "target": "out"}
+  ]
+}
+```
+
+### Fallback chains across providers
+
+A robust system degrades instead of failing: primary model → cheaper/alt provider → smaller local model → cached/static response. The runtime needs per-hop timeouts, circuit breakers (stop hammering a down provider), and bounded total attempts to avoid a retry storm amplifying an outage.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "call", "label": "Primary call", "shape": "circle"},
+    {"id": "ok", "label": "Success?", "shape": "diamond"},
+    {"id": "alt", "label": "Alt provider", "shape": "rect"},
+    {"id": "local", "label": "Local / cached", "shape": "rect"},
+    {"id": "resp", "label": "Degraded response", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "call", "target": "ok"},
+    {"source": "ok", "target": "resp", "label": "yes"},
+    {"source": "ok", "target": "alt", "label": "no (breaker)"},
+    {"source": "alt", "target": "local", "label": "also fails"},
+    {"source": "alt", "target": "resp"},
+    {"source": "local", "target": "resp"}
+  ]
+}
+```
+
+### Idempotency for at-least-once side effects
+
+LLM calls are retried, but their *side effects* (send email, charge card, write row) must not repeat. The runtime keys each effecting operation by an idempotency token, records completion, and short-circuits duplicates. Without this, every retry-on-timeout is a double-send — the most damaging production AI bug because the model "worked".
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "op", "label": "Side-effect op", "shape": "circle"},
+    {"id": "key", "label": "Idempotency key", "shape": "rect"},
+    {"id": "seen", "label": "Already done?", "shape": "diamond"},
+    {"id": "exec", "label": "Execute + record", "shape": "rect"},
+    {"id": "skip", "label": "Return prior\nresult", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "op", "target": "key"},
+    {"source": "key", "target": "seen"},
+    {"source": "seen", "target": "exec", "label": "no"},
+    {"source": "seen", "target": "skip", "label": "yes"}
+  ]
+}
+```
+
+### Testing non-deterministic systems
+
+Exact-match tests flake on stochastic output. The runtime replaces them with property-based and statistical assertions over N trials: invariants always hold (valid JSON, no PII), and metrics stay within a tolerance band vs a baseline. This is the gate that ships with confidence despite non-determinism — the same statistical-gate logic as CI/CD for AI, validated with proper [prompt engineering fundamentals](/prompt-engineering-fundamentals) on the prompts under test.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "case", "label": "Test case", "shape": "circle"},
+    {"id": "n", "label": "Run N trials", "shape": "rect"},
+    {"id": "inv", "label": "Invariants hold\nevery time?", "shape": "diamond"},
+    {"id": "band", "label": "Metric in\ntolerance band?", "shape": "diamond"},
+    {"id": "pass", "label": "Pass", "shape": "circle"},
+    {"id": "fail", "label": "Fail", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "case", "target": "n"},
+    {"source": "n", "target": "inv"},
+    {"source": "inv", "target": "fail", "label": "no"},
+    {"source": "inv", "target": "band", "label": "yes"},
+    {"source": "band", "target": "pass", "label": "yes"},
+    {"source": "band", "target": "fail", "label": "no"}
+  ]
+}
+```
 
 ## Key Takeaways
 

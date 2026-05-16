@@ -10,6 +10,41 @@ The centralized cloud model of LLM inference -- where every token is generated o
 - Platform providers (Apple Intelligence, Gemini Nano, Samsung Galaxy AI) now treat on-device models as OS-level capabilities, not app-level concerns.
 - The edge deployment decision comes down to four factors: latency requirements, privacy constraints, cost at scale, and offline needs.
 
+## Mental Model
+
+The mental model for edge deployment is **move the model to the data instead of the data to the model — and pay for it in a fixed, unforgiving resource envelope**. Cloud inference has elastic compute; the edge has a *device* with a hard ceiling on memory, compute, thermal budget, and power. So edge engineering is not "run the same model smaller" — it is fitting a capability into a box whose walls do not move, then deciding what to do when the task exceeds the box (the hybrid edge–cloud fallback).
+
+That reframes every technique here as *budget compression*: quantization, pruning, and distillation shrink the model to fit the envelope; runtime choice (llama.cpp/MLX/ONNX/WebLLM) maps the model onto the device's accelerator; the hybrid pattern routes the overflow. The cloud side of that fallback is governed by the same [LLM serving](/llm-serving) and [scaling & load balancing](/scaling-load-balancing) concerns, and the routing tier that decides edge-vs-cloud is exactly an [AI gateway](/ai-gateway) placed at the device boundary.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "task", "label": "Request at the device", "shape": "circle"},
+    {"id": "mem", "label": "Within hard memory ceiling?", "shape": "diamond"},
+    {"id": "compress", "label": "Budget-compress: quantize / prune / distill", "shape": "rect"},
+    {"id": "thermal", "label": "Within thermal / power budget?", "shape": "diamond"},
+    {"id": "edge", "label": "On-device inference (private, fast, offline)", "shape": "rect"},
+    {"id": "overflow", "label": "Task exceeds the immovable box", "shape": "stadium"},
+    {"id": "router", "label": "Edge-vs-cloud router at device boundary", "shape": "rect"},
+    {"id": "cloud", "label": "Hybrid cloud fallback", "shape": "rect"},
+    {"id": "resp", "label": "Response", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "mem"},
+    {"source": "mem", "target": "compress", "label": "no: shrink to fit"},
+    {"source": "compress", "target": "mem", "label": "re-check envelope"},
+    {"source": "mem", "target": "thermal", "label": "yes"},
+    {"source": "thermal", "target": "edge", "label": "yes"},
+    {"source": "thermal", "target": "overflow", "label": "no: over budget"},
+    {"source": "overflow", "target": "router"},
+    {"source": "router", "target": "cloud"},
+    {"source": "edge", "target": "resp"},
+    {"source": "cloud", "target": "resp"}
+  ]
+}
+```
+
 ## The Case for Edge Inference
 
 ### Latency
@@ -642,6 +677,133 @@ For devices with 8GB+ RAM (M-series Macs, gaming laptops, workstations):
 | Laptop, 16GB+ RAM | Qwen 2.5 14B or Mistral Nemo 12B | Q4_K_M | ~8-9 GB | llama.cpp / MLX |
 
 The quantization technique matters as much as the model choice. INT4 quantization (Q4_K_M in GGUF, 4-bit groupwise in ExecuTorch, INT4 in ONNX Runtime) is the default recommendation for edge -- it halves memory again versus INT8 with only 1-3% quality degradation on most benchmarks. For a detailed treatment of quantization algorithms and their quality/size trade-offs, see [Article 05: Inference Optimization](/inference-optimization).
+
+## Runtime Internals
+
+The "fixed envelope" model hides the mechanics that decide whether an edge deployment is usable or a slideshow.
+
+### Memory is the binding constraint
+
+On the edge, weights + KV cache must fit in device RAM that is also serving the OS and app. The runtime math: a 7B model at INT4 is ~3.5–4GB of weights, and the KV cache grows with context length. Exceeding RAM does not slow down — it OOM-kills or swaps to a crawl. Memory budgeting (quant level × params + KV) is the first calculation, not an afterthought, and shares the KV-cache mechanics of [memory architectures](/memory-architectures).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "ram", "label": "Device RAM (shared with OS + app)", "shape": "circle"},
+    {"id": "quant", "label": "Chosen quant level (e.g. INT4)", "shape": "rect"},
+    {"id": "w", "label": "Weights = params x quant bytes", "shape": "rect"},
+    {"id": "kv", "label": "KV cache grows with context length", "shape": "rect"},
+    {"id": "sum", "label": "Weights + KV <= free RAM?", "shape": "diamond"},
+    {"id": "headroom", "label": "OS / app headroom reserved?", "shape": "diamond"},
+    {"id": "oom", "label": "OOM-kill or swap to a crawl", "shape": "stadium"},
+    {"id": "shrink", "label": "Lower quant / smaller model / shorter ctx", "shape": "rect"},
+    {"id": "run", "label": "Load + run within envelope", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ram", "target": "quant"},
+    {"source": "quant", "target": "w"},
+    {"source": "w", "target": "sum"},
+    {"source": "kv", "target": "sum"},
+    {"source": "sum", "target": "headroom", "label": "fits raw"},
+    {"source": "sum", "target": "shrink", "label": "exceeds"},
+    {"source": "headroom", "target": "run", "label": "yes"},
+    {"source": "headroom", "target": "oom", "label": "no: starves OS"},
+    {"source": "shrink", "target": "sum", "label": "recompute"}
+  ]
+}
+```
+
+### Accelerator delegation
+
+Raw CPU inference is too slow; the runtime must delegate to the device's accelerator — Metal/ANE on Apple, NNAPI/NPU on Android, WebGPU in the browser. The catch: not every op is supported, so unsupported ops fall back to CPU and create a latency cliff. Choosing a model whose ops fully delegate matters more than raw parameter count.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "graph", "label": "Model compute graph", "shape": "circle"},
+    {"id": "part", "label": "Partition ops by backend", "shape": "rect"},
+    {"id": "backend", "label": "Backend present? (Metal / ANE / NNAPI / WebGPU)", "shape": "diamond"},
+    {"id": "sup", "label": "Op supported by backend?", "shape": "diamond"},
+    {"id": "npu", "label": "Run on NPU / GPU", "shape": "rect"},
+    {"id": "cpu", "label": "CPU fallback: latency cliff", "shape": "stadium"},
+    {"id": "frac", "label": "Delegated fraction high enough?", "shape": "diamond"},
+    {"id": "reselect", "label": "Pick a model whose ops fully delegate", "shape": "rect"},
+    {"id": "fast", "label": "Hardware-accelerated inference", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "graph", "target": "part"},
+    {"source": "part", "target": "backend"},
+    {"source": "backend", "target": "cpu", "label": "none: all CPU"},
+    {"source": "backend", "target": "sup", "label": "present"},
+    {"source": "sup", "target": "npu", "label": "yes"},
+    {"source": "sup", "target": "cpu", "label": "no"},
+    {"source": "npu", "target": "frac"},
+    {"source": "frac", "target": "fast", "label": "yes"},
+    {"source": "frac", "target": "reselect", "label": "no: too many CPU ops"}
+  ]
+}
+```
+
+### Thermal throttling and sustained load
+
+Phones and laptops throttle clock speed under sustained inference to stay within thermal limits, so the first few tokens are fast and a long generation slows down. The runtime mitigations: cap generation length, prefer bursty over continuous inference, and benchmark *sustained* (not single-shot) throughput. Single-shot benchmarks systematically over-promise edge performance.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "start", "label": "Inference start", "shape": "circle"},
+    {"id": "fast", "label": "Full clock: fast first tokens", "shape": "rect"},
+    {"id": "limit", "label": "Thermal limit reached?", "shape": "diamond"},
+    {"id": "throttle", "label": "Clock throttled: tokens slow down", "shape": "rect"},
+    {"id": "cap", "label": "Generation length capped?", "shape": "diamond"},
+    {"id": "burst", "label": "Bursty (not continuous) scheduling", "shape": "rect"},
+    {"id": "single", "label": "Single-shot benchmark over-promises", "shape": "stadium"},
+    {"id": "sustained", "label": "Benchmark SUSTAINED throughput", "shape": "rect"},
+    {"id": "done", "label": "Realistic edge performance", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "start", "target": "fast"},
+    {"source": "fast", "target": "limit"},
+    {"source": "limit", "target": "cap", "label": "short gen: stays cool"},
+    {"source": "limit", "target": "throttle", "label": "sustained load"},
+    {"source": "throttle", "target": "cap"},
+    {"source": "cap", "target": "burst", "label": "yes"},
+    {"source": "cap", "target": "single", "label": "no: uncapped"},
+    {"source": "burst", "target": "sustained"},
+    {"source": "sustained", "target": "done"}
+  ]
+}
+```
+
+### Hybrid routing at the device boundary
+
+The robust production pattern keeps a small fast model on-device for the common case and routes hard/long requests to the cloud. The runtime needs a cheap on-device router (confidence or task-type heuristic), graceful offline degradation, and consistency between the two model tiers — the same cascade economics as cloud [LLM serving](/llm-serving), with the router acting as an [AI gateway](/ai-gateway) at the edge.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Request", "shape": "circle"},
+    {"id": "route", "label": "On-device router", "shape": "diamond"},
+    {"id": "small", "label": "Edge small model", "shape": "rect"},
+    {"id": "big", "label": "Cloud large model", "shape": "rect"},
+    {"id": "off", "label": "Offline? edge-only", "shape": "stadium"},
+    {"id": "ans", "label": "Answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "route"},
+    {"source": "route", "target": "small", "label": "simple"},
+    {"source": "route", "target": "big", "label": "hard + online"},
+    {"source": "route", "target": "off", "label": "no network"},
+    {"source": "small", "target": "ans"},
+    {"source": "big", "target": "ans"},
+    {"source": "off", "target": "ans"}
+  ]
+}
+```
 
 ## Cross-References
 

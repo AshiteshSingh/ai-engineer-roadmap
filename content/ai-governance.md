@@ -10,6 +10,38 @@ The rapid deployment of large language models into high-stakes domains has outpa
 - ISO 42001 provides a certifiable AI management system standard that maps to multiple regulations and is becoming a procurement prerequisite.
 - The OWASP LLM Top 10 offers a security checklist covering prompt injection, data poisoning, excessive agency, and seven other critical risk categories.
 
+## Mental Model
+
+The mental model for AI governance is **turning policy into evidence**. A regulation or internal policy is an abstract claim ("the system is safe, fair, documented, and accountable"); governance is the engineering that produces *artifacts proving that claim* — model cards, risk assessments, immutable audit logs, eval reports. The trap is treating governance as paperwork written *after* the system ships; mature governance is a set of *gates wired into the build* that emit evidence automatically. No artifact, no deploy.
+
+This reframes governance as an evaluation-and-logging discipline, not a legal one. The "is it safe/fair?" claim is only as strong as the [evaluation fundamentals](/eval-fundamentals) and [benchmark design](/benchmark-design) behind it; the "we constrained behavior" claim is operationalized by techniques like [constitutional AI](/constitutional-ai). Governance is the layer that demands those numbers exist, are reproducible, and are logged — auditors do not accept "trust us".
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "claim", "label": "Policy / regulation = abstract claim", "shape": "circle"},
+    {"id": "controls", "label": "Decompose into concrete controls", "shape": "rect"},
+    {"id": "when", "label": "Governance before or after ship?", "shape": "diamond"},
+    {"id": "paper", "label": "After-the-fact paperwork (decorative)", "shape": "stadium"},
+    {"id": "gate", "label": "Build-time gate emits evidence", "shape": "diamond"},
+    {"id": "art", "label": "Artifacts: model card + audit log + eval report", "shape": "rect"},
+    {"id": "deploy", "label": "No artifact, no deploy", "shape": "rect"},
+    {"id": "audit", "label": "Audit-ready", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "claim", "target": "controls"},
+    {"source": "controls", "target": "when"},
+    {"source": "when", "target": "paper", "label": "after: the trap"},
+    {"source": "when", "target": "gate", "label": "wired into build"},
+    {"source": "gate", "target": "art", "label": "pass: emit"},
+    {"source": "gate", "target": "controls", "label": "fail: block"},
+    {"source": "art", "target": "deploy"},
+    {"source": "deploy", "target": "audit"}
+  ]
+}
+```
+
 ## The Regulatory Landscape
 
 ### The EU AI Act
@@ -651,6 +683,129 @@ Key design principles for regulatory adaptability:
 - **Documentation-first development**: Model cards, system cards, and risk assessments are maintained as living documents alongside code.
 
 The trend is clear: AI regulation is becoming more specific, more enforceable, and more global. Organizations that build governance capabilities now will have a significant advantage as regulations mature.
+
+## Runtime Internals
+
+The "policy → evidence" model hides the mechanics that make governance real instead of decorative.
+
+### Tamper-evident audit logs
+
+An audit log is worthless if it can be edited after an incident. The runtime requirement is append-only, hash-chained records (each entry includes the hash of the previous), ideally anchored periodically to an external store. Regular application logs are not audit logs — conflating them is the most common compliance gap.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ev", "label": "AI decision event", "shape": "circle"},
+    {"id": "kind", "label": "App log or audit log?", "shape": "diamond"},
+    {"id": "applog", "label": "App log: editable, not evidence", "shape": "stadium"},
+    {"id": "rec", "label": "Append-only record + hash(prev)", "shape": "rect"},
+    {"id": "chain", "label": "Hash chain", "shape": "rect"},
+    {"id": "anchor", "label": "Anchor interval elapsed?", "shape": "diamond"},
+    {"id": "verify", "label": "Re-hash on read: chain intact?", "shape": "diamond"},
+    {"id": "proof", "label": "Tamper-evident trail", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ev", "target": "kind"},
+    {"source": "kind", "target": "applog", "label": "conflated: compliance gap"},
+    {"source": "kind", "target": "rec", "label": "audit"},
+    {"source": "rec", "target": "chain"},
+    {"source": "chain", "target": "anchor"},
+    {"source": "anchor", "target": "verify", "label": "yes: external anchor"},
+    {"source": "anchor", "target": "chain", "label": "not yet"},
+    {"source": "verify", "target": "proof", "label": "intact"},
+    {"source": "verify", "target": "applog", "label": "broken chain"}
+  ]
+}
+```
+
+### Risk-tiering gates the controls
+
+Regulations (EU AI Act) are risk-tiered: unacceptable / high / limited / minimal. The runtime is a classifier on the *use case* that selects which controls apply — a high-risk system triggers mandatory conformity assessment and human oversight; minimal-risk does not. Misclassifying a use case down a tier is the costliest governance error.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "uc", "label": "Use case", "shape": "circle"},
+    {"id": "clf", "label": "Risk-tier classifier on the use case", "shape": "diamond"},
+    {"id": "unacc", "label": "Unacceptable: prohibited", "shape": "stadium"},
+    {"id": "high", "label": "High: conformity assessment + human oversight", "shape": "rect"},
+    {"id": "lim", "label": "Limited: transparency obligations", "shape": "rect"},
+    {"id": "min", "label": "Minimal: no mandatory controls", "shape": "rect"},
+    {"id": "downtier", "label": "Misclassified down a tier?", "shape": "diamond"},
+    {"id": "liability", "label": "Costliest governance error", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "uc", "target": "clf"},
+    {"source": "clf", "target": "unacc", "label": "unacceptable"},
+    {"source": "clf", "target": "high", "label": "high"},
+    {"source": "clf", "target": "lim", "label": "limited"},
+    {"source": "clf", "target": "min", "label": "minimal"},
+    {"source": "high", "target": "downtier"},
+    {"source": "downtier", "target": "liability", "label": "yes"},
+    {"source": "downtier", "target": "min", "label": "no: correct tier"}
+  ]
+}
+```
+
+### Compliance-as-code
+
+Mature governance encodes policies as machine-checkable rules (a `compliance-policies.yaml` evaluated in CI): allowed models, required eval thresholds, data-residency, PII rules. The pipeline blocks a release that violates a policy and emits the conformance report as a build artifact — the same gate pattern as CI/CD evals, applied to legal/risk constraints.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "rel", "label": "Release candidate", "shape": "circle"},
+    {"id": "yaml", "label": "compliance-policies.yaml", "shape": "rect"},
+    {"id": "ci", "label": "CI evaluates each rule", "shape": "rect"},
+    {"id": "models", "label": "Allowed model + eval threshold?", "shape": "diamond"},
+    {"id": "data", "label": "Data-residency + PII rules?", "shape": "diamond"},
+    {"id": "block", "label": "Block release", "shape": "stadium"},
+    {"id": "ship", "label": "Ship + conformance report artifact", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "rel", "target": "yaml"},
+    {"source": "yaml", "target": "ci"},
+    {"source": "ci", "target": "models"},
+    {"source": "models", "target": "data", "label": "pass"},
+    {"source": "models", "target": "block", "label": "fail"},
+    {"source": "data", "target": "ship", "label": "pass"},
+    {"source": "data", "target": "block", "label": "fail"}
+  ]
+}
+```
+
+### Incident response and traceability
+
+When an AI system causes harm, governance must answer "which model version, which prompt, which data, which decision path?" within hours. That is only possible if every inference is traceable to a versioned (model, prompt, dataset) tuple. Incident response is a query over the audit trail, not a forensic reconstruction — design for the query up front.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "harm", "label": "Reported harm", "shape": "circle"},
+    {"id": "design", "label": "Inference traceable to versioned tuple?", "shape": "diamond"},
+    {"id": "forensic", "label": "Slow forensic reconstruction", "shape": "stadium"},
+    {"id": "query", "label": "Query the audit trail", "shape": "rect"},
+    {"id": "tuple", "label": "Resolve (model, prompt, dataset) version", "shape": "rect"},
+    {"id": "scope", "label": "Scope all affected inferences", "shape": "rect"},
+    {"id": "hours", "label": "Answered within hours?", "shape": "diamond"},
+    {"id": "disclose", "label": "Rollback + regulatory disclosure", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "harm", "target": "design"},
+    {"source": "design", "target": "forensic", "label": "no: not designed for query"},
+    {"source": "design", "target": "query", "label": "yes"},
+    {"source": "query", "target": "tuple"},
+    {"source": "tuple", "target": "scope"},
+    {"source": "scope", "target": "hours"},
+    {"source": "hours", "target": "disclose", "label": "yes"},
+    {"source": "hours", "target": "forensic", "label": "no: misses SLA"}
+  ]
+}
+```
 
 ## Related Articles
 

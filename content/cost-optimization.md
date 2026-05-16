@@ -10,6 +10,35 @@ The economics of large language model usage have become a strategic concern as o
 - Reasoning models can inflate output costs by 3-20x via thinking tokens -- use them only for tasks that genuinely benefit, and always cap the thinking budget.
 - Self-hosting rarely breaks even below ~$10K/month in API spend; a hybrid baseline-load + burst-to-API strategy offers the best economics at medium scale.
 
+## Mental Model
+
+The mental model for LLM cost optimization is **cost = requests × tokens × price-per-token**, and you have exactly three levers, one per factor. Cut *requests* (caching — semantic and prompt-prefix). Cut *tokens* (prompt compression, shorter outputs, context pruning). Cut *price* (route to a cheaper model, batch API, self-host the baseline). Every tactic in this article is one of those three; the engineering skill is knowing which factor dominates *your* bill before optimizing — teams routinely compress prompts to save 5% while a 70% cache opportunity sits untouched.
+
+The non-obvious corollary: the levers interact. Routing to a smaller model (price↓) can raise tokens (it needs more few-shot examples), and caching (requests↓) only helps if your traffic has reuse. So measure the decomposition first. The price lever is the same trade-off space as [LLM serving](/llm-serving) and [inference optimization](/inference-optimization); the token lever overlaps directly with [context compression](/context-compression).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "bill", "label": "Total cost", "shape": "circle"},
+    {"id": "req", "label": "× requests", "shape": "rect"},
+    {"id": "tok", "label": "× tokens", "shape": "rect"},
+    {"id": "price", "label": "× $/token", "shape": "rect"},
+    {"id": "cache", "label": "Caching", "shape": "stadium"},
+    {"id": "compress", "label": "Compression", "shape": "stadium"},
+    {"id": "route", "label": "Routing / batch", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "bill", "target": "req"},
+    {"source": "bill", "target": "tok"},
+    {"source": "bill", "target": "price"},
+    {"source": "req", "target": "cache", "label": "lever 1"},
+    {"source": "tok", "target": "compress", "label": "lever 2"},
+    {"source": "price", "target": "route", "label": "lever 3"}
+  ]
+}
+```
+
 ## Token Pricing Landscape
 
 ### Understanding the Pricing Model
@@ -639,6 +668,128 @@ Fine-tuning is not always the right answer:
 - **Rapidly changing requirements**: If the task definition or output format changes frequently, re-fine-tuning each time is expensive and slow. Prompts can be updated instantly.
 - **Broad task coverage**: Fine-tuned models excel at narrow tasks. If your application needs to handle diverse, unpredictable queries, a prompted general model is more flexible.
 - **Frontier capability requirements**: For tasks that genuinely need frontier model reasoning, fine-tuning a smaller model may not reach acceptable quality regardless of training data.
+
+## Runtime Internals
+
+The three-lever model hides the mechanics that decide whether a cost optimization actually lands.
+
+### Prompt-prefix caching economics
+
+Provider prompt caching is not free: the first request pays a *write* premium (~1.25×) and cached reads cost ~10% of input. So caching only wins above a break-even reuse count, and only if the cached prefix is byte-stable — a single changing token (a timestamp in the system prompt) busts the whole prefix. The runtime discipline is: hoist all volatile content *after* the cached boundary.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Incoming request", "shape": "circle"},
+    {"id": "boundary", "label": "Volatile content hoisted after the cache boundary?", "shape": "diamond"},
+    {"id": "bust", "label": "One changing token busts the whole prefix", "shape": "stadium"},
+    {"id": "first", "label": "First hit: cache write (~1.25x premium)", "shape": "rect"},
+    {"id": "reuse", "label": "Reuse count above break-even?", "shape": "diamond"},
+    {"id": "read", "label": "Cached read (~0.1x input)", "shape": "rect"},
+    {"id": "loss", "label": "Net loss: write premium never amortized", "shape": "stadium"},
+    {"id": "win", "label": "Net token-cost win", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "boundary"},
+    {"source": "boundary", "target": "bust", "label": "no: prefix not byte-stable"},
+    {"source": "boundary", "target": "first", "label": "yes: stable prefix"},
+    {"source": "first", "target": "reuse"},
+    {"source": "reuse", "target": "read", "label": "above break-even"},
+    {"source": "reuse", "target": "loss", "label": "below break-even"},
+    {"source": "read", "target": "win"}
+  ]
+}
+```
+
+### Model routing as a cascade
+
+Routing is a runtime classifier: a cheap model (or heuristic) attempts the task; an escalation check decides whether to retry on a stronger model. The hidden cost is *double-spend* on escalated requests — if 40% escalate, you pay small+large for those, so a bad router can cost more than always using the large model. Tune the escalation threshold against measured escalation rate.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Request", "shape": "circle"},
+    {"id": "cheap", "label": "Cheap model / heuristic attempt", "shape": "rect"},
+    {"id": "esc", "label": "Escalation check: confident + valid?", "shape": "diamond"},
+    {"id": "strong", "label": "Retry on strong model (pays small + large)", "shape": "rect"},
+    {"id": "double", "label": "High escalation rate costs more than always-large", "shape": "stadium"},
+    {"id": "out", "label": "Answer at tuned cost", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "q", "target": "cheap"},
+    {"source": "cheap", "target": "esc"},
+    {"source": "esc", "target": "out", "label": "pass: cheap wins"},
+    {"source": "esc", "target": "strong", "label": "fail: escalate"},
+    {"source": "strong", "target": "double", "label": "if rate > threshold"},
+    {"source": "strong", "target": "out", "label": "rate tuned low"}
+  ]
+}
+```
+
+### Batch API trade
+
+The batch API trades latency (≈24h SLA) for ~50% off. The runtime decision is purely about *deadline*: anything not user-facing (evals, backfills, summarization pipelines) belongs on batch. The failure mode is mixing — routing latency-sensitive traffic into batch and timing out SLAs.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "job", "label": "Workload", "shape": "circle"},
+    {"id": "face", "label": "User-facing / latency-sensitive?", "shape": "diamond"},
+    {"id": "sync", "label": "Sync API (full price, low latency)", "shape": "rect"},
+    {"id": "deadline", "label": "Deadline beyond batch SLA (~24h)?", "shape": "rect"},
+    {"id": "batch", "label": "Batch API (~50% off)", "shape": "rect"},
+    {"id": "timeout", "label": "Latency traffic in batch: SLA timeout", "shape": "stadium"},
+    {"id": "done", "label": "Result", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "job", "target": "face"},
+    {"source": "face", "target": "sync", "label": "yes"},
+    {"source": "face", "target": "deadline", "label": "no"},
+    {"source": "deadline", "target": "batch", "label": "evals / backfills"},
+    {"source": "deadline", "target": "timeout", "label": "mis-routed latency job"},
+    {"source": "sync", "target": "done"},
+    {"source": "batch", "target": "done"}
+  ]
+}
+```
+
+### Reasoning-token budgeting
+
+Reasoning models bill hidden "thinking" tokens that can dwarf the visible answer. The runtime control is a thinking budget cap plus monitoring of thinking/answer ratio; an uncapped reasoning model on an easy task is the most common silent cost blowout, structurally similar to the over-generation problem [inference optimization](/inference-optimization) instruments.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "task", "label": "Task", "shape": "circle"},
+    {"id": "hard", "label": "Genuinely needs deep reasoning?", "shape": "diamond"},
+    {"id": "cap", "label": "Apply low thinking-budget cap", "shape": "rect"},
+    {"id": "full", "label": "Allow full thinking budget", "shape": "rect"},
+    {"id": "run", "label": "Generate (hidden thinking tokens billed)", "shape": "rect"},
+    {"id": "ratio", "label": "Thinking/answer ratio within bound?", "shape": "diamond"},
+    {"id": "blow", "label": "Uncapped on easy task: silent cost blowout", "shape": "stadium"},
+    {"id": "alert", "label": "Alert + tighten cap?", "shape": "diamond"},
+    {"id": "ans", "label": "Answer at controlled cost", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "hard"},
+    {"source": "hard", "target": "cap", "label": "no: cap it"},
+    {"source": "hard", "target": "full", "label": "yes"},
+    {"source": "cap", "target": "run"},
+    {"source": "full", "target": "run"},
+    {"source": "run", "target": "ratio"},
+    {"source": "ratio", "target": "ans", "label": "within bound"},
+    {"source": "ratio", "target": "blow", "label": "ratio explodes"},
+    {"source": "blow", "target": "alert"},
+    {"source": "alert", "target": "cap", "label": "yes: tighten"}
+  ]
+}
+```
+
+These cost gates belong in the pipeline, not in a spreadsheet — wire the cost delta into the same merge gate described in [CI/CD for AI](/ci-cd-ai) so a prompt change that doubles spend is caught before it ships.
 
 ## Summary and Key Takeaways
 

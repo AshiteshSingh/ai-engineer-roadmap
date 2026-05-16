@@ -17,6 +17,35 @@ However, "quality" is multidimensional:
 
 Building datasets that satisfy all these criteria requires systematic processes, not ad-hoc data collection.
 
+## Mental Model
+
+The organizing mental model for dataset curation is a **funnel, not a pile**: you start with abundant raw or synthetic candidates at the top and pass them through successively stricter filters — format validity → deduplication → quality scoring → decontamination → diversity selection — until what drips out is small, clean, and high-signal. More data is not the goal; *higher yield per token of training compute* is. A 50k-example curated set routinely beats a 2M-example raw scrape.
+
+Two corollaries follow. First, every stage is a classifier with precision/recall trade-offs, so curation quality is itself an evaluation problem — the same discipline as a [DeepEval synthesizer](/deepeval-synthesizer) generating and scoring candidates. Second, the funnel only matters relative to a downstream objective: a set curated for [fine-tuning fundamentals](/fine-tuning-fundamentals) (instruction following) looks nothing like one curated for pretraining.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "raw", "label": "Raw + synthetic\ncandidates", "shape": "circle"},
+    {"id": "fmt", "label": "Format / schema\nvalidity", "shape": "rect"},
+    {"id": "dedup", "label": "Dedup", "shape": "rect"},
+    {"id": "qual", "label": "Quality score", "shape": "rect"},
+    {"id": "decon", "label": "Decontaminate", "shape": "rect"},
+    {"id": "div", "label": "Diversity select", "shape": "rect"},
+    {"id": "out", "label": "Curated set", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "raw", "target": "fmt"},
+    {"source": "fmt", "target": "dedup"},
+    {"source": "dedup", "target": "qual"},
+    {"source": "qual", "target": "decon"},
+    {"source": "decon", "target": "div"},
+    {"source": "div", "target": "out"}
+  ]
+}
+```
+
 ## Instruction Dataset Formats
 
 Two dominant formats have emerged for instruction fine-tuning:
@@ -780,6 +809,125 @@ Before committing a curated dataset to an expensive training run, evaluate the d
 - **Coverage analysis**: Embed all instructions and visualize the distribution (UMAP or t-SNE). Gaps in the embedding space correspond to task categories your dataset does not cover. Compare against the embedding distribution of real user queries if available (datasets like LMSYS-Chat-1M or WildChat provide this reference distribution).
 - **Difficulty distribution**: Score instruction difficulty (e.g., by measuring response length or using a complexity classifier) and verify the distribution matches your target. A dataset skewed entirely toward simple tasks will not teach the model to handle hard ones.
 - **Benchmark overlap**: Run decontamination against all benchmarks you plan to evaluate on (see Article 32 for a thorough treatment of contamination detection and benchmark design).
+
+## Runtime Internals
+
+The funnel is conceptually simple; the runtime is where it gets expensive and subtle.
+
+### Dedup at scale: MinHash/LSH
+
+Exact dedup is a hash set; *near*-dedup (the one that matters) is MinHash + LSH banding so you do not pay O(n²) pairwise similarity. Get the band/row parameters wrong and you either keep near-duplicates (memorization risk) or nuke legitimate paraphrase diversity.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "doc", "label": "Document corpus", "shape": "circle"},
+    {"id": "shingle", "label": "k-shingle each doc", "shape": "rect"},
+    {"id": "mh", "label": "MinHash signature", "shape": "rect"},
+    {"id": "band", "label": "LSH band / row params tuned?", "shape": "diamond"},
+    {"id": "loose", "label": "Too loose: near-dups survive (memorization risk)", "shape": "stadium"},
+    {"id": "tight", "label": "Too tight: kills paraphrase diversity", "shape": "stadium"},
+    {"id": "bucket", "label": "Candidate pairs in same LSH bucket", "shape": "rect"},
+    {"id": "keep", "label": "Deduped corpus", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "doc", "target": "shingle"},
+    {"source": "shingle", "target": "mh"},
+    {"source": "mh", "target": "band"},
+    {"source": "band", "target": "loose", "label": "too few bands"},
+    {"source": "band", "target": "tight", "label": "too many bands"},
+    {"source": "band", "target": "bucket", "label": "calibrated"},
+    {"source": "bucket", "target": "keep", "label": "drop true near-dups"}
+  ]
+}
+```
+
+### Quality scoring as a model, not a rule
+
+Production quality filtering uses a trained classifier (or LLM judge) over heuristics because rules do not generalize. The trap is the classifier's own bias becoming the dataset's bias — it silently shapes the model you train next. This is exactly the [pretraining data](/pretraining-data) lesson: the filter *is* part of the model.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "cand", "label": "Candidate example", "shape": "circle"},
+    {"id": "clf", "label": "Trained quality classifier / LLM judge", "shape": "rect"},
+    {"id": "thr", "label": "Score >= threshold?", "shape": "diamond"},
+    {"id": "keep", "label": "Keep", "shape": "rect"},
+    {"id": "bias", "label": "Classifier bias becomes the dataset's bias", "shape": "stadium"},
+    {"id": "next", "label": "Silently shapes the next trained model", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "cand", "target": "clf"},
+    {"source": "clf", "target": "thr"},
+    {"source": "thr", "target": "keep", "label": "pass"},
+    {"source": "thr", "target": "bias", "label": "systematic reject pattern"},
+    {"source": "keep", "target": "next"},
+    {"source": "bias", "target": "next", "label": "the filter IS part of the model"}
+  ]
+}
+```
+
+### Decontamination against eval sets
+
+Before training you must remove anything overlapping your evaluation benchmarks, or your numbers are fiction. n-gram overlap is fast but misses paraphrase; embedding-similarity decontamination catches semantic leakage at higher cost.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "train", "label": "Train candidate", "shape": "circle"},
+    {"id": "ng", "label": "n-gram overlap vs benchmarks (fast)", "shape": "rect"},
+    {"id": "ngh", "label": "n-gram hit?", "shape": "diamond"},
+    {"id": "emb", "label": "Embedding-similarity scan (catches paraphrase, costlier)", "shape": "rect"},
+    {"id": "semh", "label": "Semantic leak above threshold?", "shape": "diamond"},
+    {"id": "rm", "label": "Remove contaminated example", "shape": "stadium"},
+    {"id": "safe", "label": "Clean: reported numbers are real", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "train", "target": "ng"},
+    {"source": "ng", "target": "ngh"},
+    {"source": "ngh", "target": "rm", "label": "exact / near match"},
+    {"source": "ngh", "target": "emb", "label": "no surface match"},
+    {"source": "emb", "target": "semh"},
+    {"source": "semh", "target": "rm", "label": "yes"},
+    {"source": "semh", "target": "safe", "label": "no"}
+  ]
+}
+```
+
+### Diversity selection under a budget
+
+Given a token/cost budget, you want the *most diverse* high-quality subset, not the top-N by score (which collapses to near-duplicates of the easiest cluster). Embedding-space clustering + per-cluster sampling is the standard runtime.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "pool", "label": "Quality-passed pool", "shape": "circle"},
+    {"id": "naive", "label": "Select top-N by score?", "shape": "diamond"},
+    {"id": "collapse", "label": "Collapses to near-dups of the easiest cluster", "shape": "stadium"},
+    {"id": "emb", "label": "Embed examples", "shape": "rect"},
+    {"id": "clust", "label": "Cluster in embedding space", "shape": "rect"},
+    {"id": "weight", "label": "Weight clusters by target mix", "shape": "rect"},
+    {"id": "budget", "label": "Token budget exhausted?", "shape": "diamond"},
+    {"id": "samp", "label": "Round-robin per-cluster sample", "shape": "rect"},
+    {"id": "final", "label": "Diverse curated set", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "pool", "target": "naive"},
+    {"source": "naive", "target": "collapse", "label": "yes: anti-pattern"},
+    {"source": "naive", "target": "emb", "label": "no: diversity-aware"},
+    {"source": "emb", "target": "clust"},
+    {"source": "clust", "target": "weight"},
+    {"source": "weight", "target": "samp"},
+    {"source": "samp", "target": "budget"},
+    {"source": "budget", "target": "samp", "label": "no: keep sampling"},
+    {"source": "budget", "target": "final", "label": "yes"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

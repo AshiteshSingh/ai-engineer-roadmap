@@ -10,6 +10,39 @@ Evaluating AI agents presents challenges fundamentally different from evaluating
 - Safety is a first-class concern: side-effect detection, permission boundary testing, and resource consumption monitoring must be evaluated explicitly.
 - Long-running agents introduce unique challenges -- memory decay, context drift, and superlinear cost growth -- that short-task benchmarks do not surface.
 
+## Mental Model
+
+The mental model for agent evaluation is **judge the journey, not just the destination**. A single-turn LLM eval scores one output; an agent produces a *trajectory* — a sequence of decisions, tool calls, and observations — and the final answer can be right for the wrong reasons (lucky guess) or wrong despite a sound process (bad tool). So agent eval is inherently two-dimensional: outcome (did it succeed?) **and** process (was the trajectory efficient, safe, and correct at each step?). Optimizing only outcome breeds agents that reward-hack; optimizing only process breeds agents that do beautiful work and fail the task.
+
+That split organizes everything below. Outcome metrics borrow from [benchmark design](/benchmark-design); process metrics require trajectory instrumentation that is the same data [agent debugging](/agent-debugging) consumes; and the failure taxonomy maps directly onto the [agent architectures](/agent-architectures) you chose, since each architecture fails in characteristic ways. Pick metrics by asking "which axis does this agent's risk live on?"
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "run", "label": "Agent run produces a trajectory", "shape": "circle"},
+    {"id": "outcome", "label": "Outcome axis: task solved?", "shape": "diamond"},
+    {"id": "process", "label": "Process axis: each step sound?", "shape": "diamond"},
+    {"id": "reliable", "label": "Reliable agent (both pass)", "shape": "circle"},
+    {"id": "lucky", "label": "Right for wrong reasons (outcome only)", "shape": "stadium"},
+    {"id": "beautiful", "label": "Sound process, failed task (process only)", "shape": "stadium"},
+    {"id": "broken", "label": "Clear failure (neither)", "shape": "stadium"},
+    {"id": "pick", "label": "Pick metrics by which axis the risk lives on", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "run", "target": "outcome"},
+    {"source": "run", "target": "process"},
+    {"source": "outcome", "target": "reliable", "label": "pass + process pass"},
+    {"source": "outcome", "target": "lucky", "label": "pass + process fail"},
+    {"source": "process", "target": "beautiful", "label": "pass + outcome fail"},
+    {"source": "process", "target": "broken", "label": "fail + outcome fail"},
+    {"source": "reliable", "target": "pick"},
+    {"source": "lucky", "target": "pick", "label": "reward-hack signal"},
+    {"source": "beautiful", "target": "pick", "label": "tool/env signal"}
+  ]
+}
+```
+
 ## Why Agent Evaluation is Different
 
 Traditional LLM evaluation measures response quality on a per-query basis: is the answer correct? Is it fluent? Is it helpful? Agent evaluation must consider additional dimensions that arise from the agent's agentic nature:
@@ -1084,6 +1117,118 @@ class AgentEvaluationFramework:
                 })
 
         return self.compile_report(results)
+```
+
+## Runtime Internals
+
+The two-axis model hides the instrumentation that makes agent evaluation actually measurable.
+
+### Trajectory capture is the prerequisite
+
+You cannot score a process you did not record. The runtime requires structured trace capture — every step's thought, tool call, arguments, observation, and token/cost — emitted as spans. Sampling or lossy logging silently makes process metrics unmeasurable; this is the same trace substrate [agent debugging](/agent-debugging) replays.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "step", "label": "Agent step", "shape": "circle"},
+    {"id": "span", "label": "Emit span\n(thought/tool/obs)", "shape": "rect"},
+    {"id": "store", "label": "Trace store", "shape": "rect"},
+    {"id": "eval", "label": "Trajectory eval", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "step", "target": "span"},
+    {"source": "span", "target": "store"},
+    {"source": "store", "target": "eval"}
+  ]
+}
+```
+
+### Tool-use accuracy decomposition
+
+"Tool use failed" is too coarse. The runtime scores it as a chain: was the *right tool* selected, were *arguments valid*, did *execution succeed*, and was the *result used correctly*? Each is a separate gauge; an agent with 95% selection but 60% argument accuracy needs a schema fix, not a planner fix.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "need", "label": "Tool needed", "shape": "circle"},
+    {"id": "sel", "label": "Right tool?", "shape": "diamond"},
+    {"id": "arg", "label": "Valid args?", "shape": "diamond"},
+    {"id": "exec", "label": "Exec ok?", "shape": "diamond"},
+    {"id": "use", "label": "Used result?", "shape": "diamond"},
+    {"id": "ok", "label": "Correct tool use", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "need", "target": "sel"},
+    {"source": "sel", "target": "arg", "label": "yes"},
+    {"source": "arg", "target": "exec", "label": "yes"},
+    {"source": "exec", "target": "use", "label": "yes"},
+    {"source": "use", "target": "ok", "label": "yes"}
+  ]
+}
+```
+
+### LLM-judge for trajectories (and its bias)
+
+Outcome can sometimes be checked deterministically; trajectory quality usually needs an LLM judge over the trace. The runtime risk is judge bias toward *longer* trajectories (looks thorough) and self-preference. Mitigations: rubric anchored to a reference trajectory, length normalization, and periodic human calibration — the same discipline as [benchmark design](/benchmark-design).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "traj", "label": "Trajectory under review", "shape": "circle"},
+    {"id": "ref", "label": "Rubric anchored to reference trajectory", "shape": "rect"},
+    {"id": "judge", "label": "LLM judge over the trace", "shape": "rect"},
+    {"id": "lenbias", "label": "Length bias: longer looks thorough", "shape": "diamond"},
+    {"id": "selfpref", "label": "Self-preference toward own style", "shape": "diamond"},
+    {"id": "norm", "label": "Length-normalize + debias", "shape": "rect"},
+    {"id": "cal", "label": "Periodic human calibration agrees?", "shape": "diamond"},
+    {"id": "score", "label": "Trusted trajectory score", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "traj", "target": "ref"},
+    {"source": "ref", "target": "judge"},
+    {"source": "judge", "target": "lenbias"},
+    {"source": "judge", "target": "selfpref"},
+    {"source": "lenbias", "target": "norm"},
+    {"source": "selfpref", "target": "norm"},
+    {"source": "norm", "target": "cal"},
+    {"source": "cal", "target": "score", "label": "yes"},
+    {"source": "cal", "target": "ref", "label": "no: recalibrate rubric"}
+  ]
+}
+```
+
+### Cost-aware reliability over many runs
+
+Agents are stochastic, so a single run is meaningless: the runtime evaluates over N runs and reports pass^k (succeeds k times in a row) plus cost variance. A 70%-success agent that costs 5× on its failures is worse than a 65% agent with bounded cost — reliability and the cost waterfall must be scored together, the failure modes mapped back to the chosen [agent architectures](/agent-architectures).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "task", "label": "Task (stochastic agent)", "shape": "circle"},
+    {"id": "runs", "label": "Execute N independent runs", "shape": "rect"},
+    {"id": "passk", "label": "pass^k: succeeds k times in a row", "shape": "rect"},
+    {"id": "waterfall", "label": "Cost waterfall (cost on failures)", "shape": "rect"},
+    {"id": "joint", "label": "Reliability AND bounded cost?", "shape": "diamond"},
+    {"id": "compare", "label": "70%@5x-on-fail vs 65%@bounded", "shape": "diamond"},
+    {"id": "ship", "label": "Ship", "shape": "circle"},
+    {"id": "remap", "label": "Map failures back to chosen architecture", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "task", "target": "runs"},
+    {"source": "runs", "target": "passk"},
+    {"source": "runs", "target": "waterfall"},
+    {"source": "passk", "target": "joint"},
+    {"source": "waterfall", "target": "joint"},
+    {"source": "joint", "target": "compare"},
+    {"source": "compare", "target": "ship", "label": "wins jointly"},
+    {"source": "compare", "target": "remap", "label": "loses jointly"},
+    {"source": "remap", "target": "runs", "label": "re-evaluate"}
+  ]
+}
 ```
 
 ## Summary and Key Takeaways

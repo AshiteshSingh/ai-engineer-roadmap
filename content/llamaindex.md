@@ -3,6 +3,37 @@
 ## The 30-Second Pitch
 LlamaIndex is a data framework for building context-augmented LLM applications. It solves the core problem of connecting private, domain-specific data to large language models, which by themselves are limited to their pre-trained knowledge and lack access to your proprietary documents, databases, or APIs. Instead of fine-tuning a model—which is expensive and static—LlamaIndex provides tools to ingest, structure, index, and query your data, dynamically retrieving the most relevant context to include in an LLM prompt. A team would pick it over writing custom retrieval pipelines from scratch because it abstracts away the complexity of chunking, embedding, vector storage, and retrieval orchestration, offering a unified interface to work with diverse data sources and LLMs. It's the connective tissue between your data and your LLM.
 
+## Mental Model
+
+The mental model for LlamaIndex is a **two-phase contract: an offline ingestion phase that builds an index, and an online query phase that reads it**. Almost every confusion ("why is retrieval slow?", "why are answers stale?") dissolves once you place the operation in the right phase. Ingestion = load → chunk → embed → store; it is batch, idempotent, and re-run when data or chunking changes. Query = embed the question → retrieve → (optionally route/rerank) → synthesize with an LLM; it is per-request and latency-bound.
+
+LlamaIndex's abstractions (Node, Index, Retriever, QueryEngine, Tool) are just named seams in those two pipelines. Wrapping a QueryEngine as a Tool is the bridge to agents — at that point retrieval is one [function call](/function-calling) among many, and the synthesis step is governed by the same [LLM serving](/llm-serving) latency/cost trade-offs as any other generation.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "docs", "label": "Documents", "shape": "circle"},
+    {"id": "chunk", "label": "Chunk → Node", "shape": "rect"},
+    {"id": "emb", "label": "Embed", "shape": "rect"},
+    {"id": "idx", "label": "Index store", "shape": "rect"},
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "ret", "label": "Retrieve + rerank", "shape": "rect"},
+    {"id": "syn", "label": "LLM synthesize", "shape": "rect"},
+    {"id": "ans", "label": "Answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "docs", "target": "chunk", "label": "ingest (offline)"},
+    {"source": "chunk", "target": "emb"},
+    {"source": "emb", "target": "idx"},
+    {"source": "q", "target": "ret", "label": "query (online)"},
+    {"source": "idx", "target": "ret"},
+    {"source": "ret", "target": "syn"},
+    {"source": "syn", "target": "ans"}
+  ]
+}
+```
+
 ## How It Actually Works
 The mental model is a **retrieval-augmented generation (RAG) orchestration framework**. At its core, LlamaIndex manages the flow from raw data to an LLM answer. Think of it in layers:
 
@@ -228,6 +259,129 @@ print(f"Extracted {len(extracted_data.employees)} employees.")
 *   **CI/CD:** Your pipeline would include testing for the LlamaIndex application—not just unit tests, but **retrieval evaluation tests** (checking that key queries return correct excerpts). Version control would include index configuration schemas and prompt templates.
 *   **Docker/Kubernetes:** The LlamaIndex query service would be packaged as a Docker image. In Kubernetes, you'd deploy it as a Deployment with resource limits (it can be memory-intensive during indexing). You might have a separate CronJob or Job for running periodic index updates.
 *   **Microservices:** The LlamaIndex system is a prime example of a specialized AI microservice. It exposes a clean API (e.g., `/query`, `/ingest`) to other services, encapsulating the complexity of embeddings, retrieval, and LLM interaction.
+
+## Runtime Internals
+
+The two-phase model hides where production systems actually break.
+
+### Node construction and metadata
+
+A `Node` is not just a text chunk — it carries metadata, relationships (prev/next/source), and an embedding. Retrieval quality is capped at ingestion: if chunking splits a table from its caption, no reranker recovers it. The runtime lever is the node parser (sentence-window, hierarchical) plus what metadata you attach for later filtering.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "doc", "label": "Document", "shape": "circle"},
+    {"id": "parse", "label": "Node parser", "shape": "rect"},
+    {"id": "meta", "label": "Attach metadata\n+ relationships", "shape": "rect"},
+    {"id": "node", "label": "Node", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "doc", "target": "parse"},
+    {"source": "parse", "target": "meta"},
+    {"source": "meta", "target": "node"}
+  ]
+}
+```
+
+### The retrieval → postprocess → synthesis path
+
+A QueryEngine is a pipeline, not a function: retrieve top-k, run node postprocessors (rerank, similarity cutoff, metadata filter), then a response synthesizer composes the answer. Each stage is a precision/recall/cost dial; the most common production fix is adding a reranker, not increasing k.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Query embedding", "shape": "circle"},
+    {"id": "topk", "label": "Retrieve top-k", "shape": "rect"},
+    {"id": "rerank", "label": "Reranker node postprocessor", "shape": "rect"},
+    {"id": "cut", "label": "Similarity cutoff + metadata filter", "shape": "rect"},
+    {"id": "signal", "label": "Enough relevant signal post-filter?", "shape": "diamond"},
+    {"id": "biggerk", "label": "Increasing k alone rarely fixes it", "shape": "stadium"},
+    {"id": "addrr", "label": "Add / strengthen reranker", "shape": "rect"},
+    {"id": "syn", "label": "Response synthesizer composes answer", "shape": "rect"},
+    {"id": "ans", "label": "Answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "topk"},
+    {"source": "topk", "target": "rerank"},
+    {"source": "rerank", "target": "cut"},
+    {"source": "cut", "target": "signal"},
+    {"source": "signal", "target": "syn", "label": "yes"},
+    {"source": "signal", "target": "biggerk", "label": "no: widen k?"},
+    {"source": "biggerk", "target": "addrr", "label": "better fix"},
+    {"source": "addrr", "target": "rerank"},
+    {"source": "syn", "target": "ans"}
+  ]
+}
+```
+
+### Response synthesis modes
+
+For contexts that exceed the window, LlamaIndex uses `refine`/`compact`/`tree_summarize` — multi-call strategies that trade latency and token cost for completeness. `compact` packs nodes to minimize calls; `tree_summarize` recursively merges. Picking the mode is a direct cost lever, and its quality must be measured with [evaluation fundamentals](/eval-fundamentals), not eyeballed.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "nodes", "label": "Retrieved nodes", "shape": "circle"},
+    {"id": "fit", "label": "All nodes fit the context window?", "shape": "diamond"},
+    {"id": "compact", "label": "compact: pack nodes, minimize calls", "shape": "rect"},
+    {"id": "refine", "label": "refine: sequential answer refinement", "shape": "rect"},
+    {"id": "tree", "label": "tree_summarize: recursive merge", "shape": "rect"},
+    {"id": "budget", "label": "Latency / token budget acceptable?", "shape": "diamond"},
+    {"id": "blow", "label": "Multi-call modes blow cost if unmeasured", "shape": "stadium"},
+    {"id": "measure", "label": "Quality measured with eval, not eyeballed", "shape": "rect"},
+    {"id": "ans", "label": "Synthesized answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "nodes", "target": "fit"},
+    {"source": "fit", "target": "compact", "label": "yes"},
+    {"source": "fit", "target": "refine", "label": "no: sequential"},
+    {"source": "fit", "target": "tree", "label": "no: many nodes"},
+    {"source": "compact", "target": "budget"},
+    {"source": "refine", "target": "budget"},
+    {"source": "tree", "target": "budget"},
+    {"source": "budget", "target": "measure", "label": "yes"},
+    {"source": "budget", "target": "blow", "label": "no"},
+    {"source": "measure", "target": "ans"}
+  ]
+}
+```
+
+### Agentic routing over multiple indexes
+
+Wrapping QueryEngines as Tools lets an agent pick which index to hit. The runtime risk shifts from retrieval quality to *routing* quality: a wrong tool choice returns a confident answer from the wrong corpus. This makes router evaluation as important as retrieval evaluation.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ask", "label": "User question", "shape": "circle"},
+    {"id": "agent", "label": "Agent router over QueryEngine Tools", "shape": "diamond"},
+    {"id": "hr", "label": "HR index tool", "shape": "rect"},
+    {"id": "eng", "label": "Eng index tool", "shape": "rect"},
+    {"id": "fin", "label": "Finance index tool", "shape": "rect"},
+    {"id": "right", "label": "Correct corpus selected?", "shape": "diamond"},
+    {"id": "wrong", "label": "Confident answer from the wrong corpus", "shape": "stadium"},
+    {"id": "routereval", "label": "Router eval as important as retrieval eval", "shape": "rect"},
+    {"id": "ans", "label": "Grounded answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ask", "target": "agent"},
+    {"source": "agent", "target": "hr", "label": "policy q"},
+    {"source": "agent", "target": "eng", "label": "deploy q"},
+    {"source": "agent", "target": "fin", "label": "cost q"},
+    {"source": "hr", "target": "right"},
+    {"source": "eng", "target": "right"},
+    {"source": "fin", "target": "right"},
+    {"source": "right", "target": "ans", "label": "yes"},
+    {"source": "right", "target": "wrong", "label": "no: misrouted"},
+    {"source": "wrong", "target": "routereval", "label": "drives"}
+  ]
+}
+```
 
 ## Red Flags to Avoid
 *   **"LlamaIndex is a vector database."** No, it's a framework that *uses* vector databases. It has a simple in-memory one, but for production you plug in Pinecone, Weaviate, etc.

@@ -2,6 +2,41 @@
 
 Evaluating large language models requires a principled framework that goes far beyond simple accuracy checks. The rapid proliferation of LLMs has exposed deep methodological gaps in how we measure model quality, from metric selection to dataset construction to statistical rigor. This article provides a practitioner-grounded tour of evaluation fundamentals, covering the metrics that matter, the benchmarks that define the field, and the methodology needed to draw valid conclusions.
 
+## Mental Model
+
+The mental model for LLM evaluation is **a measurement instrument you must validate before you trust its readings**. A metric is a *proxy* for a capability, and every proxy has a validity gap: lexical metrics (BLEU/ROUGE) punish correct paraphrases, accuracy hides which 15% failed, a single judge has bias and variance. So evaluation is not "compute a number" — it is *choosing a proxy whose gap you understand*, then quantifying the uncertainty around the number (confidence intervals, significance) so a 2-point delta is not mistaken for progress.
+
+That reframes the whole discipline as instrument design. The proxy must match what you actually ship — which is why eval is the foundation under [agent evaluation](/agent-evaluation), [benchmark design](/benchmark-design), and the gates in [production patterns](/production-patterns): each is this same "validate the proxy, bound the error" loop applied to a harder target. A number without an error bar and a known validity gap is decoration, not measurement.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "cap", "label": "Target capability", "shape": "circle"},
+    {"id": "proxy", "label": "Pick a metric (a proxy)", "shape": "rect"},
+    {"id": "gap", "label": "Validity gap understood?", "shape": "diamond"},
+    {"id": "lex", "label": "BLEU/ROUGE punish correct paraphrase", "shape": "stadium"},
+    {"id": "acc", "label": "Accuracy hides which slice failed", "shape": "stadium"},
+    {"id": "ci", "label": "Quantify uncertainty (bootstrap CI / significance)", "shape": "rect"},
+    {"id": "bar", "label": "Error bar reported?", "shape": "diamond"},
+    {"id": "decor", "label": "Number without an error bar = decoration", "shape": "stadium"},
+    {"id": "claim", "label": "Trustworthy claim", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "cap", "target": "proxy"},
+    {"source": "proxy", "target": "gap"},
+    {"source": "gap", "target": "lex", "label": "no: lexical proxy"},
+    {"source": "gap", "target": "acc", "label": "no: aggregate proxy"},
+    {"source": "lex", "target": "proxy", "label": "pick better"},
+    {"source": "acc", "target": "proxy", "label": "slice instead"},
+    {"source": "gap", "target": "ci", "label": "yes"},
+    {"source": "ci", "target": "bar"},
+    {"source": "bar", "target": "claim", "label": "yes"},
+    {"source": "bar", "target": "decor", "label": "no"}
+  ]
+}
+```
+
 ## Why Evaluation Is Hard for Language Models
 
 Traditional machine learning evaluation assumes a well-defined task with clear ground truth. Language models break this assumption in several ways:
@@ -654,6 +689,142 @@ class EvalPipeline:
                         "delta": values["mean"] - baseline_mean,
                     })
         return current, regressions
+```
+
+## Runtime Internals
+
+The "validate the proxy" model hides the mechanics that separate a rigorous eval from a misleading one.
+
+### Metric selection by failure mode
+
+Each metric fails in a known way: exact-match is brutal on free-form text, embedding similarity rewards topical-but-wrong answers, an LLM judge inherits the judge's biases. The runtime decision is to pick the metric whose failure mode is *least correlated with your task's risk*, and often to combine a deterministic check with a judge — never a single metric for an open-ended task.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "task", "label": "Task output", "shape": "circle"},
+    {"id": "shape", "label": "Output shape?", "shape": "diamond"},
+    {"id": "det", "label": "Exact / regex (brutal on free-form)", "shape": "rect"},
+    {"id": "emb", "label": "Embedding sim (rewards topical-but-wrong)", "shape": "rect"},
+    {"id": "judge", "label": "LLM judge (inherits judge bias)", "shape": "rect"},
+    {"id": "corr", "label": "Failure mode correlated with task risk?", "shape": "diamond"},
+    {"id": "single", "label": "Single metric on open-ended task: misleading", "shape": "stadium"},
+    {"id": "combine", "label": "Combine deterministic check + judge", "shape": "rect"},
+    {"id": "score", "label": "Risk-aware score", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "shape"},
+    {"source": "shape", "target": "det", "label": "structured"},
+    {"source": "shape", "target": "emb", "label": "short free-text"},
+    {"source": "shape", "target": "judge", "label": "long / subjective"},
+    {"source": "det", "target": "corr"},
+    {"source": "emb", "target": "corr"},
+    {"source": "judge", "target": "corr"},
+    {"source": "corr", "target": "single", "label": "yes: aligned with risk"},
+    {"source": "corr", "target": "combine", "label": "no: orthogonal"},
+    {"source": "combine", "target": "score"}
+  ]
+}
+```
+
+### Confidence intervals over point estimates
+
+85% on 200 examples is 80–90% at 95% CI — a 10-point window. The runtime must bootstrap (resample the eval set) or use a binomial CI and report it; comparisons use a paired test on shared items. Ranking models by raw point estimates with overlapping CIs is the single most common evaluation error.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "res", "label": "Per-item results", "shape": "circle"},
+    {"id": "n", "label": "Sample size n", "shape": "rect"},
+    {"id": "boot", "label": "Bootstrap resample / binomial CI", "shape": "rect"},
+    {"id": "report", "label": "Report point estimate WITH its 95% CI", "shape": "rect"},
+    {"id": "paired", "label": "Compare via paired test on shared items", "shape": "rect"},
+    {"id": "overlap", "label": "CIs overlap?", "shape": "diamond"},
+    {"id": "tie", "label": "Report 'statistical tie'", "shape": "stadium"},
+    {"id": "raw", "label": "Ranking by raw point estimate: the common error", "shape": "stadium"},
+    {"id": "rank", "label": "Report significant ranking", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "res", "target": "n"},
+    {"source": "n", "target": "boot"},
+    {"source": "boot", "target": "report"},
+    {"source": "report", "target": "paired"},
+    {"source": "paired", "target": "overlap"},
+    {"source": "overlap", "target": "tie", "label": "yes"},
+    {"source": "overlap", "target": "rank", "label": "no: separated"},
+    {"source": "res", "target": "raw", "label": "skip CI"},
+    {"source": "raw", "target": "tie", "label": "false 'progress'"}
+  ]
+}
+```
+
+### Protocol sensitivity
+
+The same model on the same benchmark scores differently across few-shot count, CoT vs direct, and answer-parsing rules. The runtime requirement: pin and report the full protocol; when comparing models, hold the protocol identical. An unreported protocol difference is why two "MMLU 80%" claims disagree.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "model", "label": "Model + benchmark", "shape": "circle"},
+    {"id": "shots", "label": "Few-shot count", "shape": "rect"},
+    {"id": "cot", "label": "CoT vs direct", "shape": "rect"},
+    {"id": "parse", "label": "Answer-parsing rule", "shape": "rect"},
+    {"id": "pinned", "label": "Full protocol pinned + reported?", "shape": "diamond"},
+    {"id": "card", "label": "Publish protocol card with the score", "shape": "rect"},
+    {"id": "disagree", "label": "Two 'MMLU 80%' claims disagree", "shape": "stadium"},
+    {"id": "same", "label": "Identical protocol when comparing models?", "shape": "diamond"},
+    {"id": "compare", "label": "Like-for-like comparison", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "model", "target": "shots"},
+    {"source": "model", "target": "cot"},
+    {"source": "model", "target": "parse"},
+    {"source": "shots", "target": "pinned"},
+    {"source": "cot", "target": "pinned"},
+    {"source": "parse", "target": "pinned"},
+    {"source": "pinned", "target": "disagree", "label": "no: unreported"},
+    {"source": "pinned", "target": "card", "label": "yes"},
+    {"source": "card", "target": "same"},
+    {"source": "same", "target": "compare", "label": "held identical"},
+    {"source": "same", "target": "disagree", "label": "differs silently"}
+  ]
+}
+```
+
+### Reference-free judging and its calibration
+
+When no gold answer exists (open generation, factuality), the runtime uses reference-free judges: G-Eval (rubric-scored by an LLM) or decomposition pipelines like FActScore (split into atomic claims, verify each against a source). Both are LLM calls with bias and cost, so they must be periodically calibrated against human labels — the boundary where eval becomes a [production patterns](/production-patterns) online-monitoring concern.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "out", "label": "Generated text (no gold answer)", "shape": "circle"},
+    {"id": "method", "label": "Rubric-score or claim-decompose?", "shape": "diamond"},
+    {"id": "geval", "label": "G-Eval: LLM rubric score", "shape": "rect"},
+    {"id": "fact", "label": "FActScore: split into atomic claims", "shape": "rect"},
+    {"id": "ver", "label": "Verify each claim vs source", "shape": "rect"},
+    {"id": "agg", "label": "Aggregate reference-free score", "shape": "rect"},
+    {"id": "cal", "label": "Periodically calibrated vs human labels?", "shape": "diamond"},
+    {"id": "drift", "label": "Uncalibrated judge bias drifts silently", "shape": "stadium"},
+    {"id": "trust", "label": "Trusted online metric", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "out", "target": "method"},
+    {"source": "method", "target": "geval", "label": "rubric"},
+    {"source": "method", "target": "fact", "label": "factuality"},
+    {"source": "fact", "target": "ver"},
+    {"source": "ver", "target": "agg"},
+    {"source": "geval", "target": "agg"},
+    {"source": "agg", "target": "cal"},
+    {"source": "cal", "target": "trust", "label": "yes"},
+    {"source": "cal", "target": "drift", "label": "no"},
+    {"source": "drift", "target": "cal", "label": "recalibrate"}
+  ]
+}
 ```
 
 ## Summary and Key Takeaways

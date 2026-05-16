@@ -2,6 +2,41 @@
 
 Multi-agent systems represent a paradigm shift in how we build AI applications: rather than relying on a single monolithic model to handle every aspect of a complex task, work is distributed across specialized agents that collaborate, debate, and coordinate to produce results no single agent could achieve alone. This article examines the architectural patterns, communication protocols, orchestration strategies, and practical frameworks (CrewAI, AutoGen, LangGraph) that define the multi-agent landscape, drawing on both academic research and production experience.
 
+## Mental Model
+
+The mental model for multi-agent systems is **a distributed system whose nodes are non-deterministic and communicate in natural language**. The promise is decomposition — specialists outperform a generalist on sub-tasks — but the cost is every classic distributed-systems problem: coordination, message passing, consensus, partial failure, and emergent behavior, now with workers that can confidently produce wrong output and a "protocol" that is ambiguous prose. Adding an agent never just adds capability; it adds a coordination surface that must be designed, not assumed.
+
+So the real question is never "should I use multiple agents?" but "is the task *decomposable* enough that the coordination cost is worth it?" — and often it is not. When it is, the topology is a [agent orchestration](/agent-orchestration) decision (router/supervisor/pipeline); each node's internal loop is an [agent architectures](/agent-architectures) choice; and judging the *joint* outcome, not individual replies, is the [agent evaluation](/agent-evaluation) problem.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "task", "label": "Complex task", "shape": "circle"},
+    {"id": "dec", "label": "Decomposable enough to beat coordination cost?", "shape": "diamond"},
+    {"id": "single", "label": "Single agent (no coordination surface)", "shape": "rect"},
+    {"id": "multi", "label": "Specialist agents", "shape": "rect"},
+    {"id": "coord", "label": "Inherits distributed-systems problems", "shape": "rect"},
+    {"id": "msg", "label": "Message passing over ambiguous prose", "shape": "stadium"},
+    {"id": "fail", "label": "Partial failure + confidently-wrong workers", "shape": "stadium"},
+    {"id": "joint", "label": "Joint outcome (not individual replies) acceptable?", "shape": "diamond"},
+    {"id": "out", "label": "Joint result", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "dec"},
+    {"source": "dec", "target": "single", "label": "no: not worth it"},
+    {"source": "dec", "target": "multi", "label": "yes"},
+    {"source": "multi", "target": "coord"},
+    {"source": "coord", "target": "msg"},
+    {"source": "coord", "target": "fail"},
+    {"source": "msg", "target": "joint"},
+    {"source": "fail", "target": "joint"},
+    {"source": "joint", "target": "out", "label": "yes"},
+    {"source": "joint", "target": "single", "label": "no: collapse to one"}
+  ]
+}
+```
+
 ## Why Multiple Agents?
 
 The motivation for multi-agent systems rests on several observations:
@@ -735,6 +770,124 @@ Both Langfuse and LangSmith support multi-agent tracing, though with different i
 For custom multi-agent frameworks without LangChain integration, the OpenTelemetry-based approach described in [Article 40: Observability](/observability) works well. Define a span for each agent invocation, propagate trace context through your orchestration layer, and export to your preferred backend. The critical requirement is that the trace captures the causal structure of the multi-agent interaction -- which agent triggered which other agent, and with what context.
 
 For evaluation of multi-agent system outputs, including trajectory analysis and per-agent contribution assessment, see [Article 30: Agent Evaluation](/agent-evaluation).
+
+## Runtime Internals
+
+The "distributed system with LLM nodes" model hides the mechanics that decide whether multi-agent scales or collapses into chatter.
+
+### Conversation topology controls cost
+
+The communication graph is the dominant cost lever. Broadcast/group-chat is O(n²) messages and context bloat; a hub-and-spoke (supervisor) is O(n) and bounds context per agent. The runtime rule: pick the sparsest topology that still lets the right agents talk — most "agents talking past each other" failures are an over-connected graph, not a weak model.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "need", "label": "Which agents genuinely must talk?", "shape": "circle"},
+    {"id": "pick", "label": "Sparsest viable topology?", "shape": "diamond"},
+    {"id": "hub", "label": "Hub-and-spoke supervisor: O(n) messages", "shape": "rect"},
+    {"id": "mesh", "label": "Group chat / broadcast: O(n^2) messages", "shape": "rect"},
+    {"id": "bound", "label": "Context per agent bounded?", "shape": "diamond"},
+    {"id": "bloat", "label": "Context bloat: agents talk past each other", "shape": "stadium"},
+    {"id": "overcon", "label": "Symptom is an over-connected graph, not a weak model", "shape": "stadium"},
+    {"id": "prune", "label": "Prune edges to the minimum needed", "shape": "rect"},
+    {"id": "ok", "label": "Cost-bounded coordination", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "need", "target": "pick"},
+    {"source": "pick", "target": "hub", "label": "structured"},
+    {"source": "pick", "target": "mesh", "label": "open debate"},
+    {"source": "hub", "target": "bound"},
+    {"source": "mesh", "target": "bound"},
+    {"source": "bound", "target": "ok", "label": "yes"},
+    {"source": "bound", "target": "bloat", "label": "no"},
+    {"source": "bloat", "target": "overcon"},
+    {"source": "overcon", "target": "prune"},
+    {"source": "prune", "target": "pick"}
+  ]
+}
+```
+
+### Inter-agent messages need a schema
+
+"Agents communicate in natural language" is the bug, not the feature, at scale: free-text handoffs lose state and drift. The runtime fix is a typed message envelope (sender, intent, payload, refs) even if the *content* is prose — so a receiving agent can route and validate. Structured messaging is what turns a chat into a protocol.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "a", "label": "Agent A", "shape": "circle"},
+    {"id": "env", "label": "Typed envelope\n(intent + payload)", "shape": "rect"},
+    {"id": "route", "label": "Router validates\n+ dispatches", "shape": "diamond"},
+    {"id": "b", "label": "Agent B acts", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "a", "target": "env"},
+    {"source": "env", "target": "route"},
+    {"source": "route", "target": "b", "label": "valid intent"},
+    {"source": "route", "target": "a", "label": "malformed: reject"}
+  ]
+}
+```
+
+### Consensus and termination
+
+Debate/voting agents can improve answers but can also loop forever or converge on a confident-but-wrong majority. The runtime needs an explicit aggregation rule (majority, judge, or supervisor decides), a round cap, and a tie/deadlock fallback. Without a termination contract, "let the agents discuss until they agree" is an unbounded cost with no guarantee of agreement.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "props", "label": "Agent proposals", "shape": "circle"},
+    {"id": "agg", "label": "Aggregate\n(vote/judge)", "shape": "rect"},
+    {"id": "con", "label": "Consensus?", "shape": "diamond"},
+    {"id": "cap", "label": "Round < max?", "shape": "diamond"},
+    {"id": "out", "label": "Decision", "shape": "circle"},
+    {"id": "fb", "label": "Supervisor decides", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "props", "target": "agg"},
+    {"source": "agg", "target": "con"},
+    {"source": "con", "target": "out", "label": "yes"},
+    {"source": "con", "target": "cap", "label": "no"},
+    {"source": "cap", "target": "props", "label": "yes: another round"},
+    {"source": "cap", "target": "fb", "label": "no: force"}
+  ]
+}
+```
+
+### Partial-failure isolation
+
+One flaky specialist must not crash the system. The runtime wraps each agent call in a timeout + circuit breaker and records per-agent errors, letting the orchestrator proceed with degraded-but-useful output. Fail-fast across agents is the anti-pattern; graceful degradation is the same resilience contract as [agent orchestration](/agent-orchestration) supervisors.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "call", "label": "Call specialist agent", "shape": "circle"},
+    {"id": "breaker", "label": "Circuit breaker open?", "shape": "diamond"},
+    {"id": "skip", "label": "Skip: use cached / default", "shape": "rect"},
+    {"id": "timeout", "label": "Response within timeout?", "shape": "diamond"},
+    {"id": "ok", "label": "Healthy result", "shape": "rect"},
+    {"id": "record", "label": "Record per-agent error", "shape": "rect"},
+    {"id": "failfast", "label": "Fail-fast across agents (anti-pattern)", "shape": "stadium"},
+    {"id": "degrade", "label": "Graceful degradation: continue with partial output", "shape": "stadium"},
+    {"id": "merge", "label": "Degraded-but-useful aggregate", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "call", "target": "breaker"},
+    {"source": "breaker", "target": "skip", "label": "open"},
+    {"source": "breaker", "target": "timeout", "label": "closed"},
+    {"source": "timeout", "target": "ok", "label": "yes"},
+    {"source": "timeout", "target": "record", "label": "no"},
+    {"source": "record", "target": "failfast", "label": "crash whole run?"},
+    {"source": "record", "target": "degrade", "label": "isolate"},
+    {"source": "ok", "target": "merge"},
+    {"source": "skip", "target": "merge"},
+    {"source": "degrade", "target": "merge"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

@@ -2,6 +2,34 @@
 
 The retrieval stage of a RAG pipeline determines the upper bound on answer quality -- an LLM cannot reason over information it never receives. Yet the design space for retrieval is vast: dense vs. sparse representations, single-stage vs. multi-stage pipelines, query-centric vs. document-centric approaches. This article provides a rigorous examination of modern retrieval strategies, from foundational hybrid search architectures through advanced techniques like Hypothetical Document Embeddings (HyDE) and learned reranking, grounded in both research findings and production experience.
 
+## Mental Model
+
+The mental model for retrieval strategies is **a funnel that trades recall for precision as it narrows, and each stage exists to fix a specific failure of the stage before it**. First-stage retrieval optimizes *recall* — get the right document into a large candidate set cheaply (dense for semantics, sparse for exact terms, hybrid for both). Reranking optimizes *precision* — reorder a small candidate set with an expensive cross-encoder. Query transformation (HyDE, expansion) fixes the *input* when the raw query embeds poorly. The unifying question is always: *which failure am I fixing, and at which stage can I afford to fix it?*
+
+That makes retrieval an architecture decision, not a model choice. It sets the quality ceiling for the whole RAG system, so its failures are precisely what [RAG evaluation](/rag-evaluation) measures and what [advanced RAG](/advanced-rag) loops recover from. The candidates come out of [vector databases](/vector-databases), and the trade is the same recall/precision/cost surface seen across [search & recommendations](/search-recommendations) — RAG retrieval is search with an LLM as the consumer.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "fix", "label": "Query embeds\nwell?", "shape": "diamond"},
+    {"id": "trans", "label": "Transform\n(HyDE/expand)", "shape": "rect"},
+    {"id": "first", "label": "First-stage\n(recall, hybrid)", "shape": "rect"},
+    {"id": "rerank", "label": "Rerank\n(precision)", "shape": "rect"},
+    {"id": "ctx", "label": "Top-k context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "fix"},
+    {"source": "fix", "target": "trans", "label": "no"},
+    {"source": "fix", "target": "first", "label": "yes"},
+    {"source": "trans", "target": "first"},
+    {"source": "first", "target": "rerank", "label": "many → few"},
+    {"source": "rerank", "target": "ctx"}
+  ]
+}
+```
+
 ## Dense vs. Sparse Retrieval: Complementary Strengths
 
 Understanding when and why dense and sparse retrieval methods fail differently is essential for building robust retrieval systems.
@@ -683,6 +711,137 @@ class AdvancedRetrievalPipeline:
         final = self.deduplicate_and_diversify(reranked, top_k)
 
         return final
+```
+
+## Runtime Internals
+
+The "recall-then-precision funnel" model hides the mechanics that decide whether each stage helps.
+
+### Hybrid fusion: combine ranks, not scores
+
+Dense (cosine) and sparse (BM25) scores are on incomparable scales, so you cannot just add them. The runtime uses Reciprocal Rank Fusion: combine by *rank position*, which is scale-free and robust. The knob is the RRF constant; the failure mode is naive min-max score normalization that lets one retriever dominate when its score distribution is wider.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "d", "label": "Dense (cosine) ranked list", "shape": "rect"},
+    {"id": "s", "label": "Sparse (BM25) ranked list", "shape": "rect"},
+    {"id": "how", "label": "Fuse by score or by rank?", "shape": "diamond"},
+    {"id": "minmax", "label": "Min-max score normalization", "shape": "rect"},
+    {"id": "dom", "label": "Wider-distribution retriever dominates", "shape": "stadium"},
+    {"id": "rrf", "label": "Reciprocal Rank Fusion (scale-free)", "shape": "rect"},
+    {"id": "k", "label": "RRF constant k tuned?", "shape": "diamond"},
+    {"id": "skew", "label": "Bad k over/under-weights tail ranks", "shape": "stadium"},
+    {"id": "cand", "label": "Robustly fused candidates", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "d"},
+    {"source": "q", "target": "s"},
+    {"source": "d", "target": "how"},
+    {"source": "s", "target": "how"},
+    {"source": "how", "target": "minmax", "label": "by score"},
+    {"source": "minmax", "target": "dom"},
+    {"source": "how", "target": "rrf", "label": "by rank"},
+    {"source": "rrf", "target": "k"},
+    {"source": "k", "target": "cand", "label": "tuned"},
+    {"source": "k", "target": "skew", "label": "default blindly"}
+  ]
+}
+```
+
+### Cross-encoder reranking budget
+
+A bi-encoder embeds query and doc separately (fast, indexable); a cross-encoder scores the pair jointly (far more accurate, one forward pass per candidate). The runtime rule: bi-encoder over the corpus for recall, cross-encoder over only the top-k for precision. Reranking thousands is a latency cliff; the k you rerank is the precision/latency dial.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "cands", "label": "Top-k candidates", "shape": "circle"},
+    {"id": "small", "label": "k small enough?", "shape": "diamond"},
+    {"id": "ce", "label": "Cross-encoder\nscore each", "shape": "rect"},
+    {"id": "cut", "label": "Reduce k", "shape": "stadium"},
+    {"id": "out", "label": "Reranked top-n", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "cands", "target": "small"},
+    {"source": "small", "target": "ce", "label": "yes"},
+    {"source": "small", "target": "cut", "label": "too many"},
+    {"source": "ce", "target": "out"}
+  ]
+}
+```
+
+### HyDE fixes query–document asymmetry
+
+A short query embeds far from long answer documents. HyDE generates a *hypothetical answer* with an LLM and embeds that instead, landing closer to real relevant docs. The runtime cost is one extra LLM call and a hallucination risk — a wrong hypothetical misdirects retrieval — so it is gated to hard/ambiguous queries, not every request.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Short query", "shape": "circle"},
+    {"id": "asym", "label": "Query embeds far from long answer docs", "shape": "rect"},
+    {"id": "gate", "label": "Query hard / ambiguous?", "shape": "diamond"},
+    {"id": "direct", "label": "Embed query directly", "shape": "rect"},
+    {"id": "hyde", "label": "LLM drafts a hypothetical answer", "shape": "rect"},
+    {"id": "halluc", "label": "Hypothetical plausibly grounded?", "shape": "diamond"},
+    {"id": "misdir", "label": "Wrong hypothetical misdirects retrieval", "shape": "stadium"},
+    {"id": "emb", "label": "Embed the hypothetical", "shape": "rect"},
+    {"id": "cost", "label": "Pays one extra LLM call", "shape": "stadium"},
+    {"id": "ret", "label": "Retrieve near real relevant docs", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "asym"},
+    {"source": "asym", "target": "gate"},
+    {"source": "gate", "target": "direct", "label": "no: simple"},
+    {"source": "gate", "target": "hyde", "label": "yes"},
+    {"source": "hyde", "target": "halluc"},
+    {"source": "halluc", "target": "emb", "label": "grounded"},
+    {"source": "halluc", "target": "misdir", "label": "fabricated"},
+    {"source": "misdir", "target": "gate", "label": "re-gate / skip HyDE"},
+    {"source": "hyde", "target": "cost"},
+    {"source": "direct", "target": "ret"},
+    {"source": "emb", "target": "ret"}
+  ]
+}
+```
+
+### Adaptive retrieval: knowing when not to retrieve
+
+Always retrieving injects noise for queries the model can answer parametrically (greetings, simple math), hurting both quality and cost. The runtime adds a gate — a cheap classifier or confidence check — that decides *whether* to retrieve at all. Skipping this is a silent quality tax; it is the same precision-over-recall discipline measured by [RAG evaluation](/rag-evaluation).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "cls", "label": "Cheap classifier / confidence check", "shape": "rect"},
+    {"id": "para", "label": "Answerable from parametric knowledge?", "shape": "diamond"},
+    {"id": "direct", "label": "Answer directly (no retrieval)", "shape": "rect"},
+    {"id": "noise", "label": "Always-retrieve injects noise + cost", "shape": "stadium"},
+    {"id": "ret", "label": "Retrieve + ground", "shape": "rect"},
+    {"id": "conf", "label": "Direct answer confident?", "shape": "diamond"},
+    {"id": "fallback", "label": "Fall back to retrieval after all", "shape": "stadium"},
+    {"id": "log", "label": "Log gate decision for RAG-eval audit", "shape": "rect"},
+    {"id": "out", "label": "Response", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "cls"},
+    {"source": "cls", "target": "para"},
+    {"source": "para", "target": "direct", "label": "yes: greeting / math"},
+    {"source": "para", "target": "ret", "label": "no: needs external"},
+    {"source": "para", "target": "noise", "label": "gate skipped"},
+    {"source": "direct", "target": "conf"},
+    {"source": "conf", "target": "log", "label": "yes"},
+    {"source": "conf", "target": "fallback", "label": "no"},
+    {"source": "fallback", "target": "ret"},
+    {"source": "ret", "target": "log"},
+    {"source": "log", "target": "out"}
+  ]
+}
 ```
 
 ## Summary and Key Takeaways

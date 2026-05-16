@@ -10,6 +10,42 @@ Fine-tuning pre-trained language models remains the most reliable method for ada
 - **Learning rate scheduling matters most**: linear warmup (6-10% of steps) followed by cosine decay, with a low base LR (around 2e-5) to avoid catastrophic forgetting.
 - Fine-tuning wins at scale (1,000+ labeled examples, repeated inference); prompting wins for flexibility and low-data regimes.
 
+## Mental Model
+
+The mental model for fine-tuning is **don't teach new facts, reshape behavior on a base you keep**. Pretraining already loaded the knowledge ([pretraining data](/pretraining-data) set the prior); fine-tuning is a small, targeted nudge to the *distribution* — make the model follow instructions, adopt a format, or specialize a domain. The single most clarifying question before any fine-tune is "is this a *behavior* gap or a *knowledge* gap?" — behavior gaps are what fine-tuning fixes; knowledge gaps are usually a retrieval problem, and fine-tuning them in is expensive and forgetful.
+
+That reframes the method choice as *how much of the base you disturb*: full fine-tuning moves all weights (max capacity, max forgetting, max cost), freezing/transfer moves a subset, and parameter-efficient methods move tiny adapters. The whole spectrum is a capacity-vs-stability-vs-cost dial, and you only know you picked right by measuring on held-out data — fine-tuning without [eval fundamentals](/eval-fundamentals) and [benchmark design](/benchmark-design) is guessing, since the failure mode (overfit / forgetting) is invisible from training loss alone.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "gap", "label": "Behavior gap or knowledge gap?", "shape": "diamond"},
+    {"id": "ret", "label": "Knowledge gap -> retrieval (cheap, fresh)", "shape": "rect"},
+    {"id": "forget", "label": "Forcing knowledge into weights: expensive + forgetful", "shape": "stadium"},
+    {"id": "disturb", "label": "How much of the base to disturb?", "shape": "diamond"},
+    {"id": "full", "label": "Full FT: all weights (max capacity, max forgetting)", "shape": "rect"},
+    {"id": "freeze", "label": "Freeze / transfer: a subset of layers", "shape": "rect"},
+    {"id": "peft", "label": "PEFT adapter: tiny delta (cheap, stable)", "shape": "rect"},
+    {"id": "eval", "label": "Held-out behavior eval (loss alone is blind)", "shape": "diamond"},
+    {"id": "ship", "label": "Adapted model", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "gap", "target": "ret", "label": "knowledge"},
+    {"source": "ret", "target": "forget", "label": "if forced into weights"},
+    {"source": "gap", "target": "disturb", "label": "behavior"},
+    {"source": "disturb", "target": "full", "label": "max capacity"},
+    {"source": "disturb", "target": "freeze", "label": "balanced"},
+    {"source": "disturb", "target": "peft", "label": "cheap / stable"},
+    {"source": "full", "target": "eval"},
+    {"source": "freeze", "target": "eval"},
+    {"source": "peft", "target": "eval"},
+    {"source": "eval", "target": "ship", "label": "no overfit / forgetting"},
+    {"source": "eval", "target": "disturb", "label": "regressed: re-pick"}
+  ]
+}
+```
+
 ## The Transfer Learning Paradigm
 
 Transfer learning in NLP underwent a phase transition with the introduction of large pre-trained language models. The core insight, articulated in Howard and Ruder's ULMFiT paper (2018) and later scaled by BERT (Devlin et al., 2019) and GPT (Radford et al., 2018), is that representations learned during unsupervised pre-training on large corpora encode general linguistic knowledge that transfers effectively to downstream tasks.
@@ -571,6 +607,139 @@ For classification or other non-generative tasks, the `Trainer` class with `Auto
 - **Warmup ratio**: 0.06-0.10 of total steps.
 - **Max sequence length**: Match your data distribution. Padding to max model length wastes compute. Use `max_seq_length` in `SFTConfig` to truncate.
 - **Gradient checkpointing**: Almost always worth enabling for 7B+ models. Reduces memory usage by ~60% at the cost of ~20% slower training.
+
+## Runtime Internals
+
+The "reshape behavior" model hides the training mechanics that decide whether a fine-tune helps or quietly breaks the base.
+
+### Loss masking on the chat template
+
+In SFT you only want the model to learn the *assistant* tokens, not to predict the user's prompt. The runtime applies a loss mask over the serialized chat template so prompt/system tokens contribute zero gradient. Forgetting the mask trains the model to imitate users — a silent quality killer that training loss looks fine for.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "conv", "label": "Multi-turn conversation", "shape": "circle"},
+    {"id": "tmpl", "label": "Serialize via chat template", "shape": "rect"},
+    {"id": "span", "label": "Token span = system / user / assistant?", "shape": "diamond"},
+    {"id": "zero", "label": "Mask: zero gradient on prompt + system", "shape": "rect"},
+    {"id": "learn", "label": "Loss on assistant tokens only", "shape": "rect"},
+    {"id": "applied", "label": "Mask actually applied?", "shape": "diamond"},
+    {"id": "imitate", "label": "Unmasked: model learns to imitate users", "shape": "stadium"},
+    {"id": "blind", "label": "Training loss looks fine either way", "shape": "stadium"},
+    {"id": "upd", "label": "Correct gradient update", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "conv", "target": "tmpl"},
+    {"source": "tmpl", "target": "span"},
+    {"source": "span", "target": "zero", "label": "system / user"},
+    {"source": "span", "target": "learn", "label": "assistant"},
+    {"source": "zero", "target": "applied"},
+    {"source": "learn", "target": "applied"},
+    {"source": "applied", "target": "upd", "label": "yes"},
+    {"source": "applied", "target": "imitate", "label": "no"},
+    {"source": "imitate", "target": "blind"}
+  ]
+}
+```
+
+### Mixed precision and the memory budget
+
+7B+ full fine-tuning is memory-bound: weights + gradients + optimizer state (Adam = 2× params) + activations. The runtime levers are bf16/fp16 compute, gradient checkpointing (recompute activations, ~60% memory cut for ~20% slower), and FSDP/ZeRO to shard state across GPUs. The training does not "run slow" when over budget — it OOMs; budgeting precedes hyperparameters.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "model", "label": "Model size (7B+)", "shape": "circle"},
+    {"id": "budget", "label": "Weights + grads + Adam optim (2x) + activations", "shape": "rect"},
+    {"id": "fit1", "label": "Fits VRAM as-is?", "shape": "diamond"},
+    {"id": "bf16", "label": "bf16 / fp16 compute", "shape": "rect"},
+    {"id": "ckpt", "label": "Gradient checkpointing (~60% mem, ~20% slower)", "shape": "rect"},
+    {"id": "fit2", "label": "Fits on one GPU now?", "shape": "diamond"},
+    {"id": "shard", "label": "FSDP / ZeRO shard state across GPUs", "shape": "rect"},
+    {"id": "oom", "label": "Over budget = OOM, not slow", "shape": "stadium"},
+    {"id": "go", "label": "Train (budget set before hyperparameters)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "model", "target": "budget"},
+    {"source": "budget", "target": "fit1"},
+    {"source": "fit1", "target": "go", "label": "yes"},
+    {"source": "fit1", "target": "bf16", "label": "no"},
+    {"source": "bf16", "target": "ckpt"},
+    {"source": "ckpt", "target": "fit2"},
+    {"source": "fit2", "target": "go", "label": "yes"},
+    {"source": "fit2", "target": "shard", "label": "still no"},
+    {"source": "shard", "target": "go"},
+    {"source": "fit2", "target": "oom", "label": "no GPUs to shard"}
+  ]
+}
+```
+
+### LR schedule and the forgetting cliff
+
+Fine-tuning learning rate is far smaller than pretraining (typically 1e-5–2e-5 with warmup + decay). Too high and the model catastrophically forgets the base in the first few hundred steps; too low and it never adapts. The runtime safeguard is a short warmup, low peak LR, and early-stopping on a *held-out behavior* metric, not training loss.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "init", "label": "FT LR set far below pretraining (1e-5 to 2e-5)", "shape": "circle"},
+    {"id": "warm", "label": "Short warmup", "shape": "rect"},
+    {"id": "peak", "label": "Peak LR too high?", "shape": "diamond"},
+    {"id": "cliff", "label": "Catastrophic forgetting in first few hundred steps", "shape": "stadium"},
+    {"id": "low", "label": "Peak LR too low?", "shape": "diamond"},
+    {"id": "stall", "label": "Never adapts", "shape": "stadium"},
+    {"id": "decay", "label": "Decay schedule", "shape": "rect"},
+    {"id": "watch", "label": "Early-stop on held-out behavior (not train loss)", "shape": "diamond"},
+    {"id": "done", "label": "Adapted model, base retained", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "init", "target": "warm"},
+    {"source": "warm", "target": "peak"},
+    {"source": "peak", "target": "cliff", "label": "yes"},
+    {"source": "peak", "target": "low", "label": "no"},
+    {"source": "low", "target": "stall", "label": "yes"},
+    {"source": "low", "target": "decay", "label": "no: in band"},
+    {"source": "decay", "target": "watch"},
+    {"source": "watch", "target": "done", "label": "stable"},
+    {"source": "watch", "target": "cliff", "label": "regressing"}
+  ]
+}
+```
+
+### Data quality dominates quantity
+
+Below ~1k examples, prompting usually wins; above it, a few thousand *clean* examples beat tens of thousands of noisy ones — fine-tuning amplifies label noise into a confident wrong behavior. The runtime is a quality filter (dedup, format validation, difficulty balance) before training, the same discipline as model [distillation & compression](/distillation-compression) where the teacher's errors become the student's.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "raw", "label": "Raw candidate examples", "shape": "circle"},
+    {"id": "dedup", "label": "Dedup", "shape": "rect"},
+    {"id": "fmt", "label": "Format validation", "shape": "rect"},
+    {"id": "diff", "label": "Difficulty balance", "shape": "rect"},
+    {"id": "noisy", "label": "Residual label noise?", "shape": "diamond"},
+    {"id": "amplify", "label": "FT amplifies noise into confident wrong behavior", "shape": "stadium"},
+    {"id": "count", "label": ">= ~1k clean examples?", "shape": "diamond"},
+    {"id": "prompt", "label": "Below threshold: prompting usually wins", "shape": "stadium"},
+    {"id": "ft", "label": "Fine-tune on the clean set", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "raw", "target": "dedup"},
+    {"source": "dedup", "target": "fmt"},
+    {"source": "fmt", "target": "diff"},
+    {"source": "diff", "target": "noisy"},
+    {"source": "noisy", "target": "amplify", "label": "yes: not filtered"},
+    {"source": "noisy", "target": "count", "label": "no: clean"},
+    {"source": "count", "target": "ft", "label": "yes"},
+    {"source": "count", "target": "prompt", "label": "no: low data"},
+    {"source": "amplify", "target": "dedup", "label": "re-filter"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

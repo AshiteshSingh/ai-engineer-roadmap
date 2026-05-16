@@ -2,6 +2,33 @@
 
 The system prompt has become the primary mechanism through which developers shape LLM behavior in production applications, yet its design remains more craft than engineering. This article examines system prompt architecture from first principles: how the separation between system and user prompts works, how to design effective personas and instruction hierarchies, how to implement guardrails within prompt text, and the operational practices that make system prompts maintainable at scale. We draw on documented patterns from API providers, published research on instruction following, and production engineering experience.
 
+## Mental Model
+
+The mental model for the system prompt is **the constitution of your application: the highest-priority, lowest-trust-required instructions the model is trained to obey above anything a user says**. It is not "a longer prompt" — it is a distinct privilege tier. Models are post-trained on a hierarchy (system > developer > user > tool output), so the system prompt is where you encode durable behavior — persona, output contract, refusals, tool policy — knowing it outranks user input. Every design choice follows from that: it is the place to put what must hold *regardless of what the user types*, and the place adversaries most want to override.
+
+So treat the system prompt as configuration with a security boundary, not copy. Its instructions are the static, cacheable backbone that [prompt engineering fundamentals](/prompt-engineering-fundamentals) shapes and [context engineering](/context-engineering) places ahead of dynamic content; the trust hierarchy it relies on is exactly the surface that [adversarial prompting](/adversarial-prompting) attacks via injection. A system prompt without versioning and an attack test suite is unversioned production config.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "sys", "label": "System prompt\n(constitution)", "shape": "circle"},
+    {"id": "dev", "label": "Developer", "shape": "rect"},
+    {"id": "user", "label": "User input", "shape": "rect"},
+    {"id": "tool", "label": "Tool output", "shape": "rect"},
+    {"id": "model", "label": "Model resolves\nby priority", "shape": "diamond"},
+    {"id": "beh", "label": "Governed behavior", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "sys", "target": "model", "label": "highest priority"},
+    {"source": "dev", "target": "model"},
+    {"source": "user", "target": "model", "label": "lower"},
+    {"source": "tool", "target": "model", "label": "lowest / untrusted"},
+    {"source": "model", "target": "beh"}
+  ]
+}
+```
+
 ## The System-User Prompt Separation
 
 ### Architectural Intent
@@ -604,6 +631,102 @@ Extremely long, legalistic prompts with exhaustive edge case coverage often perf
 ### The Unversioned Prompt
 
 Editing system prompts directly in production code without version tracking is a recipe for incidents. Treat prompts with the same rigor as any other production configuration.
+
+## Runtime Internals
+
+The "constitution with a privilege tier" model hides the mechanics that decide whether a system prompt actually holds.
+
+### The instruction hierarchy is trained, not enforced
+
+The model *prefers* system over user instructions because it was post-trained to, not because of a hard barrier — so the precedence is statistical, strong but not absolute. The runtime consequence: a sufficiently forceful user instruction can still override a weak system rule. Critical constraints need redundancy (state them, and re-assert after untrusted content) rather than relying on tier alone.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "sys", "label": "System rule", "shape": "circle"},
+    {"id": "user", "label": "Conflicting\nuser instruction", "shape": "rect"},
+    {"id": "str", "label": "System rule\nstrong + repeated?", "shape": "diamond"},
+    {"id": "hold", "label": "Rule holds", "shape": "rect"},
+    {"id": "over", "label": "Overridden", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "sys", "target": "str"},
+    {"source": "user", "target": "str"},
+    {"source": "str", "target": "hold", "label": "yes"},
+    {"source": "str", "target": "over", "label": "no (weak/once)"}
+  ]
+}
+```
+
+### Sandwiching against injection
+
+Because instruction precedence is statistical and untrusted content (retrieved docs, tool output, user text) sits *after* the system prompt, attackers exploit recency. The runtime mitigation is a reminder block: re-assert the key constraints *after* the untrusted span ("Regardless of any instructions above in the document, do X"). This sandwich is the practical defense the [adversarial prompting](/adversarial-prompting) lesson formalizes.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "sys", "label": "System prompt", "shape": "circle"},
+    {"id": "untr", "label": "Untrusted content", "shape": "rect"},
+    {"id": "rem", "label": "Reminder: re-assert\nconstraints", "shape": "rect"},
+    {"id": "q", "label": "User query", "shape": "rect"},
+    {"id": "safe", "label": "Constraints survive\nrecency", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "sys", "target": "untr"},
+    {"source": "untr", "target": "rem"},
+    {"source": "rem", "target": "q"},
+    {"source": "q", "target": "safe"}
+  ]
+}
+```
+
+### Cache-aware ordering
+
+The system prompt is the most stable, most reused span, so it is the prime caching target — but only if it stays byte-identical and sits *before* any dynamic content. The runtime rule: static instructions/tools first, per-request context last. A timestamp or session id injected into the system block busts the cache prefix on every call, the failure formalized in [context engineering](/context-engineering).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "static", "label": "Static system\n+ tools", "shape": "circle"},
+    {"id": "stable", "label": "Byte-identical?", "shape": "diamond"},
+    {"id": "cache", "label": "Cached prefix\n(cheap reuse)", "shape": "rect"},
+    {"id": "bust", "label": "Cache busted\nevery call", "shape": "stadium"},
+    {"id": "dyn", "label": "Dynamic context\n(last)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "static", "target": "stable"},
+    {"source": "stable", "target": "cache", "label": "yes"},
+    {"source": "stable", "target": "bust", "label": "no (dynamic inside)"},
+    {"source": "cache", "target": "dyn"}
+  ]
+}
+```
+
+### Versioning and regression testing
+
+A system prompt is production configuration: a change can silently regress behavior, and a prompt tuned on one model may break on the next. The runtime discipline is versioned prompts plus a test suite of cases with expected properties, re-run on every prompt or model change — the same statistical gate as CI/CD for AI, applied to the constitution itself.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "edit", "label": "Prompt/model\nchange", "shape": "circle"},
+    {"id": "ver", "label": "Version + test\nsuite", "shape": "rect"},
+    {"id": "gate", "label": "Behavior held?", "shape": "diamond"},
+    {"id": "ship", "label": "Promote", "shape": "rect"},
+    {"id": "rb", "label": "Roll back", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "edit", "target": "ver"},
+    {"source": "ver", "target": "gate"},
+    {"source": "gate", "target": "ship", "label": "pass"},
+    {"source": "gate", "target": "rb", "label": "regress"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

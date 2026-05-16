@@ -2,6 +2,34 @@
 
 Serving large language models in production requires solving a unique set of systems challenges that differ fundamentally from traditional ML inference. The autoregressive nature of token generation, variable-length inputs and outputs, and the sheer scale of modern models demand specialized serving architectures that balance throughput, latency, and resource utilization. This article examines the key components of LLM serving stacks, from API design patterns through continuous batching to streaming delivery mechanisms.
 
+## Mental Model
+
+The mental model for LLM serving is **a queue feeding a GPU that is starving on the decode phase, and the whole stack exists to keep it fed**. A request is not atomic: it is a compute-heavy prefill followed by hundreds of tiny, memory-bandwidth-bound decode steps that leave the GPU ~99% idle at batch size 1. So serving is fundamentally a *scheduling and memory-management* problem, not a model problem — every component (continuous batching, PagedAttention, chunked prefill, scheduling) is an answer to "how do I keep the GPU saturated without blowing the KV-cache memory budget or the latency SLO?"
+
+That reframes the serving stack as throughput-vs-latency arbitration. Batching raises throughput but hurts per-request latency; the scheduler arbitrates that trade per step. The deep mechanics here are the runtime of [inference optimization](/inference-optimization); the KV cache is the [memory architectures](/memory-architectures) budget that caps concurrency; and the endpoint metric — tokens per dollar — is the [cost optimization](/cost-optimization) lever everything feeds.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Request queue", "shape": "circle"},
+    {"id": "sched", "label": "Scheduler\n(batch + admit)", "shape": "diamond"},
+    {"id": "pre", "label": "Prefill\n(compute-bound)", "shape": "rect"},
+    {"id": "dec", "label": "Decode loop\n(bandwidth-bound)", "shape": "rect"},
+    {"id": "kv", "label": "KV memory cap", "shape": "diamond"},
+    {"id": "out", "label": "Stream tokens", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "sched"},
+    {"source": "sched", "target": "pre"},
+    {"source": "pre", "target": "dec"},
+    {"source": "dec", "target": "kv"},
+    {"source": "kv", "target": "sched", "label": "evict / queue"},
+    {"source": "dec", "target": "out"}
+  ]
+}
+```
+
 ## The Anatomy of an LLM Serving Request
 
 Before diving into architecture, it helps to understand what makes LLM serving distinct from serving a classifier or an image model. A single LLM request involves two phases: **prefill** (processing the entire input prompt in parallel) and **decode** (generating output tokens one at a time, each depending on all previous tokens). The prefill phase is compute-bound and parallelizable; the decode phase is memory-bandwidth-bound and inherently sequential.
@@ -556,6 +584,99 @@ class InferenceMetrics:
     queue_wait_ms: float
     batch_size_at_schedule: int
     kv_cache_utilization: float
+```
+
+## Runtime Internals
+
+The "keep the starving GPU fed" model hides the mechanics that make a serving stack fast and stable.
+
+### Continuous batching admits per step
+
+Static batching waits for the slowest request, idling finished slots. Continuous (in-flight) batching re-forms the batch *every decode step* — completed requests leave, queued ones join immediately. The runtime effect: GPU utilization goes from a few percent to near-saturated on the decode phase, the single biggest throughput win, directly attacking the idle-GPU problem from [inference optimization](/inference-optimization).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Queue", "shape": "circle"},
+    {"id": "step", "label": "Decode step", "shape": "rect"},
+    {"id": "done", "label": "Slot freed?", "shape": "diamond"},
+    {"id": "admit", "label": "Admit queued", "shape": "rect"},
+    {"id": "full", "label": "Saturated GPU", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "step"},
+    {"source": "step", "target": "done"},
+    {"source": "done", "target": "admit", "label": "yes"},
+    {"source": "done", "target": "step", "label": "no"},
+    {"source": "admit", "target": "full"}
+  ]
+}
+```
+
+### Chunked prefill protects latency
+
+A long prompt's prefill monopolizes the GPU and stalls every other request's decode (latency spike). Chunked prefill splits a big prompt into chunks interleaved with ongoing decode steps, so one large request cannot starve the rest. The runtime knob is chunk size: too large reintroduces the stall, too small adds overhead.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "big", "label": "Long prompt", "shape": "circle"},
+    {"id": "split", "label": "Split into chunks", "shape": "rect"},
+    {"id": "inter", "label": "Interleave with\ndecode steps", "shape": "rect"},
+    {"id": "fair", "label": "No request\nstarved", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "big", "target": "split"},
+    {"source": "split", "target": "inter"},
+    {"source": "inter", "target": "fair"}
+  ]
+}
+```
+
+### Scheduling under the KV-memory ceiling
+
+The scheduler cannot admit a request if its projected KV cache would exceed VRAM. The runtime must estimate per-request KV growth, admit/queue accordingly, and on pressure either preempt (evict a request's cache, recompute later) or queue. Mis-estimating leads to OOM mid-generation — the failure that drops *all* in-flight requests, not just one.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "req", "label": "Incoming request", "shape": "circle"},
+    {"id": "est", "label": "Estimate KV\ngrowth", "shape": "rect"},
+    {"id": "fit", "label": "Fits VRAM?", "shape": "diamond"},
+    {"id": "run", "label": "Admit", "shape": "rect"},
+    {"id": "pre", "label": "Preempt / queue", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "req", "target": "est"},
+    {"source": "est", "target": "fit"},
+    {"source": "fit", "target": "run", "label": "yes"},
+    {"source": "fit", "target": "pre", "label": "no"}
+  ]
+}
+```
+
+### Multi-LoRA serving on one base
+
+Serving many fine-tuned variants as separate models wastes VRAM. Multi-LoRA keeps one base model resident and swaps small per-request adapters, so dozens of customer-specific models share one GPU. The runtime cost is adapter-switch overhead and a cap on concurrent distinct adapters — the same memory-amortization trade as adapter-based [fine-tuning fundamentals](/fine-tuning-fundamentals).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Request\n(adapter id)", "shape": "circle"},
+    {"id": "base", "label": "Shared base\nin VRAM", "shape": "rect"},
+    {"id": "lora", "label": "Load tiny\nLoRA adapter", "shape": "rect"},
+    {"id": "gen", "label": "Generate", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "base"},
+    {"source": "base", "target": "lora"},
+    {"source": "lora", "target": "gen"}
+  ]
+}
 ```
 
 ## Summary and Key Takeaways

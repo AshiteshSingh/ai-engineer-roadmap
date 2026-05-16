@@ -2,6 +2,40 @@
 
 Deploying AI applications in production requires engineering discipline that the AI community has been slow to adopt. Traditional software engineering solved the continuous integration and delivery problem decades ago, but AI systems introduce unique challenges: non-deterministic outputs, gradual quality degradation, sensitivity to prompt changes, and the absence of a clear "correct" answer for most inputs. This article examines how to build CI/CD pipelines purpose-built for AI applications, covering regression testing for prompt and model changes, continuous evaluation with modern tooling, production monitoring, and the eval-driven development workflow that ties it all together.
 
+## Mental Model
+
+The mental model for CI/CD for AI is **replace the binary build gate with a statistical quality gate**. Traditional CI asks "did the tests pass — yes or no?" because software is deterministic. AI systems are not: the same input yields different outputs, "correct" is a distribution, and quality degrades gradually rather than failing loudly. So the pipeline's pass/fail decision moves from `assert x == y` to "is the new version's *aggregate score* on a held-out eval set non-inferior to the baseline, within noise?"
+
+Once you accept that, every component falls into place: the eval set is your test suite, the baseline run is your golden snapshot, the score delta is your diff, and production monitoring is just the same gate running continuously on sampled live traffic instead of once at merge. This is the discipline that turns a demo into a [production pattern](/production-patterns), and it is the operational backbone of [eval frameworks comparison](/eval-frameworks-comparison) decisions — the framework is only as useful as the gate you wire it into. The same gate discipline is what makes shipping [AI for code](/ai-for-code) safe and is a core competency on the [AI engineer roadmap](/ai-engineer-roadmap).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "pr", "label": "PR: prompt / model change", "shape": "circle"},
+    {"id": "kind", "label": "Deterministic assert or distributional score?", "shape": "diamond"},
+    {"id": "binary", "label": "Binary x==y gate is the wrong tool here", "shape": "stadium"},
+    {"id": "evalset", "label": "Eval set = the test suite", "shape": "rect"},
+    {"id": "baseline", "label": "Baseline run = golden snapshot", "shape": "rect"},
+    {"id": "delta", "label": "Aggregate score delta = the diff", "shape": "rect"},
+    {"id": "noninf", "label": "Non-inferior within noise?", "shape": "diamond"},
+    {"id": "block", "label": "Block PR", "shape": "stadium"},
+    {"id": "mon", "label": "Same gate runs continuously on sampled live traffic", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "pr", "target": "kind"},
+    {"source": "kind", "target": "binary", "label": "assert: deterministic-only"},
+    {"source": "kind", "target": "evalset", "label": "statistical"},
+    {"source": "evalset", "target": "baseline"},
+    {"source": "baseline", "target": "delta"},
+    {"source": "delta", "target": "noninf"},
+    {"source": "noninf", "target": "mon", "label": "non-inferior: merge"},
+    {"source": "noninf", "target": "block", "label": "regression"},
+    {"source": "mon", "target": "evalset", "label": "drift -> re-gate"}
+  ]
+}
+```
+
 ## Why Traditional CI/CD Falls Short for AI
 
 Traditional CI/CD pipelines test deterministic systems: given input X, the system should produce output Y. Tests are binary (pass/fail), and a single failing test blocks deployment. This model breaks down for AI applications in several ways:
@@ -1114,6 +1148,125 @@ class ProductionCostMonitor:
 ```
 
 The cost-by-feature breakdown is particularly valuable after deployments. When a new prompt version ships, the production cost monitor shows whether it is cheaper or more expensive per request, immediately and by feature. Combined with the quality metrics from the monitoring section above, this gives teams the full picture: did the change improve quality, and at what cost?
+
+## Runtime Internals
+
+The statistical-gate model hides the mechanics that make an AI pipeline trustworthy rather than flaky.
+
+### The non-inferiority gate
+
+A naive "score must not drop" gate fails constantly because eval scores are noisy. The correct runtime is a non-inferiority test: compare the new run's mean against `baseline − margin`, accounting for variance (bootstrap CI or a paired test over shared cases). The margin and sample size are the real knobs — too tight and every PR flakes red; too loose and real regressions slip.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "run", "label": "New eval run", "shape": "circle"},
+    {"id": "ci", "label": "Bootstrap CI\nof score delta", "shape": "rect"},
+    {"id": "test", "label": "delta > −margin?", "shape": "diamond"},
+    {"id": "pass", "label": "Gate pass", "shape": "circle"},
+    {"id": "fail", "label": "Gate fail", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "run", "target": "ci"},
+    {"source": "ci", "target": "test"},
+    {"source": "test", "target": "pass", "label": "yes"},
+    {"source": "test", "target": "fail", "label": "no"}
+  ]
+}
+```
+
+### Deterministic seeding for reproducibility
+
+CI must be reproducible, but LLMs are stochastic. The runtime mitigations: pin temperature to 0 for graded eval calls, fix judge-model version, cache provider responses keyed by (prompt, params) so a re-run of the same commit yields the same scores. Without response caching, a "flaky" red is indistinguishable from a real regression.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "case", "label": "Eval case", "shape": "circle"},
+    {"id": "temp", "label": "Temperature pinned to 0?", "shape": "diamond"},
+    {"id": "judgever", "label": "Judge-model version frozen?", "shape": "diamond"},
+    {"id": "key", "label": "Cache key = hash(prompt, params, model)", "shape": "rect"},
+    {"id": "hit", "label": "Response cached for this commit?", "shape": "diamond"},
+    {"id": "replay", "label": "Replay cached response", "shape": "rect"},
+    {"id": "call", "label": "Provider call (recorded)", "shape": "rect"},
+    {"id": "flaky", "label": "No cache: flaky red is indistinguishable from real regression", "shape": "stadium"},
+    {"id": "score", "label": "Reproducible score for the commit", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "case", "target": "temp"},
+    {"source": "temp", "target": "flaky", "label": "no: nondeterministic"},
+    {"source": "temp", "target": "judgever", "label": "yes"},
+    {"source": "judgever", "target": "key", "label": "yes"},
+    {"source": "judgever", "target": "flaky", "label": "no: version drift"},
+    {"source": "key", "target": "hit"},
+    {"source": "hit", "target": "replay", "label": "yes"},
+    {"source": "hit", "target": "call", "label": "no"},
+    {"source": "call", "target": "score"},
+    {"source": "replay", "target": "score"}
+  ]
+}
+```
+
+### Online eval on sampled traffic
+
+Post-deploy, the same gate runs continuously: sample a fraction of production requests, score them (LLM-judge or deferred human label), and alarm on a moving-window regression. The runtime tension is sampling rate vs cost — judging 100% of traffic doubles spend. Failures here feed back into the regression set, the same loop discussed in [agent debugging](/agent-debugging) for tracing bad trajectories.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "prod", "label": "Prod traffic", "shape": "circle"},
+    {"id": "samp", "label": "Sample p%", "shape": "diamond"},
+    {"id": "judge", "label": "Score (judge)", "shape": "rect"},
+    {"id": "win", "label": "Window regression?", "shape": "diamond"},
+    {"id": "alarm", "label": "Alarm + add to\nregression set", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "prod", "target": "samp"},
+    {"source": "samp", "target": "judge", "label": "sampled"},
+    {"source": "samp", "target": "prod", "label": "skip"},
+    {"source": "judge", "target": "win"},
+    {"source": "win", "target": "alarm", "label": "yes"},
+    {"source": "win", "target": "prod", "label": "no"}
+  ]
+}
+```
+
+### Progressive rollout under a flag
+
+Even a passing gate can miss real-world regressions, so the deploy itself is staged: a feature flag routes a small traffic percentage to the new prompt/model, the online gate watches its cohort, and rollout advances or auto-rolls-back. This makes prompt changes a [context engineering](/context-engineering) experiment with a kill switch, not a one-way door.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "new", "label": "Gate-passed new version", "shape": "circle"},
+    {"id": "flag", "label": "Feature flag routes 5% cohort", "shape": "rect"},
+    {"id": "watch", "label": "Online gate on cohort healthy?", "shape": "diamond"},
+    {"id": "r25", "label": "Ramp to 25%", "shape": "rect"},
+    {"id": "r50", "label": "Ramp to 50%", "shape": "rect"},
+    {"id": "r100", "label": "Ramp to 100%", "shape": "rect"},
+    {"id": "stage", "label": "More ramp stages remaining?", "shape": "diamond"},
+    {"id": "rb", "label": "Auto rollback (kill switch, not one-way door)", "shape": "stadium"},
+    {"id": "regr", "label": "Real-world regression a passing gate missed", "shape": "stadium"},
+    {"id": "done", "label": "Fully rolled out", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "new", "target": "flag"},
+    {"source": "flag", "target": "watch"},
+    {"source": "watch", "target": "regr", "label": "cohort regressed"},
+    {"source": "regr", "target": "rb"},
+    {"source": "watch", "target": "r25", "label": "healthy"},
+    {"source": "r25", "target": "stage"},
+    {"source": "stage", "target": "r50", "label": "next"},
+    {"source": "r50", "target": "r100", "label": "next"},
+    {"source": "r100", "target": "done"},
+    {"source": "stage", "target": "watch", "label": "re-check cohort"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

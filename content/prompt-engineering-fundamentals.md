@@ -2,6 +2,34 @@
 
 Prompt engineering has emerged as the primary interface between human intent and large language model capabilities, yet it remains poorly understood as a discipline. This article examines the foundational principles that govern effective prompting, the recurring patterns that practitioners rely on, and the tension between treating prompts as natural language instructions versus structured programs. We draw on empirical findings from recent research to move beyond folklore and toward a principled understanding of how prompts shape model behavior. For the broader discipline of managing everything that goes into a model's context window -- retrieved documents, conversation history, tool outputs, and more -- see [Context Engineering](/context-engineering).
 
+## Mental Model
+
+The mental model for prompt engineering is **you are programming a probabilistic interpreter whose only API is text, and the prompt is the program**. The model is fixed; the only lever you have at request time is the input. So a prompt is not "asking nicely" — it is specifying behavior precisely enough that the most-likely continuation *is* the behavior you want. Every principle (be specific, give examples, prefer positive instructions, delimit structure) is a technique for narrowing the model's output distribution toward your intent and away from plausible-but-wrong neighbors.
+
+That reframes prompting as engineering with a test loop, not folklore: write the spec (prompt), run it on cases, observe failures, tighten the spec, repeat. Crucially it is the *static instruction slice* of the larger problem — the rest of the input (retrieved docs, history, tools) is [context engineering](/context-engineering); structured-output demands turn it into a [structured output](/structured-output) contract; and iterating it against a metric instead of by intuition is [prompt optimization](/prompt-optimization).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "intent", "label": "Intent", "shape": "circle"},
+    {"id": "prompt", "label": "Prompt = program\n(spec in text)", "shape": "rect"},
+    {"id": "model", "label": "Probabilistic\ninterpreter", "shape": "rect"},
+    {"id": "out", "label": "Matches intent?", "shape": "diamond"},
+    {"id": "done", "label": "Reliable output", "shape": "circle"},
+    {"id": "tighten", "label": "Tighten spec", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "intent", "target": "prompt"},
+    {"source": "prompt", "target": "model"},
+    {"source": "model", "target": "out"},
+    {"source": "out", "target": "done", "label": "yes"},
+    {"source": "out", "target": "tighten", "label": "no"},
+    {"source": "tighten", "target": "prompt"}
+  ]
+}
+```
+
 ## The Prompt as a Programming Paradigm
 
 The shift from traditional software engineering to prompt-based programming represents a fundamental change in how we specify computation. In conventional programming, developers write explicit instructions in formal languages with well-defined semantics. In prompt engineering, developers write natural language instructions that are interpreted by a probabilistic model whose exact behavior is not fully predictable.
@@ -426,6 +454,107 @@ tests = [
 **Iteration**: Start with a simple prompt, evaluate it, identify failure modes, and iterate. Each iteration should address specific failure cases without introducing new ones -- a process that mirrors debugging in traditional software development.
 
 **Documentation**: Document the intent behind each prompt, the failure modes it addresses, and the model version it was tested against. Prompts that work on one model version may not work on the next.
+
+## Runtime Internals
+
+The "prompt is a program" model hides the mechanics that decide whether a prompt is robust or brittle.
+
+### Specificity narrows the distribution
+
+A vague instruction leaves a wide output distribution; the model samples a plausible-but-unintended completion. Adding constraints (format, length, audience, what *not* to do) collapses that distribution toward the target. The runtime intuition: every ambiguity is a place the model can be "correct" yet wrong — specificity is error reduction, not verbosity.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "vague", "label": "Vague prompt", "shape": "circle"},
+    {"id": "wide", "label": "Wide output\ndistribution", "shape": "rect"},
+    {"id": "spec", "label": "Add constraints", "shape": "rect"},
+    {"id": "narrow", "label": "Narrowed to\nintent", "shape": "rect"},
+    {"id": "out", "label": "Reliable answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "vague", "target": "wide"},
+    {"source": "wide", "target": "spec"},
+    {"source": "spec", "target": "narrow"},
+    {"source": "narrow", "target": "out"}
+  ]
+}
+```
+
+### Positive instructions beat negative ones
+
+"Do not use jargon" still puts jargon in the context and relies on suppression, which models do unreliably. "Write for a non-technical reader" specifies the target directly. The runtime reason: the model conditions on tokens present; describing the desired behavior is more reliable than naming the forbidden one. Rewrite every "don't X" as "do Y" wherever possible.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "rule", "label": "Constraint", "shape": "circle"},
+    {"id": "form", "label": "Phrasing?", "shape": "diamond"},
+    {"id": "neg", "label": "Negative\n(suppress)", "shape": "rect"},
+    {"id": "pos", "label": "Positive\n(specify target)", "shape": "rect"},
+    {"id": "rel", "label": "Reliable behavior", "shape": "circle"},
+    {"id": "leak", "label": "Unreliable\nsuppression", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "rule", "target": "form"},
+    {"source": "form", "target": "neg", "label": "don't X"},
+    {"source": "form", "target": "pos", "label": "do Y"},
+    {"source": "pos", "target": "rel"},
+    {"source": "neg", "target": "leak"}
+  ]
+}
+```
+
+### Delimited structure and the instruction hierarchy
+
+The model attends to structure: clearly delimited sections (Context / Task / Data / Output) and instruction-after-data ordering measurably outperform an unstructured blob. There is also a privilege order — system > developer > user — that the model is trained to respect, which is both a control lever and the attack surface for prompt injection. Layout is a correctness mechanism, not formatting taste.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "parts", "label": "Prompt parts", "shape": "circle"},
+    {"id": "delim", "label": "Delimit sections", "shape": "rect"},
+    {"id": "order", "label": "Instruction after\nreferenced data", "shape": "rect"},
+    {"id": "hier", "label": "System > dev >\nuser priority", "shape": "diamond"},
+    {"id": "robust", "label": "Robust prompt", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "parts", "target": "delim"},
+    {"source": "delim", "target": "order"},
+    {"source": "order", "target": "hier"},
+    {"source": "hier", "target": "robust"}
+  ]
+}
+```
+
+### Prompts are versioned, model-bound artifacts
+
+A prompt tuned on one model version can regress on the next — token boundaries shift, instruction-following changes. The runtime discipline treats prompts like code: version them, attach a test suite of cases with expected properties, and re-run it on every model upgrade. Iterating that suite against a metric instead of eyeballing is the boundary with [prompt optimization](/prompt-optimization).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "p", "label": "Prompt v.n", "shape": "circle"},
+    {"id": "tests", "label": "Test cases\n(expected props)", "shape": "rect"},
+    {"id": "model", "label": "Model upgrade?", "shape": "diamond"},
+    {"id": "rerun", "label": "Re-run suite", "shape": "rect"},
+    {"id": "ok", "label": "Ship", "shape": "circle"},
+    {"id": "fix", "label": "Revise prompt", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "p", "target": "tests"},
+    {"source": "tests", "target": "model"},
+    {"source": "model", "target": "rerun", "label": "yes"},
+    {"source": "rerun", "target": "ok", "label": "pass"},
+    {"source": "rerun", "target": "fix", "label": "regress"},
+    {"source": "fix", "target": "p"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

@@ -2,6 +2,41 @@
 
 Red-teaming AI systems — systematically probing for vulnerabilities, harmful behaviors, and safety failures — has traditionally been either manual (human testers crafting adversarial prompts) or script-based (sequential test suites). Both approaches struggle with the combinatorial nature of modern LLM applications: multi-agent systems, RAG pipelines, and agentic workflows create attack surfaces that are too complex for linear testing. LangGraph, LangChain's framework for building stateful, multi-step agent workflows, provides a natural fit for orchestrating adversarial campaigns as directed graphs — where attacks fan out in parallel, results flow through scoring nodes, and multi-turn jailbreaks execute as iterative loops. This article examines how LangGraph's core primitives map to red-team patterns, walks through practical graph architectures for adversarial testing, and shows how to integrate with frameworks like DeepTeam for automated vulnerability scanning. For foundational red-teaming concepts, see [Article 35: Red Teaming & Adversarial Testing](/red-teaming); for adversarial prompting techniques, see [Article 12: Adversarial Prompting](/adversarial-prompting); for LangGraph fundamentals (StateGraph, reducers, conditional edges, Send, persistence), see [LangGraph](/langgraph).
 
+## Mental Model
+
+The mental model for graph-based red-teaming is **the test campaign is itself a directed graph, because the system under attack is one too**. Linear test suites assume "input → assert output," but a modern LLM app is multi-agent, stateful, and branching — its vulnerabilities live in the *interactions*, not single calls. So you model the attack the same way you model the target: nodes that generate adversarial variants, fan-out edges that run them in parallel, scoring nodes that judge responses, and loop edges that escalate multi-turn jailbreaks. The graph is not a convenience; it is the only structure that matches the combinatorial attack surface.
+
+That reframes red-teaming as orchestration. The attack-generation/scoring loop is [red teaming](/red-teaming) methodology; the adversarial payloads are [adversarial prompting](/adversarial-prompting) techniques; and the orchestration substrate — StateGraph, reducers, Send, persistence — is plain [LangGraph](/langgraph), here pointed at your own system instead of users. The recurring judgment is *coverage of the graph's edges*, not the count of prompts fired.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "seed", "label": "Attack seeds", "shape": "circle"},
+    {"id": "linear", "label": "Linear input -> assert suite?", "shape": "diamond"},
+    {"id": "miss", "label": "Misses interaction vulnerabilities", "shape": "stadium"},
+    {"id": "gen", "label": "Generate adversarial variants (node)", "shape": "rect"},
+    {"id": "fan", "label": "Send fan-out across branches", "shape": "rect"},
+    {"id": "tgt", "label": "Multi-agent stateful target app", "shape": "rect"},
+    {"id": "score", "label": "Scoring node", "shape": "rect"},
+    {"id": "cover", "label": "Graph edges sufficiently covered?", "shape": "diamond"},
+    {"id": "rep", "label": "Risk report", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "seed", "target": "linear"},
+    {"source": "linear", "target": "miss", "label": "yes: wrong model"},
+    {"source": "linear", "target": "gen", "label": "no: graph campaign"},
+    {"source": "gen", "target": "fan"},
+    {"source": "fan", "target": "tgt", "label": "parallel"},
+    {"source": "tgt", "target": "score"},
+    {"source": "score", "target": "gen", "label": "escalate (loop)"},
+    {"source": "score", "target": "cover"},
+    {"source": "cover", "target": "rep", "label": "yes"},
+    {"source": "cover", "target": "gen", "label": "no: more edges"}
+  ]
+}
+```
+
 ## Why Graph-Based Red-Teaming
 
 Sequential red-team scripts execute attacks one at a time, in a fixed order, with no shared state between runs. This works for simple targets but breaks down when:
@@ -887,6 +922,134 @@ class TestLLMJudged:
 ```
 
 This two-layer structure gives fast feedback on obvious regressions while reserving the expensive LLM judge for nuanced assessments that string matching cannot handle.
+
+## Runtime Internals
+
+The "campaign is a graph" model hides the mechanics that make adversarial pipelines scale and stay correct.
+
+### Fan-out with Send and reducer merge
+
+`Send` dispatches one attack variant per parallel branch; each branch hits the target independently, and a state reducer merges results back without races. The runtime knob is bounded concurrency — uncapped fan-out against a real target is a self-inflicted DoS. The reducer must be associative so out-of-order branch completion still produces a correct aggregate.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "list", "label": "Variant list", "shape": "circle"},
+    {"id": "cap", "label": "Concurrency bounded?", "shape": "diamond"},
+    {"id": "dos", "label": "Uncapped fan-out = self-inflicted DoS on target", "shape": "stadium"},
+    {"id": "send", "label": "Send: one variant per branch", "shape": "rect"},
+    {"id": "b1", "label": "Branch hits target independently", "shape": "rect"},
+    {"id": "b2", "label": "Branch hits target independently", "shape": "rect"},
+    {"id": "assoc", "label": "Reducer associative?", "shape": "diamond"},
+    {"id": "race", "label": "Out-of-order completion corrupts aggregate", "shape": "stadium"},
+    {"id": "merge", "label": "Correct merged result", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "list", "target": "cap"},
+    {"source": "cap", "target": "dos", "label": "no"},
+    {"source": "cap", "target": "send", "label": "yes"},
+    {"source": "send", "target": "b1"},
+    {"source": "send", "target": "b2"},
+    {"source": "b1", "target": "assoc"},
+    {"source": "b2", "target": "assoc"},
+    {"source": "assoc", "target": "merge", "label": "yes: any order ok"},
+    {"source": "assoc", "target": "race", "label": "no"}
+  ]
+}
+```
+
+### Two-layer scoring: cheap gate, expensive judge
+
+Scoring every response with an LLM judge is slow and costly. The runtime tiers it: a deterministic first pass (regex/string match for obvious leaks like a system-prompt substring) catches blatant failures instantly; only ambiguous responses escalate to an LLM judge. The trap is a brittle string check that the target can trip *incidentally* — false positives inflate the vulnerability count.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "resp", "label": "Target response", "shape": "circle"},
+    {"id": "rx", "label": "Deterministic regex / substring gate", "shape": "rect"},
+    {"id": "obv", "label": "Obvious leak (system-prompt substring)?", "shape": "diamond"},
+    {"id": "brittle", "label": "Could the target trip this incidentally?", "shape": "diamond"},
+    {"id": "fp", "label": "False positive inflates vulnerability count", "shape": "stadium"},
+    {"id": "judge", "label": "Escalate ambiguous to LLM judge", "shape": "rect"},
+    {"id": "agree", "label": "Judge confirms exploit?", "shape": "diamond"},
+    {"id": "drop", "label": "Drop incidental match", "shape": "stadium"},
+    {"id": "verdict", "label": "Scored verdict", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "resp", "target": "rx"},
+    {"source": "rx", "target": "obv"},
+    {"source": "obv", "target": "brittle", "label": "yes: matched"},
+    {"source": "obv", "target": "judge", "label": "ambiguous"},
+    {"source": "brittle", "target": "fp", "label": "yes: brittle check"},
+    {"source": "brittle", "target": "verdict", "label": "no: real leak"},
+    {"source": "judge", "target": "agree"},
+    {"source": "agree", "target": "verdict", "label": "yes"},
+    {"source": "agree", "target": "drop", "label": "no"}
+  ]
+}
+```
+
+### Multi-turn attack loops
+
+Single-shot jailbreaks miss attacks that build over a conversation (gradual context poisoning, persona drift). A loop subgraph maintains attack state across turns, adapting the next probe based on the target's last reply, with a turn cap to terminate. This is where stateful LangGraph persistence is essential — the attack *is* the accumulated conversation.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "state", "label": "Attack state", "shape": "circle"},
+    {"id": "probe", "label": "Craft next turn", "shape": "rect"},
+    {"id": "tgt", "label": "Target reply", "shape": "rect"},
+    {"id": "win", "label": "Breached?", "shape": "diamond"},
+    {"id": "cap", "label": "Turn < max?", "shape": "diamond"},
+    {"id": "stop", "label": "Record outcome", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "state", "target": "probe"},
+    {"source": "probe", "target": "tgt"},
+    {"source": "tgt", "target": "win"},
+    {"source": "win", "target": "stop", "label": "yes"},
+    {"source": "win", "target": "cap", "label": "no"},
+    {"source": "cap", "target": "state", "label": "yes: adapt"},
+    {"source": "cap", "target": "stop", "label": "no"}
+  ]
+}
+```
+
+### Attack-surface mapping of the target graph
+
+Before attacking, enumerate the target's own graph for injection points: user-controlled text reaching a system prompt via f-string, an agent trusting un-sanitized tool output, a substring check used as a security boundary. The runtime practice is to attack *each edge*, not just the entry node — the vulnerability is almost always an internal trust boundary, the same lesson as [adversarial prompting](/adversarial-prompting).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "app", "label": "Target LangGraph app", "shape": "circle"},
+    {"id": "enum", "label": "Enumerate every edge + node", "shape": "rect"},
+    {"id": "fstring", "label": "User text reaches system prompt via f-string?", "shape": "diamond"},
+    {"id": "tooltrust", "label": "Agent trusts un-sanitized tool output?", "shape": "diamond"},
+    {"id": "substr", "label": "Substring check used as a security boundary?", "shape": "diamond"},
+    {"id": "entryonly", "label": "Attacking only the entry node misses internal boundaries", "shape": "stadium"},
+    {"id": "payload", "label": "Targeted payload per untrusted->privileged edge", "shape": "rect"},
+    {"id": "harden", "label": "Harden the edge, then retest", "shape": "rect"},
+    {"id": "safe", "label": "Internal trust boundaries closed", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "app", "target": "enum"},
+    {"source": "enum", "target": "fstring"},
+    {"source": "enum", "target": "tooltrust"},
+    {"source": "enum", "target": "substr"},
+    {"source": "fstring", "target": "payload", "label": "yes"},
+    {"source": "tooltrust", "target": "payload", "label": "yes"},
+    {"source": "substr", "target": "payload", "label": "yes"},
+    {"source": "enum", "target": "entryonly", "label": "entry-only scope"},
+    {"source": "payload", "target": "harden"},
+    {"source": "harden", "target": "safe"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

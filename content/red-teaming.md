@@ -2,6 +2,35 @@
 
 Red teaming -- the practice of systematically probing AI systems for failures, vulnerabilities, and harmful behaviors -- has become an essential component of responsible AI deployment. As language models become more capable and widely deployed, the attack surface expands and the consequences of failure grow more severe. This article examines both manual and automated approaches to red teaming, the adversarial testing frameworks that operationalize them, safety benchmarks that standardize measurement, the evolving practices around responsible disclosure for AI vulnerabilities, and the regulatory landscape that increasingly mandates adversarial testing. For foundational coverage of adversarial techniques, see [Article 12: Adversarial Prompting](/adversarial-prompting); for defense-layer patterns, see [Article 44: Guardrails & Content Filtering](/guardrails-filtering).
 
+## Mental Model
+
+The mental model for red teaming is **an adversarial search for the inputs your guardrails and training missed, run as a measured loop rather than a one-off audit**. You assume the model *will* misbehave for some input; the job is to find that input before an attacker does, score how bad it is, and feed it back as a regression test. Manual red teaming is creative breadth (humans invent novel attacks); automated red teaming is depth and scale (optimizers and attacker-LLMs grind the search space). A program needs both — humans find new attack *classes*, machines exhaust *instances* within a class.
+
+The decisive framing: red teaming only has value if findings *close the loop*. An attack that is discovered, severity-scored, and turned into a permanent test in your [CI/CD for AI](/ci-cd-ai) gate is mitigation; an attack written in a slide deck is theater. This makes red teaming the offensive counterpart to defensive [guardrails & content filtering](/guardrails-filtering) and the evidence base that [AI governance](/ai-governance) regulators now demand.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "threat", "label": "Threat model", "shape": "circle"},
+    {"id": "attack", "label": "Generate attacks\n(manual + auto)", "shape": "rect"},
+    {"id": "probe", "label": "Probe model", "shape": "rect"},
+    {"id": "fail", "label": "Failure found?", "shape": "diamond"},
+    {"id": "score", "label": "Severity score\n+ regression test", "shape": "rect"},
+    {"id": "fix", "label": "Mitigate + re-test", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "threat", "target": "attack"},
+    {"source": "attack", "target": "probe"},
+    {"source": "probe", "target": "fail"},
+    {"source": "fail", "target": "attack", "label": "no: mutate"},
+    {"source": "fail", "target": "score", "label": "yes"},
+    {"source": "score", "target": "fix"},
+    {"source": "fix", "target": "threat", "label": "loop"}
+  ]
+}
+```
+
 ## What Red Teaming Means for AI Systems
 
 The term "red teaming" originates from military and cybersecurity contexts, where a designated adversary (the red team) tests an organization's defenses. Applied to AI, red teaming involves deliberately attempting to elicit harmful, incorrect, or policy-violating behavior from a model. The goal is not to break the model for its own sake but to identify and address vulnerabilities before deployment.
@@ -611,6 +640,103 @@ class ComplianceRedTeamRecord:
 ```
 
 The gap between "we red team our models" and "we can demonstrate regulatory compliance with our adversarial testing" is primarily one of documentation, traceability, and coverage guarantees. A red teaming program that follows the structured approach outlined throughout this article -- with documented threat models, systematic attack taxonomies, severity-scored findings, and verified mitigations -- is well positioned to satisfy both the EU AI Act and NIST AI RMF requirements.
+
+## Runtime Internals
+
+The loop model hides the mechanics that make automated red teaming actually find things.
+
+### Optimizer-based attacks (GCG)
+
+Gradient-based attacks like GCG treat the jailbreak as an optimization: search a suffix that maximizes the probability of an unsafe completion. The runtime cost is many forward/backward passes per candidate, and the practical limits are white-box access (you need logits) and transferability (a suffix tuned on one model often degrades on another). It is depth, not creativity — exhaustive within a known objective.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "goal", "label": "Unsafe target\nstring", "shape": "circle"},
+    {"id": "suffix", "label": "Candidate suffix", "shape": "rect"},
+    {"id": "grad", "label": "Gradient step", "shape": "rect"},
+    {"id": "test", "label": "Elicits target?", "shape": "diamond"},
+    {"id": "jb", "label": "Jailbreak found", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "goal", "target": "suffix"},
+    {"source": "suffix", "target": "grad"},
+    {"source": "grad", "target": "test"},
+    {"source": "test", "target": "suffix", "label": "no: iterate"},
+    {"source": "test", "target": "jb", "label": "yes"}
+  ]
+}
+```
+
+### Attacker-LLM red teaming
+
+Black-box red teaming uses an attacker model that proposes prompts, observes the target's response, and adapts — a multi-turn loop. The runtime knobs are the attacker's exploration policy and a reliable judge to label "did this succeed?". A weak judge silently inflates or hides the attack success rate, so judge calibration gates the whole pipeline.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "att", "label": "Attacker LLM", "shape": "circle"},
+    {"id": "tgt", "label": "Target model", "shape": "rect"},
+    {"id": "judge", "label": "Judge: success?", "shape": "diamond"},
+    {"id": "log", "label": "Log + score", "shape": "rect"},
+    {"id": "adapt", "label": "Adapt strategy", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "att", "target": "tgt"},
+    {"source": "tgt", "target": "judge"},
+    {"source": "judge", "target": "log", "label": "yes"},
+    {"source": "judge", "target": "adapt", "label": "no"},
+    {"source": "adapt", "target": "att", "label": "next attempt"}
+  ]
+}
+```
+
+### Coverage and the attack taxonomy
+
+Scale without structure produces 10,000 variants of the same jailbreak and zero coverage of others. The runtime fix is a taxonomy (harm categories × attack techniques) with budgeted sampling per cell, so the report is "X% coverage of the threat model" not "we ran a lot of prompts". This is where red teaming overlaps [bias & fairness](/bias-fairness) — demographic harm cells must be explicit, not incidental.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "tax", "label": "Harm × technique\ntaxonomy", "shape": "circle"},
+    {"id": "budget", "label": "Per-cell budget", "shape": "rect"},
+    {"id": "gen", "label": "Generate attacks", "shape": "rect"},
+    {"id": "cov", "label": "Coverage report", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "tax", "target": "budget"},
+    {"source": "budget", "target": "gen"},
+    {"source": "gen", "target": "cov"}
+  ]
+}
+```
+
+### Findings → regression suite
+
+The output of red teaming is only durable if each confirmed attack becomes a permanent, automated test. The runtime is a pipeline: triage by severity, dedupe near-identical attacks, convert to a gate case, and re-run every release. Without dedupe the suite bloats; without severity the team fixes cosmetic issues before critical ones. Tracing *why* an attack worked is the same instrumentation as [agent debugging](/agent-debugging).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "find", "label": "Confirmed attack", "shape": "circle"},
+    {"id": "sev", "label": "Severity triage", "shape": "rect"},
+    {"id": "dedup", "label": "Dedupe", "shape": "diamond"},
+    {"id": "case", "label": "Regression case", "shape": "rect"},
+    {"id": "gate", "label": "Release gate", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "find", "target": "sev"},
+    {"source": "sev", "target": "dedup"},
+    {"source": "dedup", "target": "case", "label": "novel"},
+    {"source": "dedup", "target": "sev", "label": "dup: drop"},
+    {"source": "case", "target": "gate"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

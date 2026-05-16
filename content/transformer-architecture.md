@@ -2,6 +2,32 @@
 
 The transformer architecture, introduced by **Vaswani et al. (2017)** in "Attention Is All You Need," has become the foundational building block of modern large language models. This article traces the mechanics of self-attention from first principles through multi-head attention, examines the evolving landscape of positional encoding schemes, and explores how architectural choices interact with scale. Understanding these fundamentals is essential for anyone building, fine-tuning, or deploying transformer-based systems in production.
 
+## Mental Model
+
+The mental model for the transformer is **a stack of layers that each lets every token look at every other token and rewrite itself**. There is no recurrence and no fixed window: a layer computes, for each position, a weighted blend of all positions (attention), then a per-position transform (the MLP). Stack N of these and tokens iteratively refine their representations using global context. Two facts fall out immediately and explain almost everything downstream: attention is **all-pairs** (cost grows with sequence length squared) and the operation is **order-blind** (so position must be injected explicitly).
+
+So read every transformer design choice as managing one of those two facts. Positional encodings (sinusoidal, RoPE, ALiBi) answer "how do we inject order?"; the quadratic-cost battle (Flash Attention, GQA, sub-quadratic variants) answers "how do we afford all-pairs at long context?". This is the substrate the whole field stands on: it is what [memory architectures](/memory-architectures) page in and out, what [vision-language models](/vision-language-models) extend by feeding image patches as tokens, and the loop body that [agent architectures](/agent-architectures) iterate.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "tok", "label": "Token embeddings\n+ position", "shape": "circle"},
+    {"id": "attn", "label": "Attention\n(all-pairs blend)", "shape": "rect"},
+    {"id": "mlp", "label": "Per-position MLP", "shape": "rect"},
+    {"id": "more", "label": "More layers?", "shape": "diamond"},
+    {"id": "out", "label": "Contextual\nrepresentations", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "tok", "target": "attn"},
+    {"source": "attn", "target": "mlp"},
+    {"source": "mlp", "target": "more"},
+    {"source": "more", "target": "attn", "label": "yes (stack)"},
+    {"source": "more", "target": "out", "label": "no"}
+  ]
+}
+```
+
 ## The Self-Attention Mechanism
 
 Self-attention is the core operation that distinguishes transformers from prior sequence models like RNNs and LSTMs. Rather than processing tokens sequentially, self-attention allows every token in a sequence to attend to every other token in a single parallel operation. This eliminates the sequential bottleneck that limited recurrent models and enables transformers to capture long-range dependencies directly.
@@ -287,6 +313,110 @@ Flash Attention is not an approximation — it computes exact attention. Its ins
 **Flash Attention 2** (**Dao, 2023**) further improved throughput by optimizing the parallelism and work partitioning across GPU thread blocks, achieving close to the theoretical maximum FLOPs utilization on modern hardware.
 
 **Flash Attention 3** (**Shah et al., 2024**) targets NVIDIA Hopper architecture (H100/H200) specifically, exploiting hardware features unavailable on earlier generations. FA3 uses asynchronous block-wise data movement via the Tensor Memory Accelerator (TMA), overlaps GEMM and softmax computations using the new warp-group programming model, and leverages FP8 low-precision paths with block quantization to maintain accuracy. The result is 1.5-2x faster than FA2 on H100 GPUs, reaching up to 740 TFLOPs/s in FP16 — roughly 75% of the H100's theoretical peak. FA3 also introduces hardware-accelerated support for head dimensions beyond 128 (up to 256) without performance cliffs, which matters for architectures that use larger per-head dimensions to improve quality. These Hopper-specific optimizations underscore the broader trend of Flash Attention: each generation is co-designed with the target GPU microarchitecture, making attention computation increasingly a hardware-software co-design problem rather than a purely algorithmic one.
+
+## Runtime Internals
+
+The "all-pairs, order-blind stack" model hides the mechanics that decide whether a transformer is trainable and servable.
+
+### The attention computation, step by step
+
+Each token projects to a query, key, and value. Scores = Q·Kᵀ scaled by √d, softmaxed into weights, then used to blend the values. The √d scaling is not cosmetic: without it, large dot products push softmax into saturation and gradients vanish. This is the single most important numerical-stability detail in the whole architecture.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "x", "label": "Token", "shape": "circle"},
+    {"id": "qkv", "label": "Project Q,K,V", "shape": "rect"},
+    {"id": "score", "label": "QKᵀ / √d", "shape": "rect"},
+    {"id": "soft", "label": "Softmax", "shape": "rect"},
+    {"id": "blend", "label": "Weighted Σ V", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "x", "target": "qkv"},
+    {"source": "qkv", "target": "score"},
+    {"source": "score", "target": "soft"},
+    {"source": "soft", "target": "blend"}
+  ]
+}
+```
+
+### Residual stream + pre-norm enable depth
+
+The block is `x = x + Attn(Norm(x))` then `x = x + MLP(Norm(x))`. The residual ("skip") connection is what makes 100-layer stacks trainable — gradients flow straight through the additive path. Pre-norm (LayerNorm *before* the sublayer) stabilizes very deep training where post-norm diverges. The residual stream is also the bus that interpretability and activation steering read and write.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "in", "label": "x", "shape": "circle"},
+    {"id": "n1", "label": "Norm", "shape": "rect"},
+    {"id": "a", "label": "Attention", "shape": "rect"},
+    {"id": "r1", "label": "x + Attn", "shape": "diamond"},
+    {"id": "m", "label": "Norm → MLP", "shape": "rect"},
+    {"id": "out", "label": "x + MLP", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "in", "target": "n1"},
+    {"source": "n1", "target": "a"},
+    {"source": "a", "target": "r1"},
+    {"source": "in", "target": "r1", "label": "skip"},
+    {"source": "r1", "target": "m"},
+    {"source": "m", "target": "out"},
+    {"source": "r1", "target": "out", "label": "skip"}
+  ]
+}
+```
+
+### Positional encoding is a design knob with range consequences
+
+Order is injected, not learned for free. Absolute sinusoidal/learned encodings do not extrapolate past trained length; RoPE rotates Q/K by position and extends further (with interpolation tricks); ALiBi biases attention scores by distance and extrapolates best. The choice directly bounds usable context, which is the [memory architectures](/memory-architectures) budget.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "need", "label": "Inject order", "shape": "circle"},
+    {"id": "k", "label": "Scheme?", "shape": "diamond"},
+    {"id": "abs", "label": "Absolute\n(no extrapolation)", "shape": "rect"},
+    {"id": "rope", "label": "RoPE\n(interp-extendable)", "shape": "rect"},
+    {"id": "alibi", "label": "ALiBi\n(distance bias)", "shape": "rect"},
+    {"id": "ctx", "label": "Usable context\nlength", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "need", "target": "k"},
+    {"source": "k", "target": "abs"},
+    {"source": "k", "target": "rope"},
+    {"source": "k", "target": "alibi"},
+    {"source": "abs", "target": "ctx"},
+    {"source": "rope", "target": "ctx"},
+    {"source": "alibi", "target": "ctx"}
+  ]
+}
+```
+
+### Flash Attention: the IO-bound reality
+
+Attention is memory-bandwidth-bound, not compute-bound — the bottleneck is reading/writing the N×N score matrix to GPU HBM. Flash Attention never materializes that matrix: it tiles the computation in fast SRAM and recomputes on the backward pass. It is mathematically identical, just IO-aware, and is what makes long-context training/serving affordable — the same hardware-aware mindset agent stacks rely on via [agent architectures](/agent-architectures) running long loops.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "naive", "label": "Naive: N×N matrix\nin HBM", "shape": "circle"},
+    {"id": "io", "label": "IO-bound\nbottleneck", "shape": "diamond"},
+    {"id": "tile", "label": "Tile in SRAM", "shape": "rect"},
+    {"id": "recompute", "label": "Recompute on\nbackward", "shape": "rect"},
+    {"id": "fast", "label": "Same result,\nlong context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "naive", "target": "io"},
+    {"source": "io", "target": "tile", "label": "avoid HBM"},
+    {"source": "tile", "target": "recompute"},
+    {"source": "recompute", "target": "fast"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

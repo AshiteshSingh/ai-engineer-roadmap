@@ -2,6 +2,33 @@
 
 Extracting structured, machine-parseable output from large language models is one of the most practically important challenges in production AI engineering. While LLMs generate free-form text by default, applications need JSON objects, database records, API calls, and typed data structures. This article surveys the landscape of structured output techniques, from API-level JSON mode through schema-driven function calling to compiler-level constrained decoding, examining how each approach works, when to use it, and the reliability tradeoffs involved.
 
+## Mental Model
+
+The mental model for structured output is **the model wants to write prose; you need a contract, so you constrain *where* the guarantee is enforced**. There is a spectrum of enforcement points, from weakest to strongest: ask nicely in the prompt → JSON mode (valid JSON, any shape) → schema-constrained API (valid *and* matches schema) → constrained decoding (the token sampler literally cannot emit an invalid token). Further left is cheap and flexible but fails silently; further right is bulletproof but rigid and sometimes slower. Every technique here is a point on that "where is the guarantee?" axis.
+
+The decisive engineering judgment is matching the enforcement strength to the cost of a malformed output. A logging field can tolerate a retry; a tool call that triggers a payment cannot, so it needs a hard guarantee. Reliable extraction is therefore a *validate-and-repair loop*, and that contract is what makes the rest of the stack composable: tool arguments in agent loops, typed records returned from [memory architectures](/memory-architectures), and clean slices fed by [context engineering](/context-engineering) all depend on it. The enforcement choice also has an [LLM serving](/llm-serving) latency cost — constrained decoding adds per-token overhead.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "prompt", "label": "Prompt ask\n(weak)", "shape": "circle"},
+    {"id": "json", "label": "JSON mode", "shape": "rect"},
+    {"id": "schema", "label": "Schema-constrained\nAPI", "shape": "rect"},
+    {"id": "decode", "label": "Constrained\ndecoding (hard)", "shape": "rect"},
+    {"id": "cost", "label": "Cost of malformed\noutput?", "shape": "diamond"},
+    {"id": "use", "label": "Chosen enforcement", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "prompt", "target": "json"},
+    {"source": "json", "target": "schema"},
+    {"source": "schema", "target": "decode"},
+    {"source": "decode", "target": "cost"},
+    {"source": "cost", "target": "use", "label": "high → go right"}
+  ]
+}
+```
+
 ## The Structured Output Problem
 
 Language models generate text token by token, sampling from a probability distribution over the vocabulary at each step. Nothing in this process inherently guarantees that the output will conform to any particular structure. When you ask a model to produce JSON, several things can go wrong:
@@ -703,6 +730,108 @@ From most to least reliable:
 5. **Prompt-only** ("Please return JSON") -- Unreliable, especially for complex schemas
 
 For production applications, aim for level 2 or above. Level 5 (prompt-only) is acceptable only for prototyping or when using models that do not support structured output APIs.
+
+## Runtime Internals
+
+The "where is the guarantee enforced" model hides the mechanics that decide reliability vs latency.
+
+### Constrained decoding mechanics
+
+Grammar/JSON-schema constrained decoding works by *masking the logits*: at each step, only tokens that keep the output a valid prefix of the grammar are allowed. The runtime cost is computing the allowed-token mask per step (state-machine/automaton over the grammar). It guarantees structural validity by construction — the model *cannot* emit a syntax error — but cannot guarantee the content is correct, only well-formed.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "state", "label": "Grammar state", "shape": "circle"},
+    {"id": "logits", "label": "Model logits", "shape": "rect"},
+    {"id": "mask", "label": "Mask invalid\ntokens", "shape": "rect"},
+    {"id": "samp", "label": "Sample valid\ntoken", "shape": "rect"},
+    {"id": "adv", "label": "Advance state", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "state", "target": "logits"},
+    {"source": "logits", "target": "mask"},
+    {"source": "mask", "target": "samp"},
+    {"source": "samp", "target": "adv"},
+    {"source": "adv", "target": "state", "label": "next token"}
+  ]
+}
+```
+
+### Validate-and-repair loop
+
+When the API only guarantees valid JSON (not your schema), the runtime is a loop: parse → validate against the Pydantic/Zod model → on failure, send the validation error *back into the prompt* and retry, bounded by max_retries. This converts a hard failure into a self-correcting one, but each retry is a full extra call — the dominant latency cost of "reliable" extraction.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "resp", "label": "Model response", "shape": "circle"},
+    {"id": "val", "label": "Schema valid?", "shape": "diamond"},
+    {"id": "ok", "label": "Return typed obj", "shape": "rect"},
+    {"id": "err", "label": "Inject error +\nretry", "shape": "rect"},
+    {"id": "max", "label": "Retries left?", "shape": "diamond"},
+    {"id": "fail", "label": "Hard fail / fallback", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "resp", "target": "val"},
+    {"source": "val", "target": "ok", "label": "yes"},
+    {"source": "val", "target": "max", "label": "no"},
+    {"source": "max", "target": "err", "label": "yes"},
+    {"source": "err", "target": "resp"},
+    {"source": "max", "target": "fail", "label": "no"}
+  ]
+}
+```
+
+### Decomposition beats one mega-schema
+
+A large, deeply nested schema degrades extraction accuracy — the model loses track of fields. The runtime fix is to decompose into several focused extractions and recombine, trading more calls for higher per-field accuracy. Flat schemas also outperform deeply nested ones; schema shape is a reliability lever, not just modeling taste.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "big", "label": "One big nested\nschema", "shape": "circle"},
+    {"id": "split", "label": "Decompose to\nfocused extracts", "shape": "rect"},
+    {"id": "e1", "label": "Extract A", "shape": "rect"},
+    {"id": "e2", "label": "Extract B", "shape": "rect"},
+    {"id": "join", "label": "Recombine", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "big", "target": "split"},
+    {"source": "split", "target": "e1"},
+    {"source": "split", "target": "e2"},
+    {"source": "e1", "target": "join"},
+    {"source": "e2", "target": "join"}
+  ]
+}
+```
+
+### Structured output in agent loops
+
+In an agent, every tool call is a structured-output decision, so a single malformed argument breaks the whole trajectory. The runtime must enforce the hard guarantee on tool args (constrained decoding or validate-repair) and treat a validation failure as a recoverable step the agent retries — not a crash. This is where structured output, [memory architectures](/memory-architectures) (typed recalled records), and the [LLM serving](/llm-serving) retry budget intersect.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "plan", "label": "Agent plans\ntool call", "shape": "circle"},
+    {"id": "enf", "label": "Enforce arg\nschema", "shape": "rect"},
+    {"id": "ok", "label": "Valid args?", "shape": "diamond"},
+    {"id": "exec", "label": "Execute tool", "shape": "rect"},
+    {"id": "retry", "label": "Re-ask with\nerror", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "plan", "target": "enf"},
+    {"source": "enf", "target": "ok"},
+    {"source": "ok", "target": "exec", "label": "yes"},
+    {"source": "ok", "target": "retry", "label": "no"},
+    {"source": "retry", "target": "plan"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

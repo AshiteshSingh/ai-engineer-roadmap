@@ -4,6 +4,40 @@ Every LLM call is a function of its context. The quality of a model's response i
 
 Static prompts are a solved problem. The hard problem -- the one that determines whether production AI systems actually work -- is assembling the right context, from the right sources, in the right order, at the right time, for every single request. This article examines that problem end to end: the assembly pipeline architecture, source taxonomy, ranking strategies, template engines, context routing, multi-source retrieval patterns, tool result injection, the write-time versus read-time tradeoff, and the production infrastructure that ties it all together. For foundational concepts on context window mechanics and budget planning, see [Context Engineering](/context-engineering).
 
+## Mental Model
+
+The mental model for dynamic context assembly is **a per-request build system that compiles a prompt from many sources under a hard size budget**. The system prompt is boilerplate; the real engineering is a pipeline that, *every request*, gathers candidates from heterogeneous sources (retrieval, history, tool results, user profile), ranks and filters them, fits them to the token budget by priority, and renders a final prompt — then is observable enough to debug when quality silently drops. "The prompt" is not written; it is *assembled*, and the assembler is the application.
+
+Two consequences shape everything below. First, assembly is a *ranking-then-packing* problem: too much context is as harmful as too little (distraction, cost, lost-in-the-middle), so relevance scoring and budgeted selection are the core. Second, where each source's content was produced — write-time vs read-time — changes latency and freshness. Tool outputs enter via the [function calling](/function-calling) loop, long-lived state comes from [memory architectures](/memory-architectures), and because every assembled prompt is an LLM call, the whole pipeline lives inside the [LLM serving](/llm-serving) latency/cost budget.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Per-request trigger", "shape": "circle"},
+    {"id": "gather", "label": "Gather candidates from heterogeneous sources", "shape": "rect"},
+    {"id": "rank", "label": "Relevance-score + filter", "shape": "rect"},
+    {"id": "fit", "label": "Fits token budget by priority?", "shape": "diamond"},
+    {"id": "evict", "label": "Evict lowest-priority candidates", "shape": "rect"},
+    {"id": "much", "label": "Too much == too little (distraction / lost-in-middle / cost)", "shape": "stadium"},
+    {"id": "render", "label": "Render final prompt", "shape": "rect"},
+    {"id": "obs", "label": "Emit assembly metrics (debuggable)", "shape": "circle"},
+    {"id": "leak", "label": "Silent quality leak if unobserved", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "req", "target": "gather"},
+    {"source": "gather", "target": "rank"},
+    {"source": "rank", "target": "fit"},
+    {"source": "fit", "target": "evict", "label": "over budget"},
+    {"source": "evict", "target": "rank", "label": "re-rank remaining"},
+    {"source": "fit", "target": "render", "label": "within budget"},
+    {"source": "rank", "target": "much", "label": "over-stuffed"},
+    {"source": "render", "target": "obs"},
+    {"source": "obs", "target": "leak", "label": "no metrics emitted"}
+  ]
+}
+```
+
 ## The Assembly Pipeline
 
 Dynamic context assembly follows a five-stage pipeline. Each stage is a distinct concern with its own failure modes and optimization surface:
@@ -1799,6 +1833,129 @@ The assembled context for a typical support query might look like:
 **Skipping deduplication**: When you query multiple sources, duplicate or near-duplicate content is inevitable. Two different document chunks from the same source page, a RAG result that matches a tool output -- these waste tokens and can confuse the model by implying that the duplicated content is especially important.
 
 **No monitoring**: Without metrics on token utilization, source distribution, drop rates, and assembly latency, you are flying blind. Context assembly bugs are insidious -- they don't crash the application, they just quietly degrade response quality.
+
+## Runtime Internals
+
+The build-system model hides the mechanics that decide whether assembly is fast and correct or a silent quality leak.
+
+### Parallel source gathering with deadlines
+
+Sources have wildly different latencies (vector search ~30ms, a tool call ~2s). The runtime fans out gathering concurrently with a per-source timeout and a partial-result policy: a slow source is dropped, not blocking. Serial gathering, or one slow source with no deadline, makes assembly latency the sum instead of the max.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "req", "label": "Request", "shape": "circle"},
+    {"id": "fan", "label": "Concurrent fan-out with per-source deadline", "shape": "diamond"},
+    {"id": "vec", "label": "Vector search (~30ms)", "shape": "rect"},
+    {"id": "tool", "label": "Tool call (~2s)", "shape": "rect"},
+    {"id": "hist", "label": "History store", "shape": "rect"},
+    {"id": "slow", "label": "Source exceeds its deadline?", "shape": "diamond"},
+    {"id": "drop", "label": "Drop slow source (partial-result policy)", "shape": "stadium"},
+    {"id": "serial", "label": "Serial / no deadline: latency = sum, not max", "shape": "stadium"},
+    {"id": "join", "label": "Join ready results", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "fan"},
+    {"source": "fan", "target": "vec"},
+    {"source": "fan", "target": "tool"},
+    {"source": "fan", "target": "hist"},
+    {"source": "fan", "target": "serial", "label": "anti-pattern"},
+    {"source": "tool", "target": "slow"},
+    {"source": "slow", "target": "drop", "label": "yes"},
+    {"source": "slow", "target": "join", "label": "no"},
+    {"source": "vec", "target": "join"},
+    {"source": "hist", "target": "join"}
+  ]
+}
+```
+
+### Cross-source ranking on a common scale
+
+Candidates arrive with incomparable scores (cosine similarity vs recency vs a tool's boolean relevance). The runtime normalizes them to one scale (or uses a learned reranker over all candidates jointly) before selection — otherwise a high-cosine chunk always beats a critical-but-low-score tool result. Cross-source calibration is the subtlest correctness bug here.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "mix", "label": "Mixed candidates", "shape": "circle"},
+    {"id": "norm", "label": "Normalize scores", "shape": "rect"},
+    {"id": "rr", "label": "Joint reranker", "shape": "rect"},
+    {"id": "ord", "label": "Unified ranking", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "mix", "target": "norm"},
+    {"source": "norm", "target": "rr"},
+    {"source": "rr", "target": "ord"}
+  ]
+}
+```
+
+### Budgeted packing with pinned regions
+
+Selection is a knapsack under the token budget: maximize total relevance subject to size, but with hard-pinned regions (system prompt, tool schemas, current user message) excluded from eviction. The runtime greedily fills by relevance/size after reserving pinned space and a response margin. Forgetting the response margin is the classic boundary failure.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "budget", "label": "Total token budget", "shape": "circle"},
+    {"id": "pin", "label": "Reserve pinned regions (system, tool schemas, current msg)", "shape": "rect"},
+    {"id": "excl", "label": "Pinned regions excluded from eviction", "shape": "rect"},
+    {"id": "margin", "label": "Response margin reserved?", "shape": "diamond"},
+    {"id": "overflow", "label": "Boundary failure: reply truncated", "shape": "stadium"},
+    {"id": "greedy", "label": "Greedy fill by relevance / size (knapsack)", "shape": "rect"},
+    {"id": "full", "label": "Remaining budget exhausted?", "shape": "diamond"},
+    {"id": "next", "label": "Add next candidate", "shape": "rect"},
+    {"id": "prompt", "label": "Final packed prompt", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "budget", "target": "pin"},
+    {"source": "pin", "target": "excl"},
+    {"source": "excl", "target": "margin"},
+    {"source": "margin", "target": "overflow", "label": "no: forgot margin"},
+    {"source": "margin", "target": "greedy", "label": "yes"},
+    {"source": "greedy", "target": "full"},
+    {"source": "full", "target": "next", "label": "no"},
+    {"source": "next", "target": "greedy"},
+    {"source": "full", "target": "prompt", "label": "yes: stop"}
+  ]
+}
+```
+
+### Write-time vs read-time composition
+
+Some context can be precomputed and stored (write-time: summaries, embeddings, denormalized profiles); some must be built per request (read-time: live tool results, current query). The runtime decision trades freshness against latency — write-time is fast but can be stale; read-time is fresh but on the critical path. Mature systems classify each source explicitly and instrument drop-rate/latency per source, since assembly bugs degrade quality without crashing — only [eval fundamentals](/eval-fundamentals) on output catches them.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "src", "label": "Context source", "shape": "circle"},
+    {"id": "fresh", "label": "Must be fresh per request?", "shape": "diamond"},
+    {"id": "wt", "label": "Write-time: precompute summaries / embeddings / profiles", "shape": "rect"},
+    {"id": "rt", "label": "Read-time: live tool result / current query", "shape": "rect"},
+    {"id": "stale", "label": "Write-time risk: staleness", "shape": "stadium"},
+    {"id": "crit", "label": "Read-time risk: on the latency critical path", "shape": "stadium"},
+    {"id": "inst", "label": "Instrument per-source drop-rate + latency", "shape": "rect"},
+    {"id": "evalcatch", "label": "Output eval catches silent assembly bugs?", "shape": "diamond"},
+    {"id": "asm", "label": "Assembled context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "src", "target": "fresh"},
+    {"source": "fresh", "target": "wt", "label": "stable"},
+    {"source": "fresh", "target": "rt", "label": "must be fresh"},
+    {"source": "wt", "target": "stale"},
+    {"source": "rt", "target": "crit"},
+    {"source": "stale", "target": "inst"},
+    {"source": "crit", "target": "inst"},
+    {"source": "inst", "target": "evalcatch"},
+    {"source": "evalcatch", "target": "asm", "label": "yes"},
+    {"source": "evalcatch", "target": "src", "label": "no: silent degradation"}
+  ]
+}
+```
 
 ## Connections to Other Topics
 

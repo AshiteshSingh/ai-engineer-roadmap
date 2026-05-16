@@ -2,6 +2,33 @@
 
 Tokenization is the critical interface between raw text and neural language models, yet it remains one of the most underexamined components of the LLM pipeline. The choice of tokenization algorithm, vocabulary size, and training data directly impacts model quality, inference speed, multilinguality, and even what tasks a model can perform. This article provides a deep technical examination of modern tokenization methods, from the foundational Byte-Pair Encoding algorithm through SentencePiece and tiktoken, and explores the engineering tradeoffs that shape vocabulary design decisions in production systems.
 
+## Mental Model
+
+The mental model for tokenization is **a fixed, lossy dictionary that the model sees the world through — it never reads characters, only token IDs**. Every capability and quirk downstream is shaped by this dictionary: how many "words" a prompt costs, why the model can't spell or do digit arithmetic reliably, why some languages cost 3× more tokens than English. Tokenization is not preprocessing you can ignore; it is the *coordinate system* the entire model is trained and served in, frozen at training time and unchangeable afterward.
+
+That reframes vocabulary design as picking a compression scheme under hard constraints: bigger vocab = shorter sequences (cheaper inference) but more embedding parameters and worse rare-token coverage. The token count *is* the cost unit for [LLM serving](/llm-serving) and the budget unit for [prompt engineering fundamentals](/prompt-engineering-fundamentals); fragile token boundaries are why [structured output](/structured-output) constrained decoding must operate at the token level, not the character level.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "text", "label": "Raw text", "shape": "circle"},
+    {"id": "vocab", "label": "Fixed vocab\n(lossy dictionary)", "shape": "rect"},
+    {"id": "ids", "label": "Token IDs", "shape": "rect"},
+    {"id": "model", "label": "Model sees\nonly IDs", "shape": "rect"},
+    {"id": "cost", "label": "Tokens = cost +\ncontext budget", "shape": "diamond"},
+    {"id": "out", "label": "Behavior + price", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "text", "target": "vocab"},
+    {"source": "vocab", "target": "ids"},
+    {"source": "ids", "target": "model"},
+    {"source": "model", "target": "cost"},
+    {"source": "cost", "target": "out"}
+  ]
+}
+```
+
 ## Why Tokenization Matters
 
 A language model does not see characters or words — it sees token IDs. Every design choice in the tokenizer cascades through the entire system:
@@ -376,6 +403,103 @@ Before committing to a tokenizer, evaluate it empirically on representative data
 - **Roundtrip fidelity**: verify that encode-then-decode is lossless for all expected inputs, including unicode edge cases, code with unusual indentation, and mixed-language text.
 - **Token boundary quality**: inspect whether token boundaries fall at linguistically or structurally meaningful points. Tokens that split words mid-morpheme or split numbers at inconsistent positions signal problems.
 - **Embedding utilization**: after training, check what fraction of the vocabulary is actually used at reasonable frequency. A vocabulary where 30% of tokens appear fewer than 100 times in the training corpus represents wasted parameters, and those rarely-seen tokens will have poorly trained embeddings (see [Article 13: Embedding Models](/embedding-models) for how embedding quality impacts downstream retrieval and similarity tasks).
+
+## Runtime Internals
+
+The "fixed lossy dictionary" model hides the mechanics that produce tokenization's notorious failure modes.
+
+### BPE merge order is the algorithm
+
+BPE is trained by repeatedly merging the most frequent adjacent pair; the *ordered merge list* is the tokenizer. At encode time it greedily applies merges in that order. The runtime consequence: tokenization is deterministic but path-dependent — the same substring tokenizes differently depending on its neighbors, which is why "  hello" and "hello" are different tokens and prompt whitespace silently changes token counts.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "chars", "label": "Characters", "shape": "circle"},
+    {"id": "merge", "label": "Apply next\nmerge rule", "shape": "rect"},
+    {"id": "more", "label": "Merge applies?", "shape": "diamond"},
+    {"id": "toks", "label": "Final tokens", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "chars", "target": "merge"},
+    {"source": "merge", "target": "more"},
+    {"source": "more", "target": "merge", "label": "yes: next rule"},
+    {"source": "more", "target": "toks", "label": "no"}
+  ]
+}
+```
+
+### Pre-tokenization regex gates everything
+
+Before BPE, a regex splits text into chunks (words, numbers, punctuation runs) and merges never cross those boundaries. This is why models are bad at arithmetic — digit grouping is an artifact of the pre-tokenizer (e.g. "1000" might be one token, "10000" two), so numbers have no consistent positional structure. The pre-tokenization pattern is a load-bearing design choice, not a detail.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "raw", "label": "Raw string", "shape": "circle"},
+    {"id": "rx", "label": "Pre-tokenizer\nregex split", "shape": "rect"},
+    {"id": "chunks", "label": "Boundary chunks", "shape": "rect"},
+    {"id": "bpe", "label": "BPE within\nchunk only", "shape": "rect"},
+    {"id": "ids", "label": "Token IDs", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "raw", "target": "rx"},
+    {"source": "rx", "target": "chunks"},
+    {"source": "chunks", "target": "bpe", "label": "no cross-boundary merge"},
+    {"source": "bpe", "target": "ids"}
+  ]
+}
+```
+
+### Byte fallback guarantees coverage
+
+Modern tokenizers (byte-level BPE, SentencePiece with byte fallback) never emit an out-of-vocabulary token: any unseen character decomposes into raw UTF-8 byte tokens. The runtime trade is robustness vs efficiency — an emoji or rare script costs many byte tokens, which is the mechanism behind the multilingual "tax" where the same sentence is far more expensive in some languages.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ch", "label": "Character", "shape": "circle"},
+    {"id": "inv", "label": "In vocab?", "shape": "diamond"},
+    {"id": "tok", "label": "Single token\n(cheap)", "shape": "rect"},
+    {"id": "bytes", "label": "UTF-8 byte tokens\n(expensive)", "shape": "rect"},
+    {"id": "seq", "label": "Token sequence", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ch", "target": "inv"},
+    {"source": "inv", "target": "tok", "label": "yes"},
+    {"source": "inv", "target": "bytes", "label": "no (fallback)"},
+    {"source": "tok", "target": "seq"},
+    {"source": "bytes", "target": "seq"}
+  ]
+}
+```
+
+### Vocabulary size as a runtime dial
+
+Vocab size trades sequence length against the embedding/softmax matrix size (vocab × d_model). Larger vocab → fewer tokens per request (cheaper attention, lower [LLM serving](/llm-serving) cost) but a bigger, sparser embedding table where rare tokens are under-trained. The runtime check is embedding utilization: a vocab where 30% of tokens are near-unused is wasted parameters and poorly-trained embeddings.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "v", "label": "Vocab size", "shape": "circle"},
+    {"id": "big", "label": "Larger?", "shape": "diamond"},
+    {"id": "short", "label": "Shorter seqs\n(cheaper inference)", "shape": "rect"},
+    {"id": "sparse", "label": "Bigger table,\nrare tokens weak", "shape": "rect"},
+    {"id": "util", "label": "Check utilization", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "v", "target": "big"},
+    {"source": "big", "target": "short", "label": "yes: + speed"},
+    {"source": "big", "target": "sparse", "label": "yes: - coverage"},
+    {"source": "short", "target": "util"},
+    {"source": "sparse", "target": "util"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

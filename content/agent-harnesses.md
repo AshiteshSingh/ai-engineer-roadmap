@@ -4,6 +4,39 @@ An agent harness is the runtime environment that wraps an LLM agent, managing it
 
 This article examines the architecture of agent harnesses in depth: the event loop that drives agent execution, the permission models that control what an agent can and cannot do, the sandboxing techniques that isolate tool execution, state management strategies, error handling patterns, and real-world harness implementations from Claude Code, Cursor, Devin, and OpenAI's code interpreter. It includes complete implementation examples in both Python and TypeScript. (For foundational agent architecture patterns, see [Agent Architectures](/agent-architectures); for the tool integration layer that harnesses manage, see [Function Calling](/function-calling); for multi-agent coordination that builds on harnesses, see [Agent Orchestration](/agent-orchestration).)
 
+## Mental Model
+
+The mental model for an agent harness is **the runtime/OS that an agent program runs inside — the LLM is the CPU, the harness is everything else**. A bare model call is one instruction; a harness is the event loop that fetches the next decision, the permission layer that mediates every syscall (tool), the sandbox that isolates execution, and the state manager that persists across the loop. The model decides *what* to do; the harness decides *whether it is allowed and what happens if it goes wrong*. Treat "the agent" as untrusted code and "the harness" as the kernel enforcing the contract.
+
+That reframes harness design as systems engineering, not prompting: the four concerns are an event loop, privilege separation, sandboxing, and durable state — exactly an OS's job. The loop body is the [agent architectures](/agent-architectures) pattern you chose; every action is mediated [function calling](/function-calling); and a harness that blindly feeds tool output back is the attack surface [adversarial prompting](/adversarial-prompting) exploits, which is why permission and sandbox layers are not optional.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "model", "label": "LLM = untrusted decision CPU", "shape": "circle"},
+    {"id": "loop", "label": "Event loop (instruction fetch)", "shape": "rect"},
+    {"id": "perm", "label": "Permission layer = syscall gate", "shape": "diamond"},
+    {"id": "irr", "label": "Irreversible action?", "shape": "diamond"},
+    {"id": "box", "label": "Sandbox (isolated execution)", "shape": "rect"},
+    {"id": "state", "label": "Durable state manager", "shape": "rect"},
+    {"id": "kernel", "label": "Harness = kernel enforcing the contract", "shape": "stadium"},
+    {"id": "safe", "label": "Bounded agent", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "model", "target": "loop", "label": "proposes action"},
+    {"source": "loop", "target": "perm"},
+    {"source": "perm", "target": "loop", "label": "denied: feed back"},
+    {"source": "perm", "target": "irr", "label": "allowed"},
+    {"source": "irr", "target": "box", "label": "no"},
+    {"source": "irr", "target": "kernel", "label": "yes: escalate"},
+    {"source": "box", "target": "state"},
+    {"source": "state", "target": "loop", "label": "next instruction"},
+    {"source": "state", "target": "safe"}
+  ]
+}
+```
+
 ## The Harness Pattern vs. Bare Agent Calls
 
 ### What Bare Agent Calls Look Like
@@ -2016,6 +2049,123 @@ Having examined the components, implementations, and real-world examples, severa
 **6. The model is an untrusted input source.** Treat every tool call from the model the same way you would treat user input in a web application: validate, sanitize, constrain. The model might be confused, hallucinating, or compromised by prompt injection. The harness is the last line of defense.
 
 **7. Design for composability.** A well-designed harness can wrap any set of tools, any LLM, any permission model. Keep the layers independent so you can swap Docker sandboxing for WASM, or swap a tiered permission model for a capability-based one, without rewriting the event loop.
+
+## Runtime Internals
+
+The "harness as OS" model hides the mechanics that decide whether an agent is safe and recoverable.
+
+### The event loop's stop conditions
+
+The core loop is: call model → parse action → if it's a final answer, return; else execute tool, append observation, repeat. The runtime fragility is *termination*: a bounded step count, a wall-clock/token budget, and a no-progress detector (same tool+args repeated) are mandatory. An event loop without all three is a runaway, not an agent — the single most common production incident.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "call", "label": "Call model", "shape": "circle"},
+    {"id": "kind", "label": "Final answer?", "shape": "diamond"},
+    {"id": "tool", "label": "Execute tool", "shape": "rect"},
+    {"id": "budget", "label": "Budget / loop\nguard ok?", "shape": "diamond"},
+    {"id": "done", "label": "Return", "shape": "circle"},
+    {"id": "halt", "label": "Force-stop", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "call", "target": "kind"},
+    {"source": "kind", "target": "done", "label": "yes"},
+    {"source": "kind", "target": "tool", "label": "no"},
+    {"source": "tool", "target": "budget"},
+    {"source": "budget", "target": "call", "label": "ok"},
+    {"source": "budget", "target": "halt", "label": "exceeded"}
+  ]
+}
+```
+
+### Permission models: deny-by-default mediation
+
+Every tool call passes through a policy: deny-by-default, allowlist by tool + argument shape (read vs write, path scope, command prefix), and escalate to a human for irreversible actions. The runtime detail that matters: permission is checked on *resolved arguments*, not the tool name — "run_shell" is fine, `run_shell("rm -rf /")` is not, and only argument-level inspection catches it.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "act", "label": "Proposed action", "shape": "circle"},
+    {"id": "pol", "label": "Allowlist +\narg inspection", "shape": "diamond"},
+    {"id": "irr", "label": "Irreversible?", "shape": "diamond"},
+    {"id": "exec", "label": "Execute", "shape": "rect"},
+    {"id": "human", "label": "Human approve", "shape": "rect"},
+    {"id": "deny", "label": "Deny", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "act", "target": "pol"},
+    {"source": "pol", "target": "deny", "label": "not allowed"},
+    {"source": "pol", "target": "irr", "label": "allowed"},
+    {"source": "irr", "target": "exec", "label": "no"},
+    {"source": "irr", "target": "human", "label": "yes"},
+    {"source": "human", "target": "exec", "label": "approved"}
+  ]
+}
+```
+
+### Tool sandboxing layers
+
+Code/shell tools execute in an isolation boundary — container, microVM, or WASM — with no ambient credentials, a filesystem jail, network egress rules, and resource/time caps. The runtime principle: even a fully hijacked agent can do only what the sandbox permits, so the blast radius is the sandbox, not the host. This is the structural backstop behind the permission layer.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "tool", "label": "Code / shell tool invocation", "shape": "circle"},
+    {"id": "iso", "label": "Isolation boundary: container / microVM / WASM", "shape": "rect"},
+    {"id": "creds", "label": "Ambient credentials stripped", "shape": "rect"},
+    {"id": "jail", "label": "Filesystem jail + network egress rules", "shape": "rect"},
+    {"id": "caps", "label": "Resource / time cap exceeded?", "shape": "diamond"},
+    {"id": "egress", "label": "Egress to non-allowlisted host?", "shape": "diamond"},
+    {"id": "ret", "label": "Return result", "shape": "circle"},
+    {"id": "kill", "label": "Kill; blast radius = sandbox, not host", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "tool", "target": "iso"},
+    {"source": "iso", "target": "creds"},
+    {"source": "creds", "target": "jail"},
+    {"source": "jail", "target": "caps"},
+    {"source": "caps", "target": "egress", "label": "within limits"},
+    {"source": "caps", "target": "kill", "label": "breach / timeout"},
+    {"source": "egress", "target": "ret", "label": "allowed host"},
+    {"source": "egress", "target": "kill", "label": "blocked"}
+  ]
+}
+```
+
+### State management and recoverable failure
+
+The harness persists conversation, tool results, and a step cursor so a crashed or interrupted run can resume instead of restarting. Combined with idempotent tool execution, this turns a mid-trajectory failure into a recoverable checkpoint. Without durable state, every transient error discards all prior expensive work — the harness equivalent of no journaling.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "step", "label": "Step completes", "shape": "circle"},
+    {"id": "persist", "label": "Persist conversation + tool results + step cursor", "shape": "rect"},
+    {"id": "idem", "label": "Tool execution idempotent?", "shape": "diamond"},
+    {"id": "fault", "label": "Crash / interrupt before next step?", "shape": "diamond"},
+    {"id": "resume", "label": "Resume from cursor", "shape": "rect"},
+    {"id": "replay", "label": "Last tool safe to replay?", "shape": "diamond"},
+    {"id": "restart", "label": "No journaling: discard all prior work", "shape": "stadium"},
+    {"id": "cont", "label": "Continue run", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "step", "target": "persist"},
+    {"source": "persist", "target": "idem"},
+    {"source": "idem", "target": "replay", "label": "yes: idempotent"},
+    {"source": "idem", "target": "restart", "label": "no: non-recoverable"},
+    {"source": "persist", "target": "fault"},
+    {"source": "fault", "target": "cont", "label": "no"},
+    {"source": "fault", "target": "resume", "label": "yes"},
+    {"source": "resume", "target": "replay"},
+    {"source": "replay", "target": "cont", "label": "safe"}
+  ]
+}
+```
 
 ## Conclusion
 

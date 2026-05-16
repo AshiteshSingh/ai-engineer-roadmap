@@ -4,6 +4,34 @@ Prompt caching is the single most accessible optimization available to engineers
 
 Understanding prompt caching sits at the intersection of several disciplines covered elsewhere in this knowledge base. The transformer attention mechanism that creates the KV cache is detailed in [Transformer Architecture](/transformer-architecture). The serving infrastructure that manages KV cache memory -- PagedAttention, continuous batching, disaggregated prefill/decode -- is covered in [Inference Optimization](/inference-optimization) and [LLM Serving](/llm-serving). The economic framework for evaluating when caching is worthwhile appears in [Cost Optimization](/cost-optimization). And the broader practice of designing what goes into the context window -- of which cache-aware prompt design is a critical technique -- is the subject of [Context Engineering](/context-engineering).
 
+## Mental Model
+
+The mental model for prompt caching is **the model already did expensive work computing the KV state for your fixed prefix — caching just stops it from redoing that on every request**. A request's cost is dominated by prefill over the system prompt + tools + few-shot examples, which are *identical* across calls. Caching stores the computed KV for that prefix so subsequent requests skip straight to the unique suffix. Everything follows from one invariant: **the cached prefix must be byte-identical and contiguous from the start of the prompt** — one changed token, or dynamic content placed before static content, busts the entire cache.
+
+So cache design is really *prompt layout*: hoist all stable content (instructions, tools, RAG corpus) to the front, push everything volatile (timestamps, user input) to the end. This is the KV-cache mechanic of [inference optimization](/inference-optimization)/[LLM serving](/llm-serving) exposed as a pricing lever, its economics are the [cost optimization](/cost-optimization) calculation, and "what to put where in the prompt" is exactly [context engineering](/context-engineering) with a caching constraint.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Request", "shape": "circle"},
+    {"id": "split", "label": "Static prefix vs\ndynamic suffix", "shape": "diamond"},
+    {"id": "hit", "label": "Prefix byte-\nidentical?", "shape": "diamond"},
+    {"id": "reuse", "label": "Reuse cached KV\n(~0.1x cost)", "shape": "rect"},
+    {"id": "full", "label": "Full prefill\n(+1.25x write)", "shape": "rect"},
+    {"id": "gen", "label": "Decode suffix", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "split"},
+    {"source": "split", "target": "hit"},
+    {"source": "hit", "target": "reuse", "label": "yes"},
+    {"source": "hit", "target": "full", "label": "no (busted)"},
+    {"source": "reuse", "target": "gen"},
+    {"source": "full", "target": "gen"}
+  ]
+}
+```
+
 ## KV Cache Fundamentals
 
 ### Why the KV Cache Exists
@@ -1563,6 +1591,107 @@ Reasoning model request:
 ```
 
 Caching is still worthwhile for reasoning models (free money is free money), but the primary cost lever shifts to controlling thinking budget. See [Cost Optimization](/cost-optimization) for reasoning model cost management strategies.
+
+## Runtime Internals
+
+The "don't redo prefill" model hides the mechanics that decide whether caching saves money or silently does nothing.
+
+### The write/read cost asymmetry
+
+The first request that populates the cache pays a *premium* (≈1.25× the input cost); subsequent hits pay ≈0.1×. So caching only wins above a break-even reuse count — a prefix used once is *more* expensive cached. The runtime decision is per-prefix: cache things reused across many requests (system prompt, tool defs, a RAG corpus classified 1000×), not one-off context.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "px", "label": "Candidate prefix", "shape": "circle"},
+    {"id": "reuse", "label": "Reused ≥ break-\neven count?", "shape": "diamond"},
+    {"id": "cache", "label": "Cache (1.25x once,\n0.1x after)", "shape": "rect"},
+    {"id": "no", "label": "Don't cache\n(full price)", "shape": "stadium"},
+    {"id": "save", "label": "Net savings", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "px", "target": "reuse"},
+    {"source": "reuse", "target": "cache", "label": "yes"},
+    {"source": "reuse", "target": "no", "label": "one-off"},
+    {"source": "cache", "target": "save"}
+  ]
+}
+```
+
+### TTL and the silent eviction
+
+Caches expire (Anthropic ~5 min; others vary). If request inter-arrival exceeds the TTL, every request is a cache *write*, not a hit — you pay the premium forever and think caching is "on." The runtime needs to either keep traffic warm, refresh the cache proactively, or detect TTL gaps from timestamps. A 0% hit rate with caching enabled is almost always a TTL or prefix-stability bug, not a config error.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "req", "label": "Request arrives", "shape": "circle"},
+    {"id": "ttl", "label": "Within TTL of\nlast write?", "shape": "diamond"},
+    {"id": "hit", "label": "Cache read (0.1x)", "shape": "rect"},
+    {"id": "miss", "label": "Cache write (1.25x)", "shape": "stadium"},
+    {"id": "warm", "label": "Keep-warm /\nrefresh", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "req", "target": "ttl"},
+    {"source": "ttl", "target": "hit", "label": "yes"},
+    {"source": "ttl", "target": "miss", "label": "no (gap)"},
+    {"source": "miss", "target": "warm", "label": "mitigate"},
+    {"source": "warm", "target": "ttl"}
+  ]
+}
+```
+
+### Cache-aware prompt layering
+
+The prefix is cached up to the *last cacheable token before the first change*. So order content by volatility: tool definitions and system prompt (never change) → few-shot examples (rarely) → retrieved context (per session) → conversation history → user message. The runtime trap is a single dynamic token (a timestamp, a request id) high in the prompt that truncates the cacheable prefix to almost nothing.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "sys", "label": "System + tools\n(static)", "shape": "circle"},
+    {"id": "few", "label": "Few-shot", "shape": "rect"},
+    {"id": "rag", "label": "Retrieved context", "shape": "rect"},
+    {"id": "hist", "label": "History", "shape": "rect"},
+    {"id": "user", "label": "User msg\n(volatile)", "shape": "rect"},
+    {"id": "bound", "label": "Cache boundary\n= last static token", "shape": "diamond"}
+  ],
+  "edges": [
+    {"source": "sys", "target": "few"},
+    {"source": "few", "target": "rag"},
+    {"source": "rag", "target": "hist"},
+    {"source": "hist", "target": "user"},
+    {"source": "rag", "target": "bound", "label": "cache ends here"}
+  ]
+}
+```
+
+### Multi-turn conversation caching
+
+Each turn appends to the conversation, so the *previous* turn's full prompt is a valid prefix of the next. With breakpoint caching, turn N reuses turn N-1's KV and only pays for the new exchange — caching cost grows with the delta, not the whole history. The runtime detail: re-summarizing or reordering history invalidates the chain, forfeiting the compounding benefit.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "t1", "label": "Turn 1\n(cache write)", "shape": "circle"},
+    {"id": "t2", "label": "Turn 2: reuse T1\n+ new exchange", "shape": "rect"},
+    {"id": "t3", "label": "Turn 3: reuse T2", "shape": "rect"},
+    {"id": "stable", "label": "History stable?", "shape": "diamond"},
+    {"id": "comp", "label": "Cost ≈ delta only", "shape": "circle"},
+    {"id": "lost", "label": "Chain broken\n(full re-pay)", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "t1", "target": "t2"},
+    {"source": "t2", "target": "t3"},
+    {"source": "t3", "target": "stable"},
+    {"source": "stable", "target": "comp", "label": "yes"},
+    {"source": "stable", "target": "lost", "label": "reordered/summarized"}
+  ]
+}
+```
 
 ## Summary of Best Practices
 

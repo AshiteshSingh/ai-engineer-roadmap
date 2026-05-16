@@ -16,13 +16,15 @@
 //! similarity are global) and differs only in output/side-effects.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 use serde::Serialize;
 
-use knowledge_ml_core::{parser, similarity::SimilarityMatrix};
+use knowledge_ml_core::{parser, readability, similarity::SimilarityMatrix};
 
 // Structure thresholds — kept byte-identical to the Python gate.
 const MIN_WORD_COUNT: usize = 1500;
@@ -34,6 +36,26 @@ const MIN_XYFLOW_BLOCKS: usize = 5;
 const RELATION_MIN_CROSSREFS: usize = 3;
 const RELATION_TOPK: usize = 5;
 const RELATION_TOPK_HITS: usize = 2;
+
+// Quality thresholds (blocking; disabled by --no-quality).
+const Q_DUP_JACCARD: f32 = 0.50; // MM/RI cross-lesson near-duplicate ceiling
+const Q_SHINGLE_K: usize = 8; // word k-shingle size
+const Q_XYFLOW_DUP_OTHERS: usize = 8; // diagram skeleton shared by ≥N other lessons
+const Q_XYFLOW_DUP_MIN_BLOCKS: usize = 3; // ≥N such blocks in a lesson → boilerplate
+const Q_FK_MIN: f32 = 10.0;
+const Q_FK_MAX: f32 = 22.0;
+const Q_TECH_MIN: f32 = 0.010;
+const Q_PROSE_PER_XYFLOW: usize = 200;
+const Q_SECTION_MIN_PROSE: usize = 120;
+
+// Categories (from parser::category_from_slug) that are NOT AI-engineering
+// topics. With --ai-only, lessons in these categories leave the loop.
+const NON_AI: [&str; 4] = [
+    "Cloud Platforms",
+    "AWS Deep Dives",
+    "Software Engineering",
+    "Other",
+];
 
 #[derive(Parser)]
 #[command(name = "content-gate")]
@@ -62,6 +84,13 @@ struct Args {
     /// Scan all lessons and write the worklist (default mode).
     #[arg(long)]
     all: bool,
+    /// Restrict the worklist/counts to AI-engineering categories only;
+    /// non-AI lessons are excluded from the loop (not gated, not failed).
+    #[arg(long)]
+    ai_only: bool,
+    /// Disable the quality tier (Q0–Q3); structure+relation only.
+    #[arg(long)]
+    no_quality: bool,
 }
 
 // ── Serialized report shapes ─────────────────────────────────────────
@@ -84,9 +113,11 @@ struct LessonReport {
     file: String,
     structure_ok: bool,
     relation_ok: bool,
+    quality_ok: bool,
     ok: bool,
     structure_issues: Vec<String>,
     relation_issues: Vec<String>,
+    quality_issues: Vec<String>,
     metrics: Metrics,
 }
 
@@ -104,6 +135,16 @@ struct Thresholds {
     relation_topk: usize,
     #[serde(rename = "relationTopKHits")]
     relation_topk_hits: usize,
+    #[serde(rename = "qDupJaccard")]
+    q_dup_jaccard: f32,
+    #[serde(rename = "qFkRange")]
+    q_fk_range: [f32; 2],
+    #[serde(rename = "qTechMin")]
+    q_tech_min: f32,
+    #[serde(rename = "qProsePerXyflow")]
+    q_prose_per_xyflow: usize,
+    #[serde(rename = "qualityEnabled")]
+    quality_enabled: bool,
 }
 
 #[derive(Serialize)]
@@ -121,6 +162,7 @@ struct Report {
     warnings: Vec<String>,
     summary: Summary,
     skipped: Vec<String>,
+    excluded_non_ai: Vec<String>,
     lessons: Vec<LessonReport>,
     worklist: Vec<String>,
 }
@@ -344,6 +386,192 @@ fn parse_lesson_slugs(articles_ts: &Path) -> Option<Vec<String>> {
     }
 }
 
+// ── Quality tier helpers (Q0–Q3) ─────────────────────────────────────
+
+/// A markdown line that is an H2 (`## …`) — exactly two hashes then ws.
+fn is_h2(line: &str) -> bool {
+    match line.strip_prefix("##") {
+        Some(rest) => {
+            let t = rest.trim_start_matches([' ', '\t']);
+            t.len() != rest.len() // whitespace consumed ⇒ not "###"/"##Foo"
+        }
+        None => false,
+    }
+}
+
+/// Body text of the `## <heading>` section (until the next H2 / EOF), with
+/// fenced code/xyflow blocks removed. None if the section is absent.
+fn section_body(content: &str, heading: &str) -> Option<String> {
+    let mut in_section = false;
+    let mut out: Vec<&str> = Vec::new();
+    for line in content.lines() {
+        if is_h2(line) {
+            if in_section {
+                break; // next H2 ends the section
+            }
+            let rest = line.strip_prefix("##").unwrap();
+            let t = rest.trim_start_matches([' ', '\t']);
+            if let Some(tail) = t.strip_prefix(heading) {
+                if tail.as_bytes().first().map_or(true, |&c| !is_word(c)) {
+                    in_section = true;
+                }
+            }
+            continue;
+        }
+        if in_section {
+            out.push(line);
+        }
+    }
+    if !in_section {
+        return None;
+    }
+    Some(strip_fences(&out.join("\n")))
+}
+
+/// Remove ```…``` fenced blocks (code or xyflow) entirely.
+fn strip_fences(s: &str) -> String {
+    let mut keep = true;
+    let mut out: Vec<&str> = Vec::new();
+    for line in s.lines() {
+        if line.trim_start().starts_with("```") {
+            keep = !keep;
+            continue;
+        }
+        if keep {
+            out.push(line);
+        }
+    }
+    out.join("\n")
+}
+
+/// Whitespace word count of fence-stripped prose (heading hashes ignored).
+fn prose_words(text: &str) -> usize {
+    strip_fences(text)
+        .split_whitespace()
+        .filter(|w| !w.chars().all(|c| c == '#'))
+        .count()
+}
+
+/// Lowercased alphanumeric-token k-shingle set, hashed to u64.
+fn shingle_set(text: &str, k: usize) -> HashSet<u64> {
+    let toks: Vec<String> = text
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_ascii_lowercase())
+        .collect();
+    let mut set = HashSet::new();
+    if toks.len() < k {
+        if !toks.is_empty() {
+            let mut h = DefaultHasher::new();
+            toks.join(" ").hash(&mut h);
+            set.insert(h.finish());
+        }
+        return set;
+    }
+    for w in toks.windows(k) {
+        let mut h = DefaultHasher::new();
+        w.join(" ").hash(&mut h);
+        set.insert(h.finish());
+    }
+    set
+}
+
+fn jaccard(a: &HashSet<u64>, b: &HashSet<u64>) -> f32 {
+    if a.is_empty() || b.is_empty() {
+        return 0.0;
+    }
+    let inter = a.intersection(b).count() as f32;
+    let uni = a.union(b).count() as f32;
+    inter / uni
+}
+
+/// Extract each ```xyflow fenced block's body.
+fn xyflow_bodies(content: &str) -> Vec<String> {
+    let mut blocks = Vec::new();
+    let mut cur: Option<Vec<&str>> = None;
+    for line in content.lines() {
+        let t = line.trim_start();
+        if cur.is_none() && t.starts_with("```xyflow") {
+            cur = Some(Vec::new());
+            continue;
+        }
+        if let Some(buf) = cur.as_mut() {
+            if t == "```" {
+                blocks.push(buf.join("\n"));
+                cur = None;
+            } else {
+                buf.push(line);
+            }
+        }
+    }
+    blocks
+}
+
+/// Validate one xyflow block against the documented schema.
+/// Ok(signature) on success; Err(reason) on any violation.
+fn xyflow_signature(body: &str) -> Result<String, String> {
+    let v: serde_json::Value =
+        serde_json::from_str(body).map_err(|e| format!("invalid JSON ({e})"))?;
+    let obj = v.as_object().ok_or("not a JSON object")?;
+    match obj.get("direction").and_then(|d| d.as_str()) {
+        Some("TD") | Some("LR") => {}
+        _ => return Err("direction must be \"TD\" or \"LR\"".into()),
+    }
+    let nodes = obj
+        .get("nodes")
+        .and_then(|n| n.as_array())
+        .ok_or("missing nodes[]")?;
+    let mut ids: HashSet<&str> = HashSet::new();
+    let mut shapes: Vec<&str> = Vec::new();
+    for (i, n) in nodes.iter().enumerate() {
+        let no = n.as_object().ok_or(format!("node {i} not an object"))?;
+        let id = no
+            .get("id")
+            .and_then(|x| x.as_str())
+            .ok_or(format!("node {i} missing string id"))?;
+        no.get("label")
+            .and_then(|x| x.as_str())
+            .ok_or(format!("node {id} missing string label"))?;
+        let shape = no
+            .get("shape")
+            .and_then(|x| x.as_str())
+            .ok_or(format!("node {id} missing shape"))?;
+        if !matches!(shape, "rect" | "circle" | "diamond" | "stadium") {
+            return Err(format!("node {id} bad shape '{shape}'"));
+        }
+        ids.insert(id);
+        shapes.push(shape);
+    }
+    let edges = obj
+        .get("edges")
+        .and_then(|e| e.as_array())
+        .ok_or("missing edges[]")?;
+    for (i, e) in edges.iter().enumerate() {
+        let eo = e.as_object().ok_or(format!("edge {i} not an object"))?;
+        let s = eo
+            .get("source")
+            .and_then(|x| x.as_str())
+            .ok_or(format!("edge {i} missing source"))?;
+        let t = eo
+            .get("target")
+            .and_then(|x| x.as_str())
+            .ok_or(format!("edge {i} missing target"))?;
+        if !ids.contains(s) {
+            return Err(format!("edge {i} source '{s}' is not a node id"));
+        }
+        if !ids.contains(t) {
+            return Err(format!("edge {i} target '{t}' is not a node id"));
+        }
+    }
+    shapes.sort_unstable();
+    Ok(format!(
+        "n{}|{}|e{}",
+        nodes.len(),
+        shapes.join(","),
+        edges.len()
+    ))
+}
+
 fn run_scan(args: &Args) -> anyhow::Result<Scan> {
     let lessons = parser::load_lessons(&args.content)?;
     let loaded: BTreeSet<String> = lessons.iter().map(|l| l.slug.clone()).collect();
@@ -389,6 +617,56 @@ fn run_scan(args: &Args) -> anyhow::Result<Scan> {
             if !b_links_back {
                 need_backlink.entry(b.clone()).or_default().insert(a.to_string());
             }
+        }
+    }
+
+    // ── Quality corpus pass (Q1 needs cross-lesson comparison) ──────
+    let quality_on = !args.no_quality;
+    struct QData {
+        mm: Option<HashSet<u64>>,
+        ri: Option<HashSet<u64>>,
+        mm_prose: usize,
+        ri_prose: usize,
+        sigs: Vec<String>,
+        xy_errs: Vec<String>,
+        prose_total: usize,
+    }
+    let mut qmap: HashMap<String, QData> = HashMap::new();
+    let mut sig_lessons: HashMap<String, HashSet<String>> = HashMap::new();
+    if quality_on {
+        for l in &lessons {
+            let mm = section_body(&l.content, "Mental Model");
+            let ri = section_body(&l.content, "Runtime Internals");
+            let mm_prose = mm.as_deref().map(prose_words).unwrap_or(0);
+            let ri_prose = ri.as_deref().map(prose_words).unwrap_or(0);
+            let mm_sh = mm.as_deref().map(|s| shingle_set(s, Q_SHINGLE_K));
+            let ri_sh = ri.as_deref().map(|s| shingle_set(s, Q_SHINGLE_K));
+            let mut sigs = Vec::new();
+            let mut xy_errs = Vec::new();
+            for (i, body) in xyflow_bodies(&l.content).into_iter().enumerate() {
+                match xyflow_signature(&body) {
+                    Ok(sig) => sigs.push(sig),
+                    Err(why) => xy_errs.push(format!("block {}: {why}", i + 1)),
+                }
+            }
+            for s in sigs.iter().collect::<BTreeSet<_>>() {
+                sig_lessons
+                    .entry(s.clone())
+                    .or_default()
+                    .insert(l.slug.clone());
+            }
+            qmap.insert(
+                l.slug.clone(),
+                QData {
+                    mm: mm_sh,
+                    ri: ri_sh,
+                    mm_prose,
+                    ri_prose,
+                    sigs,
+                    xy_errs,
+                    prose_total: prose_words(&l.content),
+                },
+            );
         }
     }
 
@@ -461,15 +739,105 @@ fn run_scan(args: &Args) -> anyhow::Result<Scan> {
         }
 
         let relation_ok = relation_issues.is_empty();
-        let ok = structure_ok && relation_ok;
+
+        // ── Quality tier (Q0–Q3) — blocking unless --no-quality ──────
+        let mut quality_issues: Vec<String> = Vec::new();
+        if quality_on {
+            if let Some(q) = qmap.get(&slug) {
+                // Q0 — xyflow JSON / schema validity
+                for e in &q.xy_errs {
+                    quality_issues.push(format!("Q0: xyflow {e}"));
+                }
+                // Q1 — MM / RI cross-lesson near-duplicate (boilerplate)
+                for (label, mine) in [("Mental Model", &q.mm), ("Runtime Internals", &q.ri)] {
+                    if let Some(mine) = mine {
+                        let mut best = 0.0f32;
+                        let mut who = String::new();
+                        for (os, oq) in &qmap {
+                            if os == &slug {
+                                continue;
+                            }
+                            let other = if label == "Mental Model" { &oq.mm } else { &oq.ri };
+                            if let Some(other) = other {
+                                let j = jaccard(mine, other);
+                                if j > best {
+                                    best = j;
+                                    who = os.clone();
+                                }
+                            }
+                        }
+                        if best >= Q_DUP_JACCARD {
+                            quality_issues.push(format!(
+                                "Q1: {label} section is {best:.2} Jaccard-similar to /{who} (ceiling {Q_DUP_JACCARD:.2}) — rewrite it lesson-specifically, drop the template"
+                            ));
+                        }
+                    }
+                }
+                // Q1 — reused xyflow skeletons
+                let dup_blocks = q
+                    .sigs
+                    .iter()
+                    .filter(|s| {
+                        sig_lessons
+                            .get(*s)
+                            .map_or(0, |set| set.iter().filter(|x| *x != &slug).count())
+                            >= Q_XYFLOW_DUP_OTHERS
+                    })
+                    .count();
+                if dup_blocks >= Q_XYFLOW_DUP_MIN_BLOCKS {
+                    quality_issues.push(format!(
+                        "Q1: {dup_blocks} xyflow diagrams reuse a skeleton shared by ≥{Q_XYFLOW_DUP_OTHERS} other lessons — make the diagrams lesson-specific"
+                    ));
+                }
+                // Q2 — readability / substance (reuses readability.rs)
+                let rm = readability::analyze_lesson(l).overall;
+                if rm.flesch_kincaid_grade < Q_FK_MIN || rm.flesch_kincaid_grade > Q_FK_MAX {
+                    quality_issues.push(format!(
+                        "Q2: Flesch-Kincaid {:.1} outside [{Q_FK_MIN:.0},{Q_FK_MAX:.0}]",
+                        rm.flesch_kincaid_grade
+                    ));
+                }
+                if rm.technical_term_density < Q_TECH_MIN {
+                    quality_issues.push(format!(
+                        "Q2: technical-term density {:.4} < {Q_TECH_MIN:.3} (filler / not substantive)",
+                        rm.technical_term_density
+                    ));
+                }
+                // Q3 — prose / diagram balance
+                if metrics.xyflow_blocks > 0 {
+                    let ratio = q.prose_total / metrics.xyflow_blocks;
+                    if ratio < Q_PROSE_PER_XYFLOW {
+                        quality_issues.push(format!(
+                            "Q3: {ratio} prose words per xyflow (min {Q_PROSE_PER_XYFLOW}) — add explanation, not just diagrams"
+                        ));
+                    }
+                }
+                if q.mm.is_some() && q.mm_prose < Q_SECTION_MIN_PROSE {
+                    quality_issues.push(format!(
+                        "Q3: Mental Model section has {} prose words (min {Q_SECTION_MIN_PROSE})",
+                        q.mm_prose
+                    ));
+                }
+                if q.ri.is_some() && q.ri_prose < Q_SECTION_MIN_PROSE {
+                    quality_issues.push(format!(
+                        "Q3: Runtime Internals section has {} prose words (min {Q_SECTION_MIN_PROSE})",
+                        q.ri_prose
+                    ));
+                }
+            }
+        }
+        let quality_ok = quality_issues.is_empty();
+        let ok = structure_ok && relation_ok && quality_ok;
         reports.push(LessonReport {
             slug: slug.clone(),
             file: format!("content/{slug}.md"),
             structure_ok,
             relation_ok,
+            quality_ok,
             ok,
             structure_issues,
             relation_issues,
+            quality_issues,
             metrics,
         });
     }
@@ -481,14 +849,33 @@ fn run_scan(args: &Args) -> anyhow::Result<Scan> {
         .cloned()
         .collect();
 
-    let pass = reports.iter().filter(|r| r.ok).count();
-    let fail = reports.len() - pass;
+    // AI-topics-only scope: lessons in non-AI categories leave the loop
+    // entirely — not gated, not failed, not counted.
+    let non_ai_slugs: BTreeSet<String> = if args.ai_only {
+        lessons
+            .iter()
+            .filter(|l| NON_AI.contains(&l.category.as_str()))
+            .map(|l| l.slug.clone())
+            .collect()
+    } else {
+        BTreeSet::new()
+    };
+    let excluded_non_ai: Vec<String> = non_ai_slugs.iter().cloned().collect();
 
-    // Worklist: failing slugs, most-issues-first, slug-asc tiebreak.
-    let mut failing: Vec<&LessonReport> = reports.iter().filter(|r| !r.ok).collect();
+    let scoped: Vec<&LessonReport> = reports
+        .iter()
+        .filter(|r| !non_ai_slugs.contains(&r.slug))
+        .collect();
+    let scoped_total = scoped.len();
+    let pass = scoped.iter().filter(|r| r.ok).count();
+    let fail = scoped_total - pass;
+
+    // Worklist: failing in-scope slugs, most-issues-first, slug-asc tiebreak.
+    let mut failing: Vec<&LessonReport> =
+        scoped.into_iter().filter(|r| !r.ok).collect();
     failing.sort_by(|a, b| {
-        let ai = a.structure_issues.len() + a.relation_issues.len();
-        let bi = b.structure_issues.len() + b.relation_issues.len();
+        let ai = a.structure_issues.len() + a.relation_issues.len() + a.quality_issues.len();
+        let bi = b.structure_issues.len() + b.relation_issues.len() + b.quality_issues.len();
         bi.cmp(&ai).then_with(|| a.slug.cmp(&b.slug))
     });
     let worklist: Vec<String> = failing.iter().map(|r| r.slug.clone()).collect();
@@ -508,15 +895,21 @@ fn run_scan(args: &Args) -> anyhow::Result<Scan> {
                 relation_min_crossrefs: RELATION_MIN_CROSSREFS,
                 relation_topk: RELATION_TOPK,
                 relation_topk_hits: RELATION_TOPK_HITS,
+                q_dup_jaccard: Q_DUP_JACCARD,
+                q_fk_range: [Q_FK_MIN, Q_FK_MAX],
+                q_tech_min: Q_TECH_MIN,
+                q_prose_per_xyflow: Q_PROSE_PER_XYFLOW,
+                quality_enabled: !args.no_quality,
             },
             warnings,
             summary: Summary {
-                total: reports.len() + skipped.len(),
+                total: scoped_total + skipped.len(),
                 skipped: skipped.len(),
                 pass,
                 fail,
             },
             skipped,
+            excluded_non_ai,
             lessons: reports,
             worklist,
         },
@@ -559,10 +952,15 @@ fn main() -> anyhow::Result<()> {
                     println!("{}", serde_json::to_string_pretty(lr)?);
                 } else {
                     eprintln!(
-                        "{slug}: ok={} structure_ok={} relation_ok={}",
-                        lr.ok, lr.structure_ok, lr.relation_ok
+                        "{slug}: ok={} structure_ok={} relation_ok={} quality_ok={}",
+                        lr.ok, lr.structure_ok, lr.relation_ok, lr.quality_ok
                     );
-                    for i in lr.structure_issues.iter().chain(lr.relation_issues.iter()) {
+                    for i in lr
+                        .structure_issues
+                        .iter()
+                        .chain(lr.relation_issues.iter())
+                        .chain(lr.quality_issues.iter())
+                    {
                         eprintln!("  - {i}");
                     }
                 }
@@ -590,4 +988,53 @@ fn main() -> anyhow::Result<()> {
         eprintln!("warnings: {}", report.warnings.join(", "));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const VALID: &str = r#"{"direction":"TD","nodes":[{"id":"a","label":"A","shape":"rect"},{"id":"b","label":"B","shape":"circle"}],"edges":[{"source":"a","target":"b"}]}"#;
+
+    #[test]
+    fn xyflow_valid_returns_signature() {
+        let sig = xyflow_signature(VALID).unwrap();
+        assert_eq!(sig, "n2|circle,rect|e1");
+    }
+
+    #[test]
+    fn xyflow_rejects_bad_json_shape_and_dangling_edge() {
+        assert!(xyflow_signature("{not json").is_err());
+        assert!(xyflow_signature(
+            r#"{"direction":"TD","nodes":[{"id":"a","label":"A","shape":"hex"}],"edges":[]}"#
+        )
+        .is_err());
+        assert!(xyflow_signature(
+            r#"{"direction":"LR","nodes":[{"id":"a","label":"A","shape":"rect"}],"edges":[{"source":"a","target":"z"}]}"#
+        )
+        .is_err());
+        assert!(xyflow_signature(
+            r#"{"direction":"DIAG","nodes":[],"edges":[]}"#
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn jaccard_identical_and_disjoint() {
+        let a = shingle_set("the mental model is a closed loop control system", 3);
+        assert!((jaccard(&a, &a) - 1.0).abs() < 1e-6);
+        let b = shingle_set("entirely different words appearing nowhere alike here", 3);
+        assert!(jaccard(&a, &b) < 0.05);
+    }
+
+    #[test]
+    fn section_body_extracts_until_next_h2() {
+        let md = "# T\n\n## Mental Model\n\nfirst para here.\n\n```rust\ncode\n```\n\nmore.\n\n## Next\n\nignored.";
+        let body = section_body(md, "Mental Model").unwrap();
+        assert!(body.contains("first para here."));
+        assert!(body.contains("more."));
+        assert!(!body.contains("ignored."));
+        assert!(!body.contains("code")); // fenced block stripped
+        assert!(section_body(md, "Runtime Internals").is_none());
+    }
 }

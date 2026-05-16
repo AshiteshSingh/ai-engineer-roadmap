@@ -3,6 +3,31 @@
 ## The 30-Second Pitch
 Embeddings are dense, low-dimensional vector representations of discrete, high-dimensional data—like words, sentences, or images. They solve the problem of making complex, unstructured data computationally tractable for machine learning models by capturing semantic meaning and relationships in a continuous vector space. A team would pick embeddings over simpler encodings (like one-hot vectors) because they enable models to understand similarity (e.g., "king" is to "queen" as "man" is to "woman"), reduce dimensionality for efficiency, and serve as a powerful, transferable foundation for downstream AI tasks like search, recommendation, and classification.
 
+## Mental Model
+
+The mental model for embeddings is a **learned map where distance means meaning**. Discrete things (words, sentences, images) are placed as points in a continuous space such that *semantically similar things land near each other*. Everything downstream — search, RAG retrieval, clustering, classification — is just a geometry operation (nearest-neighbor, dot product, cluster) on that map. The model's only job is to make "near" mean "similar enough for your task".
+
+Two consequences follow. First, an embedding is only as good as the *objective it was trained for*: a model tuned for semantic similarity is not automatically good at code or multilingual retrieval — that is the [embedding models](/embedding-models) selection problem. Second, the map is useless without an index that can answer "what's near this point?" at scale, which is the [vector databases](/vector-databases) problem.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "raw", "label": "Text / image", "shape": "circle"},
+    {"id": "enc", "label": "Encoder", "shape": "rect"},
+    {"id": "vec", "label": "Dense vector", "shape": "rect"},
+    {"id": "space", "label": "Vector space\n(near = similar)", "shape": "rect"},
+    {"id": "op", "label": "Geometry op\nkNN / dot / cluster", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "raw", "target": "enc"},
+    {"source": "enc", "target": "vec"},
+    {"source": "vec", "target": "space"},
+    {"source": "space", "target": "op"}
+  ]
+}
+```
+
 ## How It Actually Works
 The core mental model is a mapping function: `f(item) -> vector`. This function is learned, typically by a neural network, such that the geometric relationships (distance, direction) in the resulting vector space reflect the semantic relationships of the original items.
 
@@ -188,6 +213,96 @@ The batch script (`batchEmbeddings.js`) would:
 *   **CI/CD:** Your embedding pipeline code and the services that consume vectors are part of the same codebase and CI/CD flow. You need to version your embedding models in the pipeline (e.g., `text-embedding-ada-002` vs `-3`) just like any other dependency, as a change can alter your entire vector space and require a re-indexing step in deployment.
 *   **Microservices:** The "Embedding Service" or "Vector Search Service" is a prime candidate to be its own microservice. It exposes a clean API (`POST /embed`, `GET /search`) and encapsulates all logic related to model choice, chunking, caching, and vector DB interactions. This follows the Single Responsibility Principle.
 *   **Kubernetes:** You'll deploy your embedding pipeline as a **CronJob** and your vector search service as a **Deployment** with horizontal pod autoscaling based on QPS. You'll manage secrets for API keys via **Secrets**, and configs for model parameters via **ConfigMaps**. The vector database client in your service needs to be configured for connection pooling suitable for the Kubernetes environment.
+
+## Runtime Internals
+
+The map metaphor hides the mechanics that decide whether retrieval actually works in production.
+
+### Pooling: token vectors → one vector
+
+A transformer emits one vector *per token*; an embedding is a single vector, so a pooling step (mean-pool, CLS, or last-token) collapses them. The pooling choice is not cosmetic — mismatched pooling between index time and query time silently destroys recall.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "tok", "label": "Token vectors", "shape": "circle"},
+    {"id": "pool", "label": "Pool\n(mean/CLS/last)", "shape": "rect"},
+    {"id": "norm", "label": "L2 normalize", "shape": "rect"},
+    {"id": "emb", "label": "Embedding", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "tok", "target": "pool"},
+    {"source": "pool", "target": "norm"},
+    {"source": "norm", "target": "emb"}
+  ]
+}
+```
+
+### Normalization and the metric
+
+Cosine similarity is just a dot product on L2-normalized vectors. If you normalize at index time but not query time (or mix metrics), similarity scores become meaningless. The rule: pick one metric, normalize consistently on both sides.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "Query vec", "shape": "circle"},
+    {"id": "n", "label": "Normalized?", "shape": "diamond"},
+    {"id": "dot", "label": "Dot = cosine", "shape": "rect"},
+    {"id": "bad", "label": "Scale-skewed\nscores", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "q", "target": "n"},
+    {"source": "n", "target": "dot", "label": "yes (both sides)"},
+    {"source": "n", "target": "bad", "label": "no / mixed"}
+  ]
+}
+```
+
+### ANN index: trading recall for speed
+
+Exact nearest-neighbor is O(N); production uses ANN (HNSW/IVF) which trades a little recall for huge speed. The runtime knobs (HNSW `ef`, IVF `nprobe`) are a recall/latency dial you must tune against real query load.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "query", "label": "Query vec", "shape": "circle"},
+    {"id": "ann", "label": "ANN index\n(HNSW/IVF)", "shape": "rect"},
+    {"id": "knob", "label": "ef / nprobe", "shape": "diamond"},
+    {"id": "cand", "label": "Top-k candidates", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "query", "target": "ann"},
+    {"source": "ann", "target": "knob"},
+    {"source": "knob", "target": "cand", "label": "higher = recall"},
+    {"source": "knob", "target": "ann", "label": "lower = speed"}
+  ]
+}
+```
+
+### Re-embedding and drift
+
+Embeddings are tied to a model version. Upgrading the model means *re-embedding the entire corpus* — query and index vectors from different model versions are not comparable. This is the operational cost the [chunking strategies](/chunking-strategies) decision compounds, since changing chunking also forces a full re-embed.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "v1", "label": "Index @ model v1", "shape": "circle"},
+    {"id": "up", "label": "Model upgrade?", "shape": "diamond"},
+    {"id": "re", "label": "Re-embed whole\ncorpus", "shape": "rect"},
+    {"id": "v2", "label": "Index @ v2\n(consistent)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "v1", "target": "up"},
+    {"source": "up", "target": "v1", "label": "no"},
+    {"source": "up", "target": "re", "label": "yes"},
+    {"source": "re", "target": "v2"}
+  ]
+}
+```
 
 ## Red Flags to Avoid
 *   **"We can just train our own embeddings from scratch."** For almost all real-world applications, this is a massive waste of time and compute. Acknowledge the power of pre-trained models.

@@ -10,6 +10,34 @@ As organizations integrate LLM capabilities across multiple products and teams, 
 - ML-based model routers (Martian, Not Diamond, Unify) select the optimal model per request, cutting costs by 40–60% at equivalent quality compared to always using a frontier model.
 - The gateway is the best place to enforce compliance: geographic routing, PII filtering, and immutable audit logs can be applied centrally without modifying application code.
 
+## Mental Model
+
+The mental model for an AI gateway is **a reverse proxy that speaks "LLM" instead of "HTTP"**. Just as an API gateway sits between clients and microservices to centralize auth, rate limiting, and observability, an AI gateway sits between your application and one-or-many model providers to centralize the concerns that are *specific to LLM traffic*: token-aware rate limiting, semantic caching, provider fallback, cost attribution, and prompt/PII governance. The application calls one stable endpoint; the gateway decides which provider actually serves the request.
+
+The single idea that organizes everything below: **every cross-cutting concern that would otherwise be copy-pasted into every service moves to the gateway.** That makes it the natural control point for the [LLM serving](/llm-serving) economics (which model, batched or not, how much it costs) and a core piece of mature [production patterns](/production-patterns) — the place you change a routing policy once instead of redeploying ten services.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "app", "label": "Application", "shape": "circle"},
+    {"id": "gw", "label": "AI Gateway", "shape": "rect"},
+    {"id": "pol", "label": "Policy\n(rate / cache / route)", "shape": "diamond"},
+    {"id": "p1", "label": "Provider A", "shape": "rect"},
+    {"id": "p2", "label": "Provider B", "shape": "rect"},
+    {"id": "resp", "label": "Response", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "app", "target": "gw", "label": "one stable endpoint"},
+    {"source": "gw", "target": "pol"},
+    {"source": "pol", "target": "p1", "label": "primary"},
+    {"source": "pol", "target": "p2", "label": "fallback"},
+    {"source": "p1", "target": "resp"},
+    {"source": "p2", "target": "resp"}
+  ]
+}
+```
+
 ## Why AI Gateways Exist
 
 Consider an organization with five teams, each building LLM-powered features. Without a gateway, each team independently:
@@ -1242,6 +1270,107 @@ The gateway can apply different PII policies per team or data classification lev
 > **Note:** Regex alone is not sufficient for reliable PII detection. Supplement pattern matching with an NER model to catch names, addresses, and other unstructured personal data that regexes miss.
 
 For organizations operating under the EU AI Act or similar regulatory frameworks, the gateway's compliance layer provides the technical controls that governance policies require. The gateway's centralized audit log, combined with its PII filtering and geographic routing capabilities, directly addresses the transparency and accountability obligations that AI regulations impose. For a thorough examination of AI governance requirements and how to build compliant systems, see [Article 47: AI Governance](/ai-governance).
+
+## Runtime Internals
+
+The proxy abstraction hides the mechanics that make a gateway fast and safe instead of a single point of failure.
+
+### Token-aware rate limiting
+
+LLM rate limiting is not request-per-second — it is *tokens*-per-minute, and the token count is only known *after* generation. The runtime trick is a two-phase reservation: estimate tokens up front, reserve against the budget, then reconcile with the actual usage on completion. Getting this wrong either over-throttles or lets cost run away.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Request", "shape": "circle"},
+    {"id": "est", "label": "Estimate tokens", "shape": "rect"},
+    {"id": "res", "label": "Budget left?", "shape": "diamond"},
+    {"id": "call", "label": "Call provider", "shape": "rect"},
+    {"id": "rec", "label": "Reconcile\nactual usage", "shape": "rect"},
+    {"id": "rej", "label": "429 reject", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "req", "target": "est"},
+    {"source": "est", "target": "res"},
+    {"source": "res", "target": "call", "label": "yes"},
+    {"source": "res", "target": "rej", "label": "no"},
+    {"source": "call", "target": "rec"}
+  ]
+}
+```
+
+### Fallback chains and circuit breaking
+
+A provider outage must not become your outage. The gateway wraps each provider in a circuit breaker: on repeated failures it opens the breaker and routes to the next provider in the chain, periodically half-opening to probe recovery. The subtle bug is *retry storms* — retrying a timed-out request against every provider amplifies load; bounded, jittered retries are mandatory. This is the same resilience reasoning surfaced in [agent debugging](/agent-debugging) when a tool call flaps.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "call", "label": "Call primary", "shape": "circle"},
+    {"id": "cb", "label": "Breaker open?", "shape": "diamond"},
+    {"id": "fb", "label": "Next provider", "shape": "rect"},
+    {"id": "ok", "label": "Response", "shape": "circle"},
+    {"id": "probe", "label": "Half-open probe", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "call", "target": "cb"},
+    {"source": "cb", "target": "ok", "label": "closed: ok"},
+    {"source": "cb", "target": "fb", "label": "open"},
+    {"source": "fb", "target": "ok"},
+    {"source": "cb", "target": "probe", "label": "cooldown"},
+    {"source": "probe", "target": "call"}
+  ]
+}
+```
+
+### Semantic caching
+
+Exact-match caching barely helps LLM traffic (prompts vary). Semantic caching embeds the request and serves a cached response when cosine similarity to a prior request exceeds a threshold. The danger is a too-loose threshold returning a *plausible but wrong* cached answer — cache correctness becomes a retrieval-precision problem, and the embedding/threshold choice is exactly an [function calling](/function-calling)-style contract: right shape, wrong content is worse than a miss.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Request", "shape": "circle"},
+    {"id": "emb", "label": "Embed", "shape": "rect"},
+    {"id": "sim", "label": "sim ≥ τ?", "shape": "diamond"},
+    {"id": "hit", "label": "Serve cached", "shape": "rect"},
+    {"id": "miss", "label": "Call provider\n+ store", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "q", "target": "emb"},
+    {"source": "emb", "target": "sim"},
+    {"source": "sim", "target": "hit", "label": "yes"},
+    {"source": "sim", "target": "miss", "label": "no"}
+  ]
+}
+```
+
+### Edge placement and the latency tax
+
+A gateway adds a hop. Running it at the edge (close to the user, or co-located with the app) keeps the added latency in the single-digit-millisecond range; a poorly placed gateway can add more latency than it saves via caching. This is an [edge deployment](/edge-deployment) decision: the gateway belongs where the request already is, not in a distant region.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "user", "label": "User", "shape": "circle"},
+    {"id": "edge", "label": "Edge gateway", "shape": "rect"},
+    {"id": "near", "label": "Cache / policy\n(sub-ms)", "shape": "rect"},
+    {"id": "prov", "label": "Provider", "shape": "rect"},
+    {"id": "resp", "label": "Response", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "user", "target": "edge"},
+    {"source": "edge", "target": "near"},
+    {"source": "near", "target": "prov", "label": "on miss"},
+    {"source": "near", "target": "resp", "label": "on hit"},
+    {"source": "prov", "target": "resp"}
+  ]
+}
+```
 
 ## Key Takeaways
 

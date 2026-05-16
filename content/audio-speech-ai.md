@@ -10,6 +10,36 @@ The audio and speech AI landscape has undergone a radical transformation with th
 - **Streaming at every stage** — ASR, LLM, and TTS simultaneously — is essential for sub-second voice agent response times
 - **Voice cloning requires explicit consent, audio watermarking (AudioSeal), and regulatory compliance** — treat it as a high-risk capability from day one
 
+## Mental Model
+
+The one mental model that organizes all of speech AI is the **latency budget around a turn-taking loop**. A voice agent is a cycle: human speaks → ASR transcribes → LLM reasons → TTS synthesizes → human hears → repeats. Perceived quality is dominated not by any single model's accuracy but by the *end-to-end latency of that loop* and by *where you can overlap stages*. Every architectural choice (streaming ASR, speculative LLM decoding, chunked TTS, or collapsing the whole loop into one speech-to-speech model) is an attack on the same budget: get total turn latency under ~800 ms or the conversation feels broken.
+
+So reason about speech systems as a pipeline with a deadline, not as three independent models. The reasoning step is just an [conversational AI](/conversational-ai) problem with a hard real-time constraint, and the deployment economics are the same [LLM serving](/llm-serving) trade-offs (batching vs latency) seen everywhere else, only stricter.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "user", "label": "Human speaks", "shape": "circle"},
+    {"id": "asr", "label": "Streaming ASR", "shape": "rect"},
+    {"id": "llm", "label": "LLM reason", "shape": "rect"},
+    {"id": "tts", "label": "Chunked TTS", "shape": "rect"},
+    {"id": "hear", "label": "Human hears", "shape": "circle"},
+    {"id": "budget", "label": "< 800ms turn budget", "shape": "diamond"}
+  ],
+  "edges": [
+    {"source": "user", "target": "asr"},
+    {"source": "asr", "target": "llm", "label": "partial hyps"},
+    {"source": "llm", "target": "tts", "label": "token stream"},
+    {"source": "tts", "target": "hear"},
+    {"source": "hear", "target": "user", "label": "next turn"},
+    {"source": "asr", "target": "budget"},
+    {"source": "llm", "target": "budget"},
+    {"source": "tts", "target": "budget"}
+  ]
+}
+```
+
 ## Automatic Speech Recognition: The Whisper Revolution
 
 ### Whisper Architecture
@@ -659,6 +689,104 @@ Building a production voice agent from individual ASR, LLM, and TTS components r
 | Latency optimization | Manual tuning | Managed | Managed |
 
 For teams with strong engineering capacity that need fine-grained control over every pipeline component, building on LiveKit (open-source WebRTC framework) with pluggable ASR/TTS remains viable. For teams that want to ship a voice agent quickly and iterate on conversation design rather than infrastructure, managed platforms provide a compelling tradeoff. See Article 52 on conversational AI for guidance on designing the conversation logic itself.
+
+## Runtime Internals
+
+The pipeline view above hides where real systems actually break. This section drills into the runtime mechanics.
+
+### Streaming ASR: partial hypotheses and endpointing
+
+Streaming ASR does not wait for silence — it emits *partial* hypotheses that get revised as more audio arrives, and a separate *endpointer* decides when the turn is over. Two failure modes dominate: an endpointer that fires too early (clips the user) or too late (adds dead air). The runtime trick is to start LLM prefill speculatively on the partial transcript and discard it if the final transcript diverges.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "audio", "label": "Audio frames", "shape": "circle"},
+    {"id": "enc", "label": "Encoder", "shape": "rect"},
+    {"id": "part", "label": "Partial hypothesis", "shape": "rect"},
+    {"id": "ep", "label": "Endpoint?", "shape": "diamond"},
+    {"id": "fin", "label": "Final transcript", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "audio", "target": "enc"},
+    {"source": "enc", "target": "part"},
+    {"source": "part", "target": "ep"},
+    {"source": "ep", "target": "enc", "label": "no: keep listening"},
+    {"source": "ep", "target": "fin", "label": "yes"}
+  ]
+}
+```
+
+### TTS as audio-token language modeling
+
+Modern TTS treats speech as autoregressive generation over discrete audio codec tokens, then a vocoder decodes tokens to waveform. Because it is autoregressive, you can *stream* it: emit the first audio chunk after the first few tokens instead of waiting for the whole utterance — the single biggest latency win in the TTS stage.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "text", "label": "Text", "shape": "circle"},
+    {"id": "lm", "label": "Audio-token LM", "shape": "rect"},
+    {"id": "codec", "label": "Codec tokens", "shape": "rect"},
+    {"id": "voc", "label": "Vocoder", "shape": "rect"},
+    {"id": "chunk", "label": "Stream chunk", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "text", "target": "lm"},
+    {"source": "lm", "target": "codec"},
+    {"source": "codec", "target": "voc"},
+    {"source": "voc", "target": "chunk"},
+    {"source": "chunk", "target": "lm", "label": "next chunk"}
+  ]
+}
+```
+
+### Barge-in and full-duplex
+
+A natural conversation lets the human interrupt mid-response. That requires full-duplex: keep the mic open *while* TTS plays, run echo cancellation so the agent doesn't transcribe its own voice, and on detected speech immediately cancel in-flight TTS and LLM generation. Barge-in handling is what separates a demo from a usable agent.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "speak", "label": "Agent speaking", "shape": "circle"},
+    {"id": "mic", "label": "Mic open + AEC", "shape": "rect"},
+    {"id": "vad", "label": "User speech?", "shape": "diamond"},
+    {"id": "cancel", "label": "Cancel TTS + LLM", "shape": "rect"},
+    {"id": "listen", "label": "Switch to listen", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "speak", "target": "mic"},
+    {"source": "mic", "target": "vad"},
+    {"source": "vad", "target": "speak", "label": "no"},
+    {"source": "vad", "target": "cancel", "label": "yes (barge-in)"},
+    {"source": "cancel", "target": "listen"}
+  ]
+}
+```
+
+### Speech-to-speech collapse
+
+End-to-end speech-to-speech models delete the ASR/TTS boundaries entirely: audio in, audio out, one model. This removes inter-stage latency and preserves prosody/emotion that a text bottleneck destroys — at the cost of weaker tool-use and harder debugging, since there is no intermediate transcript to inspect. The architecture trade-off mirrors the broader [model architectures](/model-architectures) tension between modular and monolithic designs.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "ain", "label": "Audio in", "shape": "circle"},
+    {"id": "pipe", "label": "ASR→LLM→TTS\n(modular)", "shape": "rect"},
+    {"id": "s2s", "label": "Speech-to-speech\n(monolithic)", "shape": "rect"},
+    {"id": "aout", "label": "Audio out", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "ain", "target": "pipe", "label": "debuggable"},
+    {"source": "ain", "target": "s2s", "label": "low latency"},
+    {"source": "pipe", "target": "aout"},
+    {"source": "s2s", "target": "aout"}
+  ]
+}
+```
 
 ## Cross-References
 

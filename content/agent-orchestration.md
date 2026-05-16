@@ -2,6 +2,35 @@
 
 Orchestration is the discipline of coordinating multiple agents, models, or processing stages into a coherent system that accomplishes goals no single agent could handle alone. While a single ReAct agent with tools can solve many problems (see [Agent Architectures](/agent-architectures)), production workloads demand routing decisions, specialist delegation, parallel execution, human approval gates, and graceful degradation under failure. This article provides a deep technical treatment of orchestration patterns -- from simple routers that dispatch to the right model, through handoff protocols that transfer context between agents, to full supervisor architectures that decompose tasks, delegate to specialist teams, and aggregate results. These patterns form the connective tissue between individual agent capabilities and the complex, multi-step workflows required by real applications.
 
+## Mental Model
+
+The mental model for agent orchestration is **distributed systems, where the workers happen to be LLMs**. The moment you have more than one agent, the hard problems are not "prompting" — they are routing (who handles this?), context transfer (handoffs without losing state), aggregation (merging concurrent results), partial failure (one specialist dies, the system must not), and consistency of shared state. These are the same problems as microservices, with one twist: every "service" is non-deterministic and can fail by producing confident nonsense, not just by erroring.
+
+So choose an orchestration topology the way you choose a distributed architecture: by the failure and coordination model the task needs. A *router* is stateless dispatch; a *supervisor* is a coordinator that delegates and tolerates subgraph failure; a *DAG* is a fixed pipeline; *fan-out/fan-in* is map-reduce. Each agent's internal loop is its [agent architectures](/agent-architectures) choice run inside a [agent harnesses](/agent-harnesses) sandbox; shared cross-agent state is a [memory architectures](/memory-architectures) problem; and whether the whole system worked is judged on the *joint trajectory* via [agent evaluation](/agent-evaluation).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "task", "label": "Task", "shape": "circle"},
+    {"id": "topo", "label": "Coordination\nmodel?", "shape": "diamond"},
+    {"id": "route", "label": "Router\n(dispatch)", "shape": "rect"},
+    {"id": "sup", "label": "Supervisor\n(delegate)", "shape": "rect"},
+    {"id": "dag", "label": "DAG / fan-out\n(pipeline)", "shape": "rect"},
+    {"id": "merge", "label": "Aggregate +\ntolerate failure", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "task", "target": "topo"},
+    {"source": "topo", "target": "route", "label": "pick one"},
+    {"source": "topo", "target": "sup", "label": "decompose"},
+    {"source": "topo", "target": "dag", "label": "fixed stages"},
+    {"source": "route", "target": "merge"},
+    {"source": "sup", "target": "merge"},
+    {"source": "dag", "target": "merge"}
+  ]
+}
+```
+
 ## Why Orchestrate? The Limits of Single-Agent Systems
 
 A single agent -- one LLM with a system prompt, a set of tools, and a loop -- works remarkably well for constrained tasks. But as complexity grows, single-agent systems hit several walls:
@@ -2094,6 +2123,103 @@ class ProductionOrchestrator:
         )
         self.tracer.end_span(span)
         return Response(content=result, trace_id=trace_id_var.get())
+```
+
+## Runtime Internals
+
+The "distributed systems with LLM workers" model hides the mechanics that decide whether orchestration scales or deadlocks.
+
+### Routing: classify then dispatch
+
+A router is a classifier (LLM or rules) that maps a request to a handler. The runtime risk is misroute confidence — a wrong route returns a fluent answer from the wrong specialist with no error. Robust routers attach a confidence/uncertainty signal and have a fallback (default agent or clarify) rather than always committing to the top class.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Request", "shape": "circle"},
+    {"id": "clf", "label": "Classify intent", "shape": "rect"},
+    {"id": "conf", "label": "Confident?", "shape": "diamond"},
+    {"id": "spec", "label": "Specialist agent", "shape": "rect"},
+    {"id": "fb", "label": "Default / clarify", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "req", "target": "clf"},
+    {"source": "clf", "target": "conf"},
+    {"source": "conf", "target": "spec", "label": "yes"},
+    {"source": "conf", "target": "fb", "label": "no"}
+  ]
+}
+```
+
+### Handoffs: transferring context, not just control
+
+A handoff must move the *relevant* state (goal, constraints, progress) to the next agent without dumping the entire transcript (cost, distraction). The runtime mechanism is a structured handoff payload — a summary plus pinned facts — not raw history. Lossy handoffs cause the receiving agent to redo work or contradict prior decisions.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "a", "label": "Agent A", "shape": "circle"},
+    {"id": "pack", "label": "Build handoff\npayload", "shape": "rect"},
+    {"id": "summ", "label": "Summary +\npinned facts", "shape": "rect"},
+    {"id": "b", "label": "Agent B resumes", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "a", "target": "pack"},
+    {"source": "pack", "target": "summ"},
+    {"source": "summ", "target": "b"}
+  ]
+}
+```
+
+### Supervisor with partial-failure tolerance
+
+A supervisor `ainvoke`s specialist subgraphs and must not crash when one fails. The runtime pattern records per-subgraph errors in a results map and proceeds with whatever succeeded, degrading gracefully. The anti-pattern is fail-fast: one flaky specialist taking down a multi-agent run that could have returned a partial answer.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "sup", "label": "Supervisor", "shape": "circle"},
+    {"id": "s1", "label": "Specialist 1", "shape": "rect"},
+    {"id": "s2", "label": "Specialist 2", "shape": "rect"},
+    {"id": "s3", "label": "Specialist 3", "shape": "rect"},
+    {"id": "merge", "label": "Merge + record\nsubgraph_errors", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "sup", "target": "s1"},
+    {"source": "sup", "target": "s2"},
+    {"source": "sup", "target": "s3"},
+    {"source": "s1", "target": "merge"},
+    {"source": "s2", "target": "merge"},
+    {"source": "s3", "target": "merge", "label": "error tolerated"}
+  ]
+}
+```
+
+### Fan-out/fan-in and circuit breaking
+
+Parallel delegation (map) plus result aggregation (reduce) needs bounded concurrency, per-branch timeouts, and a circuit breaker around each remote agent so a degraded downstream does not cascade. The runtime detail: aggregation must define what "enough successful branches" means up front, or one slow branch stalls the whole join indefinitely.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "in", "label": "Task", "shape": "circle"},
+    {"id": "fan", "label": "Fan-out\n(bounded)", "shape": "diamond"},
+    {"id": "w", "label": "Worker agents\n(breaker each)", "shape": "rect"},
+    {"id": "quorum", "label": "Enough done?", "shape": "diamond"},
+    {"id": "out", "label": "Aggregate", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "in", "target": "fan"},
+    {"source": "fan", "target": "w"},
+    {"source": "w", "target": "quorum"},
+    {"source": "quorum", "target": "w", "label": "wait / timeout"},
+    {"source": "quorum", "target": "out", "label": "quorum met"}
+  ]
+}
 ```
 
 ## Design Principles and Tradeoffs

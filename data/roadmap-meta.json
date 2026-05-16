@@ -92,23 +92,12 @@
       "name": "Appendix · Other Clouds & Platforms",
       "slug": "appendix-clouds",
       "icon": "☁",
-      "description": "Beyond the edge — AWS/Azure/GCP, containers and Kubernetes for comparison and context",
+      "description": "Beyond the edge — GCP, containers and Kubernetes for comparison and context",
       "gradientFrom": "var(--sky-9)",
       "gradientTo": "var(--sky-11)",
       "sortOrder": 8,
       "lessonRangeLo": 80,
-      "lessonRangeHi": 84
-    },
-    {
-      "name": "Appendix · AWS Deep Dives",
-      "slug": "appendix-aws",
-      "icon": "📦",
-      "description": "Beyond the edge — deep-dive reference guides for core AWS services",
-      "gradientFrom": "var(--amber-9)",
-      "gradientTo": "var(--amber-11)",
-      "sortOrder": 9,
-      "lessonRangeLo": 85,
-      "lessonRangeHi": 93
+      "lessonRangeHi": 82
     },
     {
       "name": "Appendix · Engineering & Communication",
@@ -117,9 +106,9 @@
       "description": "Beyond the edge — timeless engineering principles, LlamaIndex, and communication skills",
       "gradientFrom": "var(--slate-9)",
       "gradientTo": "var(--slate-11)",
-      "sortOrder": 10,
-      "lessonRangeLo": 94,
-      "lessonRangeHi": 102
+      "sortOrder": 9,
+      "lessonRangeLo": 83,
+      "lessonRangeHi": 91
     }
   ],
   "lessonNumber": {
@@ -202,28 +191,17 @@
     "dataset-curation": 77,
     "continual-learning": 78,
     "distillation-compression": 79,
-    "aws": 80,
-    "azure": 81,
-    "gcp": 82,
-    "docker": 83,
-    "kubernetes": 84,
-    "aws-lambda-serverless": 85,
-    "aws-api-gateway-networking": 86,
-    "aws-iam-security": 87,
-    "aws-compute-containers": 88,
-    "aws-storage-s3": 89,
-    "aws-cicd-devops": 90,
-    "aws-architecture": 91,
-    "aws-ai-ml-services": 92,
-    "dynamodb-data-services": 93,
-    "microservices": 94,
-    "ci-cd": 95,
-    "nodejs": 96,
-    "solid-principles": 97,
-    "acid-properties": 98,
-    "postgresql-joins": 99,
-    "foreign-keys": 100,
-    "llamaindex": 101,
-    "public-speaking": 102
+    "gcp": 80,
+    "docker": 81,
+    "kubernetes": 82,
+    "microservices": 83,
+    "ci-cd": 84,
+    "nodejs": 85,
+    "solid-principles": 86,
+    "acid-properties": 87,
+    "postgresql-joins": 88,
+    "foreign-keys": 89,
+    "llamaindex": 90,
+    "public-speaking": 91
   }
 }

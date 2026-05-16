@@ -46,10 +46,7 @@ const LESSON_SLUGS = [
   "vision-language-models", "audio-speech-ai", "ai-for-code", "conversational-ai",
   "search-recommendations", "production-patterns", "langgraph",
   "langgraph-red-teaming", "llamaindex", "ai-engineer-roadmap",
-  "aws", "azure", "gcp", "docker", "kubernetes",
-  "aws-lambda-serverless", "aws-api-gateway-networking", "aws-iam-security",
-  "aws-compute-containers", "aws-storage-s3", "aws-cicd-devops",
-  "aws-architecture", "aws-ai-ml-services", "dynamodb-data-services",
+  "gcp", "docker", "kubernetes",
   "microservices", "ci-cd", "nodejs", "solid-principles", "acid-properties",
 ];
 
@@ -65,16 +62,11 @@ const CATEGORIES: [number, number, string, string][] = [
   [59, 65, "Safety & Alignment", "🛡"],
   [66, 69, "Multimodal AI", "👁"],
   [70, 75, "Applied AI & Production", "🚀"],
-  [76, 80, "Cloud Platforms", "☁"],
-  [81, 89, "AWS Deep Dives", "☁"],
-  [90, 94, "Software Engineering", "🏗"],
+  [76, 78, "Cloud Platforms", "☁"],
+  [79, 83, "Software Engineering", "🏗"],
 ];
 
-const AWS_DEEP_DIVE_SLUGS = new Set([
-  "aws-lambda-serverless", "aws-api-gateway-networking", "aws-iam-security",
-  "aws-compute-containers", "aws-storage-s3", "aws-cicd-devops",
-  "aws-architecture", "aws-ai-ml-services", "dynamodb-data-services",
-]);
+const AWS_DEEP_DIVE_SLUGS = new Set<string>([]);
 
 /** Slug-derived titles are sometimes poor — override those here */
 const TITLE_OVERRIDES: Record<string, string> = {
@@ -90,15 +82,6 @@ const TITLE_OVERRIDES: Record<string, string> = {
   "ai-engineer-roadmap": "AI Engineer Roadmap",
   "ai-governance": "AI Governance & Policy",
   "deepeval-synthesizer": "DeepEval Synthesizer",
-  "dynamodb-data-services": "DynamoDB & Data Services",
-  "aws-api-gateway-networking": "AWS API Gateway & Networking",
-  "aws-iam-security": "AWS IAM & Security",
-  "aws-compute-containers": "AWS Compute & Containers",
-  "aws-storage-s3": "AWS S3 & Storage",
-  "aws-cicd-devops": "AWS CI/CD & DevOps",
-  "aws-ai-ml-services": "AWS AI/ML Services",
-  "aws-lambda-serverless": "AWS Lambda & Serverless",
-  "aws-architecture": "AWS Architecture Patterns",
   "lora-adapters": "LoRA & QLoRA Adapters",
   "solid-principles": "SOLID Principles",
   "acid-properties": "ACID Properties",

@@ -2,6 +2,38 @@
 
 Deploying large language models in production requires navigating the tension between model quality and computational cost, a tension that model compression techniques directly address. This article provides a technical deep-dive into knowledge distillation, structured and unstructured pruning, post-training quantization versus quantization-aware training, the GPTQ and AWQ algorithms, and emerging model merging techniques like TIES, DARE, and SLERP. These methods are not theoretical curiosities; they are the practical tools that determine whether a model runs on a single GPU, on a mobile device, or at all within a given latency budget. Understanding their trade-offs is essential for any engineer deploying LLMs at scale.
 
+## Mental Model
+
+The mental model for model compression is **trade a measured amount of quality for a large reduction in resource cost — on purpose, with a knob**. A model has three expensive axes: parameter count, bit-width, and forward-pass compute. Distillation shrinks parameters (a small student mimics a big teacher), pruning removes weights, quantization shrinks bits, speculative decoding cuts compute. None is "free": each moves you along a quality↔cost curve, and the engineering is finding the point just before quality falls off the cliff for *your* task.
+
+So compression is never "make it smaller" in the abstract — it is "hit this latency/memory budget while staying above this accuracy floor", validated empirically. The accuracy floor is an [eval fundamentals](/eval-fundamentals) measurement; the deployment target (single GPU, mobile, browser) is set by [edge deployment](/edge-deployment); and the compute-axis techniques connect directly to [inference optimization](/inference-optimization). A compressed model that was never re-evaluated is a silent quality regression.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "big", "label": "Large model", "shape": "circle"},
+    {"id": "axis", "label": "Which cost axis?", "shape": "diamond"},
+    {"id": "dist", "label": "Distill\n(fewer params)", "shape": "rect"},
+    {"id": "prune", "label": "Prune\n(remove weights)", "shape": "rect"},
+    {"id": "quant", "label": "Quantize\n(fewer bits)", "shape": "rect"},
+    {"id": "floor", "label": "Above accuracy\nfloor?", "shape": "diamond"},
+    {"id": "ship", "label": "Deployable model", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "big", "target": "axis"},
+    {"source": "axis", "target": "dist"},
+    {"source": "axis", "target": "prune"},
+    {"source": "axis", "target": "quant"},
+    {"source": "dist", "target": "floor"},
+    {"source": "prune", "target": "floor"},
+    {"source": "quant", "target": "floor"},
+    {"source": "floor", "target": "ship", "label": "yes"},
+    {"source": "floor", "target": "axis", "label": "no: back off"}
+  ]
+}
+```
+
 ## Knowledge Distillation
 
 ### The Hinton Framework
@@ -640,6 +672,134 @@ def speculative_decode(draft_model, target_model, prompt_ids, K=5):
 The connection to distillation is direct: the draft model is often a distilled version of the target model, specifically trained to approximate the target's distribution as closely as possible. The higher the agreement rate between draft and target, the more tokens are accepted per verification step, and the greater the speedup. This creates a virtuous cycle where better distillation directly translates to faster inference.
 
 In practice, speculative decoding is most effective when: (1) the task involves predictable token sequences (code completion, structured output, formulaic text) where the draft model's acceptance rate is high, (2) the target model is large enough that its forward pass dominates wall-clock time, and (3) the draft model is at least 5-10x smaller than the target. Google's production deployment of speculative decoding in Gemini and DeepMind's work on "distillation-based speculative decoding" have validated this approach at scale. For a deeper treatment of inference-time optimization techniques including KV cache management and batching strategies, see [Article 05: Inference Optimization](/inference-optimization).
+
+## Runtime Internals
+
+The "quality-for-cost knob" model hides the mechanics that decide whether a compressed model is usable.
+
+### Distillation: matching soft targets
+
+The student is trained not on hard labels but on the teacher's *probability distribution* (soft targets), which carries dark knowledge — the relative likelihoods of wrong answers. The runtime knobs are temperature (softens the distribution) and the layer-mapping for intermediate-feature matching. The trap: a student too small relative to the teacher cannot fit the distribution no matter the recipe — capacity is a hard floor.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "teach", "label": "Teacher logits", "shape": "circle"},
+    {"id": "soft", "label": "Soften with temperature T", "shape": "rect"},
+    {"id": "dark", "label": "Dark knowledge: relative wrong-answer likelihoods", "shape": "rect"},
+    {"id": "kd", "label": "Student fits soft targets + intermediate features", "shape": "rect"},
+    {"id": "map", "label": "Layer-mapping aligned?", "shape": "diamond"},
+    {"id": "cap", "label": "Student capacity above the hard floor?", "shape": "diamond"},
+    {"id": "underfit", "label": "Underfits regardless of recipe", "shape": "stadium"},
+    {"id": "skew", "label": "Mismatched layers: feature loss misleads", "shape": "stadium"},
+    {"id": "ok", "label": "Compact student retains behavior", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "teach", "target": "soft"},
+    {"source": "soft", "target": "dark"},
+    {"source": "dark", "target": "kd"},
+    {"source": "kd", "target": "map"},
+    {"source": "map", "target": "skew", "label": "no"},
+    {"source": "map", "target": "cap", "label": "yes"},
+    {"source": "cap", "target": "underfit", "label": "too small"},
+    {"source": "cap", "target": "ok", "label": "sufficient"}
+  ]
+}
+```
+
+### Pruning: structured vs unstructured
+
+Unstructured pruning zeroes individual weights (high sparsity, but needs sparse kernels to actually speed up). Structured pruning removes whole heads/channels (immediate speedup on dense hardware, coarser quality hit). The runtime detail that surprises people: 60% unstructured sparsity often gives *zero* latency win without specialized kernels — the form of sparsity must match the hardware.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "model", "label": "Dense model", "shape": "circle"},
+    {"id": "kind", "label": "Sparsity form?", "shape": "diamond"},
+    {"id": "uns", "label": "Unstructured\n(needs sparse kernel)", "shape": "rect"},
+    {"id": "str", "label": "Structured\n(dense speedup)", "shape": "rect"},
+    {"id": "hw", "label": "Matches hardware?", "shape": "diamond"},
+    {"id": "fast", "label": "Real speedup", "shape": "circle"},
+    {"id": "none", "label": "No speedup", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "model", "target": "kind"},
+    {"source": "kind", "target": "uns"},
+    {"source": "kind", "target": "str"},
+    {"source": "uns", "target": "hw"},
+    {"source": "str", "target": "fast"},
+    {"source": "hw", "target": "fast", "label": "yes"},
+    {"source": "hw", "target": "none", "label": "no"}
+  ]
+}
+```
+
+### Quantization: calibration is the algorithm
+
+GPTQ/AWQ do not just round weights — they use a small calibration set to minimize the *output* error introduced by low precision, protecting the salient weights/activations that matter most. The runtime risk: an unrepresentative calibration set produces a model that benchmarks fine but fails on real traffic. Calibration data quality is the single biggest quantization quality lever.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "w", "label": "FP16 weights + activations", "shape": "circle"},
+    {"id": "calib", "label": "Small calibration set", "shape": "rect"},
+    {"id": "salient", "label": "Identify salient weights / activation channels", "shape": "rect"},
+    {"id": "scale", "label": "Per-channel scale selection", "shape": "rect"},
+    {"id": "obj", "label": "GPTQ/AWQ minimize OUTPUT error, not rounding error", "shape": "rect"},
+    {"id": "rep", "label": "Calibration representative of real traffic?", "shape": "diamond"},
+    {"id": "drift", "label": "Distribution shift vs production?", "shape": "diamond"},
+    {"id": "bench", "label": "Benchmarks fine, fails on real traffic", "shape": "stadium"},
+    {"id": "good", "label": "INT4 with quality held", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "w", "target": "obj"},
+    {"source": "calib", "target": "salient"},
+    {"source": "salient", "target": "scale"},
+    {"source": "scale", "target": "obj"},
+    {"source": "obj", "target": "rep"},
+    {"source": "rep", "target": "drift", "label": "claimed yes"},
+    {"source": "rep", "target": "bench", "label": "no"},
+    {"source": "drift", "target": "bench", "label": "shifted"},
+    {"source": "drift", "target": "good", "label": "matches"}
+  ]
+}
+```
+
+### Speculative decoding: compute without quality loss
+
+A small draft model proposes k tokens; the large target verifies them in one parallel pass and accepts the longest correct prefix. Output is *identical* to the target alone — pure latency win, no quality trade — but only when acceptance rate is high (predictable text) and the draft is much smaller. It is the one compression technique on the compute axis that does not move the quality curve, the bridge to [inference optimization](/inference-optimization).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "draft", "label": "Small draft model proposes k tokens", "shape": "circle"},
+    {"id": "ver", "label": "Target verifies all k in one parallel pass", "shape": "rect"},
+    {"id": "prefix", "label": "Accept longest correct prefix", "shape": "rect"},
+    {"id": "ident", "label": "Output identical to target alone (no quality trade)", "shape": "rect"},
+    {"id": "rate", "label": "Acceptance rate high (predictable text)?", "shape": "diamond"},
+    {"id": "ratio", "label": "Draft much smaller than target?", "shape": "diamond"},
+    {"id": "slow", "label": "Net slowdown: verify overhead unamortized", "shape": "stadium"},
+    {"id": "redo", "label": "Re-draft from first reject", "shape": "stadium"},
+    {"id": "win", "label": "Pure latency win", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "draft", "target": "ver"},
+    {"source": "ver", "target": "prefix"},
+    {"source": "prefix", "target": "ident"},
+    {"source": "prefix", "target": "redo", "label": "tokens rejected"},
+    {"source": "redo", "target": "draft"},
+    {"source": "ident", "target": "rate"},
+    {"source": "rate", "target": "slow", "label": "low accept"},
+    {"source": "rate", "target": "ratio", "label": "high accept"},
+    {"source": "ratio", "target": "slow", "label": "draft too large"},
+    {"source": "ratio", "target": "win", "label": "draft tiny"}
+  ]
+}
+```
 
 ## Cross-References
 

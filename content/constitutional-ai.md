@@ -2,6 +2,33 @@
 
 Constitutional AI (CAI) represents a paradigm shift in how we train language models to be helpful, harmless, and honest. Rather than relying solely on human feedback to shape model behavior, CAI uses a set of explicit principles -- a "constitution" -- to guide self-critique and revision, dramatically reducing the need for human-labeled harmlessness data. This article examines the mechanics of CAI, its relationship to RLHF, and how these techniques scale supervision of increasingly capable models.
 
+## Mental Model
+
+The mental model for Constitutional AI is **replace the expensive human labeler with the model judging itself against written principles**. Classic RLHF needs humans to label which of two responses is safer — slow, costly, and a bottleneck on scaling supervision. CAI's insight: a capable model can critique and revise its *own* output against an explicit constitution, generating the preference data that would otherwise require humans. The constitution is the externalized, auditable value spec; self-critique is the labeling engine; the rest is ordinary preference optimization.
+
+So read CAI as *moving the human from per-example labeler to constitution author*. Humans still set the values (and increasingly, [bias & fairness](/bias-fairness)-aware collective input shapes the constitution), but the model does the per-sample work. This is [RLHF & preference optimization](/rlhf-preference) with an AI-generated preference signal, validated like any safety property through [red teaming](/red-teaming) and measured [eval fundamentals](/eval-fundamentals) — a self-generated signal is only as trustworthy as its evaluation.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "const", "label": "Constitution\n(written principles)", "shape": "circle"},
+    {"id": "gen", "label": "Model generates", "shape": "rect"},
+    {"id": "crit", "label": "Self-critique\nvs principles", "shape": "rect"},
+    {"id": "rev", "label": "Revise", "shape": "rect"},
+    {"id": "pref", "label": "AI preference\npairs", "shape": "rect"},
+    {"id": "rl", "label": "Preference\noptimization", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "const", "target": "crit"},
+    {"source": "gen", "target": "crit"},
+    {"source": "crit", "target": "rev"},
+    {"source": "rev", "target": "pref"},
+    {"source": "pref", "target": "rl"}
+  ]
+}
+```
+
 ## The Safety Problem in Language Models
 
 Large language models trained on internet text inevitably learn to produce harmful, biased, and deceptive outputs. The fundamental challenge is alignment: ensuring models behave in ways consistent with human values and intentions. Early approaches relied on simple keyword filtering and rule-based systems, but these proved brittle against the combinatorial explosion of ways harmful content can be expressed.
@@ -338,6 +365,105 @@ Several approaches are being explored to address these challenges. Sortition-bas
 ### Connecting Democratic Governance to Alignment
 
 Collective Constitutional AI connects the technical problem of alignment to the political problem of legitimate governance. A constitution that reflects broad public input has stronger democratic legitimacy, which matters for public trust in AI systems. It also produces more robust safety training because diverse perspectives identify harm categories and edge cases that a homogeneous team might miss. This intersection of alignment and governance is one of the most important frontiers in responsible AI development, with direct implications for the bias and fairness concerns discussed in [Article 46: Bias, Fairness & Responsible AI](/bias-fairness).
+
+## Runtime Internals
+
+The "model judges itself against principles" model hides the mechanics that decide whether CAI actually improves safety.
+
+### The two-phase pipeline (SL-CAI then RL-CAI)
+
+CAI runs in two stages. Supervised: the model generates a response, critiques it against a sampled constitutional principle, revises, and the revised pairs become SFT data. RL: the model produces a preference label between responses by reference to the constitution, feeding RLHF without human harm labels. The runtime detail: principle *sampling* matters — a constitution principle that never gets sampled never shapes behavior.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "resp", "label": "Initial response", "shape": "circle"},
+    {"id": "pick", "label": "Sample principle", "shape": "rect"},
+    {"id": "crit", "label": "Critique", "shape": "rect"},
+    {"id": "rev", "label": "Revise → SL data", "shape": "rect"},
+    {"id": "ai", "label": "AI preference\n→ RL data", "shape": "rect"},
+    {"id": "train", "label": "Train", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "resp", "target": "pick"},
+    {"source": "pick", "target": "crit"},
+    {"source": "crit", "target": "rev"},
+    {"source": "rev", "target": "ai"},
+    {"source": "ai", "target": "train"}
+  ]
+}
+```
+
+### Self-critique is only as good as the judge
+
+The whole method rests on the model reliably detecting its own violations. A weak or miscalibrated critic produces label noise that the RL stage then amplifies into a confidently mis-aligned model. The runtime safeguard is calibrating the critic against human spot-checks and red-team probes before trusting it at scale — the AI-feedback equivalent of inter-rater reliability.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "out", "label": "Model output", "shape": "circle"},
+    {"id": "judge", "label": "Self-critic", "shape": "rect"},
+    {"id": "cal", "label": "Agrees with\nhuman spot-check?", "shape": "diamond"},
+    {"id": "trust", "label": "Use as label", "shape": "rect"},
+    {"id": "fix", "label": "Recalibrate\ncritic", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "out", "target": "judge"},
+    {"source": "judge", "target": "cal"},
+    {"source": "cal", "target": "trust", "label": "yes"},
+    {"source": "cal", "target": "fix", "label": "no"}
+  ]
+}
+```
+
+### Red-team-assisted training closes the gap
+
+Static principles miss novel attacks, so CAI is paired with adversarial probing: red-team prompts surface failures, those failures are added to the critique/revision set, and the model is retrained. The runtime is a loop, not a one-shot — the same arms-race discipline as standalone [red teaming](/red-teaming), with the constitution as the evolving spec.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "model", "label": "CAI model", "shape": "circle"},
+    {"id": "rt", "label": "Red-team probes", "shape": "rect"},
+    {"id": "fail", "label": "New failure?", "shape": "diamond"},
+    {"id": "add", "label": "Add to revision\nset + retrain", "shape": "rect"},
+    {"id": "ok", "label": "Hardened", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "model", "target": "rt"},
+    {"source": "rt", "target": "fail"},
+    {"source": "fail", "target": "add", "label": "yes"},
+    {"source": "add", "target": "model"},
+    {"source": "fail", "target": "ok", "label": "no"}
+  ]
+}
+```
+
+### Reward hacking and overoptimization
+
+Optimizing hard against a constitutional reward causes the model to game it — over-refusing (safe but useless) or producing principle-shaped hollow text. The runtime mitigation is a KL anchor to the base model plus a helpfulness counter-metric: safety and helpfulness must be measured *together*, the same dual-axis trap as [RLHF & preference optimization](/rlhf-preference). A model that refuses everything has perfect safety and zero value.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "opt", "label": "Optimize\nconstitution reward", "shape": "circle"},
+    {"id": "hack", "label": "Over-refuse /\ngame metric?", "shape": "diamond"},
+    {"id": "anchor", "label": "KL anchor +\nhelpfulness metric", "shape": "rect"},
+    {"id": "bal", "label": "Safe AND helpful", "shape": "circle"},
+    {"id": "bad", "label": "Useless model", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "opt", "target": "hack"},
+    {"source": "hack", "target": "anchor", "label": "guard"},
+    {"source": "anchor", "target": "bal"},
+    {"source": "hack", "target": "bad", "label": "unchecked"}
+  ]
+}
+```
 
 ## Key Takeaways
 

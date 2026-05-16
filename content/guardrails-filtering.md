@@ -2,6 +2,34 @@
 
 Production LLM deployments require multiple layers of defense beyond model training to ensure safe, policy-compliant outputs. Guardrails and content filtering systems act as runtime safety nets -- inspecting inputs before they reach the model and validating outputs before they reach users. This article explores the architecture of these systems, surveys major frameworks like NeMo Guardrails and Guardrails AI, and presents production patterns for building robust safety layers.
 
+## Mental Model
+
+The mental model for guardrails is **two checkpoints around an untrusted core**: an input gate before the model and an output gate after it, with the model treated as a powerful but unreliable component you wrap rather than trust. The input gate defends the model (prompt injection, jailbreaks, PII you must not ingest); the output gate defends the user and the business (toxic, off-policy, hallucinated, or data-leaking responses). Every framework here is some arrangement of those two gates.
+
+The decisive design question is **what each gate is allowed to do on a failure**: block, redact, regenerate, or escalate. That choice is a policy decision, not a code one — which is why guardrails are the enforcement arm of [AI governance](/ai-governance), why the input gate is really a hardened extension of your [system prompts](/system-prompts) contract, and why a guardrail that returns a clean machine-readable verdict is the same [structured output](/structured-output) problem applied to a safety classifier.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "user", "label": "User input", "shape": "circle"},
+    {"id": "ingate", "label": "Input gate", "shape": "diamond"},
+    {"id": "model", "label": "Model\n(untrusted core)", "shape": "rect"},
+    {"id": "outgate", "label": "Output gate", "shape": "diamond"},
+    {"id": "resp", "label": "Response", "shape": "circle"},
+    {"id": "block", "label": "Block / redact /\nregenerate", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "user", "target": "ingate"},
+    {"source": "ingate", "target": "model", "label": "clean"},
+    {"source": "ingate", "target": "block", "label": "injection/PII"},
+    {"source": "model", "target": "outgate"},
+    {"source": "outgate", "target": "resp", "label": "policy ok"},
+    {"source": "outgate", "target": "block", "label": "violation"}
+  ]
+}
+```
+
 ## Why Guardrails Are Necessary
 
 Even the best-aligned models fail. No amount of RLHF or Constitutional AI training eliminates all risks. Models can be jailbroken with novel prompts, produce hallucinated content that happens to be harmful, leak private information from their context, or behave unexpectedly on out-of-distribution inputs. Guardrails provide defense-in-depth: if the model's training fails to prevent a harmful output, external systems catch it before it reaches the user.
@@ -685,6 +713,134 @@ The relationship is not linear: moving recall from 95% to 99% on harmful content
 ### Continuous Evaluation
 
 Static benchmarks are necessary but insufficient. Adversarial attacks evolve, and guardrails that performed well against yesterday's attack techniques may fail against tomorrow's. Continuous evaluation requires a pipeline that regularly runs the guardrail against updated attack datasets, monitors false positive rates on production traffic, and flags performance degradation for human review. This feedback loop is what separates a deployed guardrail from a robust one.
+
+## Runtime Internals
+
+The two-gate model hides the mechanics that decide whether guardrails protect you or just add latency.
+
+### The latency budget of inline checks
+
+Every inline guardrail is on the critical path. A classifier per gate adds tens-to-hundreds of ms; chaining many serially can exceed the model call itself. The runtime tactic is tiering: a near-free deterministic check (regex/denylist) first, an embedding/classifier second, and an expensive LLM-judge only for the ambiguous remainder — the same cascade economics covered in [LLM serving](/llm-serving).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "in", "label": "Input on the critical path", "shape": "circle"},
+    {"id": "cache", "label": "Verdict cached by content hash?", "shape": "diamond"},
+    {"id": "rx", "label": "Tier 1: regex / denylist (~0ms)", "shape": "rect"},
+    {"id": "t1", "label": "Decisive at tier 1?", "shape": "diamond"},
+    {"id": "clf", "label": "Tier 2: embedding / classifier (~10ms)", "shape": "rect"},
+    {"id": "t2", "label": "Confident at tier 2?", "shape": "diamond"},
+    {"id": "judge", "label": "Tier 3: LLM judge (ambiguous remainder only)", "shape": "rect"},
+    {"id": "serial", "label": "All gates serial can exceed the model call itself", "shape": "stadium"},
+    {"id": "verdict", "label": "Verdict within latency budget", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "in", "target": "cache"},
+    {"source": "cache", "target": "verdict", "label": "hit: skip tiers"},
+    {"source": "cache", "target": "rx", "label": "miss"},
+    {"source": "rx", "target": "t1"},
+    {"source": "t1", "target": "verdict", "label": "block / clearly safe"},
+    {"source": "t1", "target": "clf", "label": "uncertain"},
+    {"source": "clf", "target": "t2"},
+    {"source": "t2", "target": "verdict", "label": "confident"},
+    {"source": "t2", "target": "judge", "label": "ambiguous"},
+    {"source": "judge", "target": "verdict"},
+    {"source": "judge", "target": "serial", "label": "if every input reaches here"}
+  ]
+}
+```
+
+### Streaming output filtering
+
+If you stream tokens to the user, the output gate cannot wait for a complete response. The runtime buffers a sliding window, scans it incrementally, and either releases safe chunks or halts the stream mid-generation on a violation — which means the user may see a truncated answer. Designing the "halt and replace" UX is part of the guardrail, not an afterthought.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "gen", "label": "Token stream to user", "shape": "circle"},
+    {"id": "buf", "label": "Sliding-window buffer", "shape": "rect"},
+    {"id": "scan", "label": "Incremental scan of window", "shape": "rect"},
+    {"id": "safe", "label": "Window safe?", "shape": "diamond"},
+    {"id": "emit", "label": "Release safe chunk", "shape": "rect"},
+    {"id": "halt", "label": "Halt stream mid-generation", "shape": "stadium"},
+    {"id": "ux", "label": "Halt-and-replace UX designed?", "shape": "diamond"},
+    {"id": "trunc", "label": "User sees a truncated answer (no fallback)", "shape": "stadium"},
+    {"id": "done", "label": "Safe completed stream", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "gen", "target": "buf"},
+    {"source": "buf", "target": "scan"},
+    {"source": "scan", "target": "safe"},
+    {"source": "safe", "target": "emit", "label": "yes"},
+    {"source": "safe", "target": "halt", "label": "violation"},
+    {"source": "emit", "target": "buf", "label": "next window"},
+    {"source": "emit", "target": "done", "label": "stream end"},
+    {"source": "halt", "target": "ux"},
+    {"source": "ux", "target": "done", "label": "yes: replacement message"},
+    {"source": "ux", "target": "trunc", "label": "no"}
+  ]
+}
+```
+
+### Indirect prompt injection containment
+
+The hardest case: malicious instructions arrive *inside* tool/retrieved content, not the user message. The runtime defense is provenance — mark retrieved/tool text as untrusted, never let it alter system policy, and re-run the input gate on tool outputs before they re-enter the model. This is why guardrails and [agent harnesses](/agent-harnesses) must be co-designed; a harness that blindly feeds tool output back defeats the input gate.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "tool", "label": "Tool / retrieved content", "shape": "circle"},
+    {"id": "prov", "label": "Tag with untrusted provenance", "shape": "rect"},
+    {"id": "regate", "label": "Re-run input gate on tool output", "shape": "rect"},
+    {"id": "inj", "label": "Injection detected?", "shape": "diamond"},
+    {"id": "policy", "label": "Untrusted span tries to alter system policy?", "shape": "diamond"},
+    {"id": "strip", "label": "Strip / quarantine", "shape": "stadium"},
+    {"id": "feed", "label": "Feed to model with no policy power", "shape": "rect"},
+    {"id": "blind", "label": "Harness blindly re-feeds tool output: gate defeated", "shape": "stadium"},
+    {"id": "safe", "label": "Contained: instructions stay data", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "tool", "target": "prov"},
+    {"source": "prov", "target": "regate"},
+    {"source": "regate", "target": "inj"},
+    {"source": "inj", "target": "strip", "label": "yes"},
+    {"source": "inj", "target": "policy", "label": "no"},
+    {"source": "policy", "target": "strip", "label": "yes: escalation attempt"},
+    {"source": "policy", "target": "feed", "label": "no"},
+    {"source": "feed", "target": "safe"},
+    {"source": "regate", "target": "blind", "label": "skipped by harness"}
+  ]
+}
+```
+
+### Tuning the false-positive/false-negative trade
+
+A guardrail is a classifier with a threshold; moving it trades user friction (false positives blocking legitimate requests) against risk (false negatives). The runtime needs both rates measured on production traffic continuously, because adversaries adapt and a static threshold silently degrades. Block-rate dashboards are a guardrail's most important telemetry.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "score", "label": "Risk score", "shape": "circle"},
+    {"id": "thr", "label": "≥ threshold?", "shape": "diamond"},
+    {"id": "block", "label": "Block", "shape": "rect"},
+    {"id": "allow", "label": "Allow", "shape": "rect"},
+    {"id": "mon", "label": "Monitor FP/FN\non live traffic", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "score", "target": "thr"},
+    {"source": "thr", "target": "block", "label": "yes"},
+    {"source": "thr", "target": "allow", "label": "no"},
+    {"source": "block", "target": "mon"},
+    {"source": "allow", "target": "mon"},
+    {"source": "mon", "target": "thr", "label": "retune"}
+  ]
+}
+```
 
 ## Cross-References
 

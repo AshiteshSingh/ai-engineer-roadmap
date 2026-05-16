@@ -2,6 +2,39 @@
 
 Traditional observability -- metrics, logs, traces -- was designed for deterministic systems where the same input produces the same output. LLM-powered applications shatter this assumption: outputs are stochastic, quality is subjective, failure modes are semantic rather than syntactic, and a single user request may trigger multiple LLM calls across different models and providers. Building effective observability for AI systems requires extending classical approaches with LLM-specific instrumentation for token usage, response quality, prompt versioning, and end-to-end pipeline tracing. This article examines the observability stack for production AI applications, from low-level instrumentation through platform integration to debugging workflows.
 
+## Mental Model
+
+The clearest way to think about LLM observability is as **three concentric loops around a single trace**. The innermost loop is the request itself: a user prompt enters, one or more model calls execute on the edge, and a response leaves. The middle loop is the *operational* loop -- latency, error class, token cost -- the signals an on-call engineer watches. The outermost loop is the *quality* loop -- did the answer actually help? -- which closes asynchronously through sampled evaluation rather than synchronously in the request path.
+
+A useful analogy: a traditional APM dashboard is a speedometer, but an LLM system needs a flight recorder. You are not just asking "is it fast and up?" but "what exactly did the model see, what did it decide, and was that decision good?" Every layer of the stack exists to reconstruct that story after the fact, because you cannot reproduce a stochastic failure by rerunning it blindly. On Cloudflare, the request loop runs in a Worker, structured events stream out through Workers Logpush and Workers Analytics Engine, and the AI Gateway in front of the model provider captures token usage and cost without touching application code -- so instrumentation is ambient rather than bolted on. The same discipline that makes a model [serveable in production](/llm-serving) is what makes it observable, and the quality loop is just [evaluation fundamentals](/eval-fundamentals) applied to live traffic instead of a fixed test set.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "user", "label": "User\nPrompt", "shape": "circle"},
+    {"id": "worker", "label": "Worker\n(request loop)", "shape": "rect"},
+    {"id": "gateway", "label": "AI Gateway\n(cost + tokens)", "shape": "rect"},
+    {"id": "model", "label": "Model", "shape": "rect"},
+    {"id": "ops", "label": "Operational Loop\nlatency / errors / cost", "shape": "stadium"},
+    {"id": "quality", "label": "Quality Loop\nsampled eval", "shape": "stadium"},
+    {"id": "resp", "label": "Response", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "user", "target": "worker"},
+    {"source": "worker", "target": "gateway"},
+    {"source": "gateway", "target": "model"},
+    {"source": "model", "target": "worker", "label": "completion"},
+    {"source": "worker", "target": "resp"},
+    {"source": "worker", "target": "ops", "label": "spans"},
+    {"source": "ops", "target": "quality", "label": "sample"},
+    {"source": "quality", "target": "worker", "label": "feedback"}
+  ]
+}
+```
+
+Hold this picture while reading the rest of the article: every tool below is an implementation of one of these three loops.
+
 ## Why LLM Observability Is Fundamentally Different
 
 Consider a traditional API endpoint that fetches data from a database and returns JSON. Observability is straightforward: log the request, measure latency, check the HTTP status code. If the response is wrong, examine the SQL query and the data.
@@ -876,6 +909,134 @@ class CostBudgetController:
 ```
 
 The budget controller integrates with the AI gateway layer (see Article 42) to enforce limits at the routing level. When a feature approaches its budget, the system can automatically degrade to a smaller, cheaper model rather than cutting off users entirely.
+
+## Runtime Internals
+
+The sections above describe *what* to observe; this section describes *how* a trace is physically produced at the edge, because the failure modes of observability itself live here.
+
+### Span lifecycle
+
+A span is not a log line -- it is a small state machine. It is *started* (timestamp + parent context captured), *enriched* (attributes like `gen_ai.usage.input_tokens` attached as they become known), optionally marked with an *error status*, and finally *ended* and *exported*. The dangerous states are the ones where a span is started but never ended: on Cloudflare Workers an unhandled rejection or a hitting of the CPU-time limit can terminate the isolate before `span.end()` runs, producing "orphan" spans that silently distort latency percentiles. The defensive pattern is to end spans in a `finally` and to flush the exporter inside `ctx.waitUntil()` so export survives the response returning.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "start", "label": "start(): capture parent ctx + timestamp", "shape": "circle"},
+    {"id": "active", "label": "active: enrich attributes as known", "shape": "rect"},
+    {"id": "err", "label": "Exception or CPU-limit hit?", "shape": "diamond"},
+    {"id": "orphan", "label": "Isolate killed before end(): orphan span", "shape": "stadium"},
+    {"id": "status", "label": "Set error status + record", "shape": "rect"},
+    {"id": "finally", "label": "end() in a finally block?", "shape": "diamond"},
+    {"id": "skew", "label": "Missing end() distorts latency percentiles", "shape": "stadium"},
+    {"id": "flush", "label": "Flush exporter inside ctx.waitUntil()", "shape": "rect"},
+    {"id": "export", "label": "Span exported", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "start", "target": "active"},
+    {"source": "active", "target": "err"},
+    {"source": "err", "target": "status", "label": "yes"},
+    {"source": "err", "target": "finally", "label": "no: success"},
+    {"source": "status", "target": "finally"},
+    {"source": "err", "target": "orphan", "label": "isolate terminated"},
+    {"source": "finally", "target": "flush", "label": "yes"},
+    {"source": "finally", "target": "skew", "label": "no"},
+    {"source": "flush", "target": "export"}
+  ]
+}
+```
+
+### Context propagation across the edge
+
+A single AI request fans out: the entry Worker calls a retrieval subrequest, then a Durable Object for conversation memory, then the model through the AI Gateway. The trace only stays connected if the `traceparent` context is explicitly threaded through every hop -- `fetch()` subrequests must inject the header, and Durable Object RPC must pass the serialized span context. Lose it at any hop and you get two disconnected traces instead of one, which is the single most common reason an "end-to-end" trace isn't.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "entry", "label": "Entry Worker\nroot span", "shape": "rect"},
+    {"id": "retr", "label": "Retrieval\nsubrequest", "shape": "rect"},
+    {"id": "do", "label": "Durable Object\nmemory", "shape": "rect"},
+    {"id": "gw", "label": "AI Gateway", "shape": "rect"},
+    {"id": "model", "label": "Model call", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "entry", "target": "retr", "label": "inject traceparent"},
+    {"source": "entry", "target": "do", "label": "pass span ctx"},
+    {"source": "entry", "target": "gw", "label": "inject traceparent"},
+    {"source": "gw", "target": "model"}
+  ]
+}
+```
+
+### Sampling decision
+
+Tracing every request at full fidelity is unaffordable at scale, but tail-based decisions (keep the trace only if it errored or was slow) require buffering the whole trace before deciding. The practical edge compromise is *head sampling for the cheap operational signal* (always emit a minimal span with latency/cost/error) plus *conditional full capture* (attach prompts, completions, and retrieved context only when a head coin-flip, an error, or an explicit debug header fires). This keeps the operational loop complete while bounding the cost of the expensive payloads.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "req", "label": "Request", "shape": "circle"},
+    {"id": "min", "label": "Always emit minimal span (latency/cost/error)", "shape": "rect"},
+    {"id": "tail", "label": "Tail-based decision wanted?", "shape": "diamond"},
+    {"id": "buffer", "label": "Buffer whole trace before deciding (costly at scale)", "shape": "stadium"},
+    {"id": "head", "label": "Head sampling: cheap operational signal", "shape": "rect"},
+    {"id": "trigger", "label": "Error / sampled coin-flip / debug header?", "shape": "diamond"},
+    {"id": "full", "label": "Attach prompt + completion + retrieved context", "shape": "rect"},
+    {"id": "skip", "label": "Skip expensive payload", "shape": "stadium"},
+    {"id": "done", "label": "Operational loop complete, cost bounded", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "min"},
+    {"source": "min", "target": "tail"},
+    {"source": "tail", "target": "buffer", "label": "yes: at scale"},
+    {"source": "tail", "target": "head", "label": "no: edge compromise"},
+    {"source": "head", "target": "trigger"},
+    {"source": "trigger", "target": "full", "label": "yes"},
+    {"source": "trigger", "target": "skip", "label": "default"},
+    {"source": "full", "target": "done"},
+    {"source": "skip", "target": "done"}
+  ]
+}
+```
+
+### Cost attribution at runtime
+
+Cost is not known when the span starts -- it is computed when the model usage comes back, then multiplied by per-model pricing and tagged with the feature/customer dimensions carried in baggage. Doing this *inside* the span exporter rather than in a nightly batch job is what makes per-feature unit economics queryable in real time, and it is the same instrumentation that surfaces a runaway loop in [agent debugging](/agent-debugging) before the invoice does.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "start", "label": "Span starts: cost unknown yet", "shape": "circle"},
+    {"id": "usage", "label": "Model usage returns token counts", "shape": "rect"},
+    {"id": "price", "label": "Multiply by per-model pricing", "shape": "rect"},
+    {"id": "baggage", "label": "Feature / customer dims in baggage?", "shape": "diamond"},
+    {"id": "untagged", "label": "Unattributable spend (no dimensions)", "shape": "stadium"},
+    {"id": "tag", "label": "Tag span with cost + dimensions", "shape": "rect"},
+    {"id": "where", "label": "Compute in exporter or nightly batch?", "shape": "diamond"},
+    {"id": "stale", "label": "Batch job: economics hours stale", "shape": "stadium"},
+    {"id": "rt", "label": "Real-time per-feature unit economics", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "start", "target": "usage"},
+    {"source": "usage", "target": "price"},
+    {"source": "price", "target": "baggage"},
+    {"source": "baggage", "target": "untagged", "label": "no"},
+    {"source": "baggage", "target": "tag", "label": "yes"},
+    {"source": "tag", "target": "where"},
+    {"source": "where", "target": "rt", "label": "in exporter"},
+    {"source": "where", "target": "stale", "label": "nightly batch"}
+  ]
+}
+```
+
+## Related Lessons
+
+- [AI Governance](/ai-governance) -- observability is the evidence layer governance and audit policies are enforced and proven against.
+- [CI/CD for AI](/ci-cd-ai) -- traces and online evals are the gates that decide whether a prompt or model change is promoted.
+- [Production Patterns](/production-patterns) -- the broader set of edge patterns this monitoring stack plugs into.
 
 ## Summary and Key Takeaways
 

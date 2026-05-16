@@ -4,6 +4,38 @@ Every token in a context window has a cost -- financial, computational, and atte
 
 This is not merely an optimization concern. As systems grow more complex -- agents orchestrating multi-step plans, RAG pipelines assembling documents from dozens of sources, long-running conversations accumulating history -- the gap between "all available information" and "what fits in the context window" widens dramatically. The question is never whether to compress, but how to compress without losing the signal that determines output quality. This article examines the full spectrum of compression techniques, from extractive methods that select the most relevant passages to learned compressors that drop low-information tokens, and the architectural patterns that make compression a first-class concern in production systems.
 
+## Mental Model
+
+The mental model for context compression is **lossy encoding under a token budget, where the loss function is downstream answer quality, not reconstruction**. You are not trying to recreate the original text; you are trying to keep exactly the tokens that change what the model outputs and discard the rest. That reframes every technique as a point on a *compression-ratio vs task-accuracy* curve: extractive (select the best spans, lossless within selection), abstractive (rewrite shorter, semantically lossy), token-level (drop low-information tokens), and retrieval-as-compression (only fetch what is relevant in the first place).
+
+So the engineering judgment is never "compress or not" — it is "how far down the ratio curve can I go before accuracy falls off the cliff?", and that cliff is task-specific and must be measured. This is the active half of [context window management](/context-window-management) (deciding *what* to keep), it overlaps directly with [chunking strategies](/chunking-strategies) (compression starts at how you split), and for long-running agents it is the mechanism behind [memory architectures](/memory-architectures) — a summary is just compressed episodic memory.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "raw", "label": "All available\ncontext", "shape": "circle"},
+    {"id": "method", "label": "Compression\nmethod?", "shape": "diamond"},
+    {"id": "ext", "label": "Extractive\n(select spans)", "shape": "rect"},
+    {"id": "abs", "label": "Abstractive\n(rewrite)", "shape": "rect"},
+    {"id": "tok", "label": "Token-level\n(drop low-info)", "shape": "rect"},
+    {"id": "fit", "label": "Fits budget,\naccuracy held?", "shape": "diamond"},
+    {"id": "ctx", "label": "Compressed context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "raw", "target": "method"},
+    {"source": "method", "target": "ext"},
+    {"source": "method", "target": "abs"},
+    {"source": "method", "target": "tok"},
+    {"source": "ext", "target": "fit"},
+    {"source": "abs", "target": "fit"},
+    {"source": "tok", "target": "fit"},
+    {"source": "fit", "target": "ctx", "label": "yes"},
+    {"source": "fit", "target": "method", "label": "no: change method"}
+  ]
+}
+```
+
 ## Why Compression Matters
 
 ### The Finite Context Budget
@@ -1627,6 +1659,128 @@ Based on the techniques and tradeoffs discussed, here are guidelines for impleme
 **Cache compressed results.** If the same source content will be used across multiple queries or sessions, compress it once and cache the result. This is particularly effective for static knowledge base content, as discussed in [Context Window Management](/context-window-management).
 
 **Make compression visible.** When compressed content is injected into context, annotate it: "[Summarized from 15 documents]" or "[Compressed: extractive, 3x ratio]." This gives the model (and human debuggers) information about potential gaps.
+
+## Runtime Internals
+
+The "lossy encoding under a budget" model hides the mechanics that decide whether compression preserves the answer or silently breaks it.
+
+### Extractive selection: relevance scoring then pack
+
+Extractive compression scores each span (against the query, by salience, or by perplexity) and packs the top spans until the budget is hit. The runtime risk is *context fragmentation*: selecting disjoint sentences can drop the connective tissue that made them meaningful. Packing whole semantic units, not isolated sentences, is the difference between a usable and a misleading compression.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "spans", "label": "Candidate spans", "shape": "circle"},
+    {"id": "method", "label": "Score by query / salience / perplexity", "shape": "diamond"},
+    {"id": "rank", "label": "Rank spans", "shape": "rect"},
+    {"id": "pack", "label": "Pack top spans until budget hit", "shape": "rect"},
+    {"id": "unit", "label": "Packed whole semantic units?", "shape": "diamond"},
+    {"id": "frag", "label": "Disjoint sentences: connective tissue lost", "shape": "stadium"},
+    {"id": "ctx", "label": "Coherent compressed context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "spans", "target": "method"},
+    {"source": "method", "target": "rank"},
+    {"source": "rank", "target": "pack"},
+    {"source": "pack", "target": "unit"},
+    {"source": "unit", "target": "ctx", "label": "yes"},
+    {"source": "unit", "target": "frag", "label": "no: misleading"}
+  ]
+}
+```
+
+### Token-level compression (LLMLingua-style)
+
+A small model scores per-token informativeness and drops low-perplexity tokens, achieving high ratios on verbose text. The runtime trap: it can delete a negation or a number that flips meaning while the sentence still reads fluently. Production use protects "anchor" spans (entities, numbers, instructions) from dropping and validates on a task metric, not on how natural the output looks.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "txt", "label": "Verbose text", "shape": "circle"},
+    {"id": "sm", "label": "Small model: per-token informativeness", "shape": "rect"},
+    {"id": "anchor", "label": "Anchor span (entity / number / instruction)?", "shape": "diamond"},
+    {"id": "protect", "label": "Protect from dropping", "shape": "rect"},
+    {"id": "low", "label": "Low-perplexity token?", "shape": "diamond"},
+    {"id": "drop", "label": "Drop token", "shape": "rect"},
+    {"id": "flip", "label": "Dropped negation / number flips meaning", "shape": "stadium"},
+    {"id": "valid", "label": "Validated on task metric, not fluency", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "txt", "target": "sm"},
+    {"source": "sm", "target": "anchor"},
+    {"source": "anchor", "target": "protect", "label": "yes"},
+    {"source": "anchor", "target": "low", "label": "no"},
+    {"source": "low", "target": "drop", "label": "yes"},
+    {"source": "low", "target": "protect", "label": "no: informative"},
+    {"source": "drop", "target": "flip", "label": "if load-bearing"},
+    {"source": "protect", "target": "valid"},
+    {"source": "drop", "target": "valid"}
+  ]
+}
+```
+
+### Conversation compression: recency + pinned facts
+
+Long chats are compressed by summarizing old turns while keeping recent turns verbatim and pinning durable facts (decisions, constraints, IDs) outside the compressible region. The runtime failure is summarizing the pinned facts — the summary reads fine but a binding constraint silently changed. This is the [context window management](/context-window-management) eviction policy made concrete.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "hist", "label": "Long chat history", "shape": "circle"},
+    {"id": "pin", "label": "Extract durable facts (decisions / constraints / IDs)", "shape": "rect"},
+    {"id": "region", "label": "Pinned outside the compressible region?", "shape": "diamond"},
+    {"id": "leak", "label": "Pinned fact summarized: constraint silently changed", "shape": "stadium"},
+    {"id": "split", "label": "Recent or old turns?", "shape": "diamond"},
+    {"id": "verb", "label": "Recent turns kept verbatim", "shape": "rect"},
+    {"id": "sum", "label": "Summarize old turns", "shape": "rect"},
+    {"id": "ctx", "label": "Compact context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "hist", "target": "pin"},
+    {"source": "pin", "target": "region"},
+    {"source": "region", "target": "leak", "label": "no: inside region"},
+    {"source": "region", "target": "split", "label": "yes: protected"},
+    {"source": "split", "target": "verb", "label": "recent"},
+    {"source": "split", "target": "sum", "label": "old"},
+    {"source": "verb", "target": "ctx"},
+    {"source": "sum", "target": "ctx"}
+  ]
+}
+```
+
+### The accuracy cliff and ratio selection
+
+Compression accuracy degrades non-linearly: often flat to ~50% reduction, then a sharp cliff. The runtime requirement is to *find your cliff empirically* on a task eval (e.g., 0.84 acc at 25% vs 0.62 at 75%) and operate just before it, with a fallback to less compression when confidence is low. Picking a ratio by intuition is how compression silently destroys quality.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "set", "label": "Task eval set", "shape": "circle"},
+    {"id": "sweep", "label": "Sweep compression ratios", "shape": "rect"},
+    {"id": "curve", "label": "Non-linear accuracy curve (flat, then cliff)", "shape": "rect"},
+    {"id": "found", "label": "Cliff located empirically?", "shape": "diamond"},
+    {"id": "intuition", "label": "Ratio picked by intuition: silent quality loss", "shape": "stadium"},
+    {"id": "before", "label": "Operate just before the cliff", "shape": "rect"},
+    {"id": "conf", "label": "Per-request confidence low?", "shape": "diamond"},
+    {"id": "backoff", "label": "Fall back to less compression", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "set", "target": "sweep"},
+    {"source": "sweep", "target": "curve"},
+    {"source": "curve", "target": "found"},
+    {"source": "found", "target": "intuition", "label": "no"},
+    {"source": "found", "target": "before", "label": "yes"},
+    {"source": "before", "target": "conf"},
+    {"source": "conf", "target": "backoff", "label": "yes"},
+    {"source": "conf", "target": "before", "label": "no: hold ratio"}
+  ]
+}
+```
 
 ## Connections to Other Topics
 

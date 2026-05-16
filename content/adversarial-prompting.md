@@ -2,6 +2,40 @@
 
 Adversarial prompting -- the practice of crafting inputs that cause language models to behave in unintended ways -- has emerged as one of the most active areas of AI security research. As LLMs are deployed in increasingly sensitive applications, understanding the attack surface and defense landscape is not optional: it is a core engineering responsibility. This article provides a systematic taxonomy of adversarial prompting techniques, examines the most significant attack vectors, surveys defense strategies from input filtering to architectural patterns, and confronts the fundamental challenge that makes this an ongoing arms race rather than a solved problem.
 
+## Mental Model
+
+The mental model for adversarial prompting is **the model cannot distinguish trusted instructions from untrusted data — they are the same token stream**. A classic system separates code (trusted) from input (untrusted) by type. An LLM has no such boundary: the system prompt, the user message, a retrieved document, and a tool's output are all just text the model interprets *as potential instructions*. Every attack (jailbreak, direct injection, indirect injection via a poisoned web page) is a variation of "smuggle instructions into the data channel"; every defense is an attempt to reconstruct a trust boundary the architecture never had.
+
+That reframes the field as a security-boundary problem, not a prompt-wording problem. Defenses are layered for the same reason network security is: input filtering, privilege separation, output checking — no single layer holds. This is the offensive counterpart to defensive [guardrails & content filtering](/guardrails-filtering); systematically probing for these failures is [red teaming](/red-teaming); and the same instruction-following power that makes [system prompts](/system-prompts) work is exactly what the attacker hijacks.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "sys", "label": "System prompt (trusted)", "shape": "circle"},
+    {"id": "usr", "label": "User message", "shape": "rect"},
+    {"id": "rag", "label": "Retrieved document", "shape": "rect"},
+    {"id": "tool", "label": "Tool output", "shape": "rect"},
+    {"id": "stream", "label": "Single undifferentiated token stream", "shape": "stadium"},
+    {"id": "boundary", "label": "Reconstructed trust boundary (layered defense)", "shape": "diamond"},
+    {"id": "follow", "label": "Model obeys strongest instruction", "shape": "diamond"},
+    {"id": "hijack", "label": "Hijacked behavior", "shape": "stadium"},
+    {"id": "intended", "label": "Intended behavior", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "sys", "target": "stream"},
+    {"source": "usr", "target": "stream", "label": "may smuggle"},
+    {"source": "rag", "target": "stream", "label": "may smuggle"},
+    {"source": "tool", "target": "stream", "label": "may smuggle"},
+    {"source": "stream", "target": "boundary"},
+    {"source": "boundary", "target": "intended", "label": "boundary held"},
+    {"source": "boundary", "target": "follow", "label": "no boundary held"},
+    {"source": "follow", "target": "hijack", "label": "attacker span strongest"},
+    {"source": "follow", "target": "intended", "label": "system span strongest"}
+  ]
+}
+```
+
 ## Prompt Injection: The Fundamental Vulnerability
 
 ### What Prompt Injection Is
@@ -496,6 +530,128 @@ class SecureLLMApplication:
         )
 
         return safe_response
+```
+
+## Runtime Internals
+
+The "no trust boundary" model hides the mechanics that decide whether a defense is real or theater.
+
+### Indirect injection: the dangerous case
+
+Direct injection (user types "ignore instructions") is visible. Indirect injection hides instructions inside content the model later ingests — a web page, a PDF, an email, a tool result — so the *attacker is not the user*. The runtime defense is provenance tagging: mark every non-system span as untrusted, and never let untrusted text alter policy or trigger privileged tools without confirmation.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "att", "label": "Attacker poisons external content (web / PDF / email)", "shape": "circle"},
+    {"id": "ingest", "label": "Agent ingests via RAG or tool result", "shape": "rect"},
+    {"id": "prov", "label": "Span tagged untrusted by provenance?", "shape": "diamond"},
+    {"id": "policy", "label": "Untrusted span tries to alter policy / call privileged tool?", "shape": "diamond"},
+    {"id": "data", "label": "Rendered inert as data", "shape": "rect"},
+    {"id": "confirm", "label": "Human confirmation gate", "shape": "stadium"},
+    {"id": "pwn", "label": "Executed as instruction (attacker is not the user)", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "att", "target": "ingest"},
+    {"source": "ingest", "target": "prov"},
+    {"source": "prov", "target": "data", "label": "yes: tagged"},
+    {"source": "prov", "target": "pwn", "label": "no: untagged"},
+    {"source": "data", "target": "policy", "label": "later referenced"},
+    {"source": "policy", "target": "confirm", "label": "yes: needs approval"},
+    {"source": "policy", "target": "data", "label": "no: harmless"}
+  ]
+}
+```
+
+### Privilege separation breaks the kill chain
+
+An injection only matters if it can *do* something. The runtime mitigation borrows from OS security: the model that reads untrusted content has no direct access to dangerous tools; a separate, constrained planner with a fixed allowlist mediates actions. Even a fully hijacked reader cannot exfiltrate data if it cannot call the network. This is the strongest structural defense and pairs with [guardrails & content filtering](/guardrails-filtering).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "untrust", "label": "Untrusted content", "shape": "circle"},
+    {"id": "reader", "label": "Reader model (no direct tool access)", "shape": "rect"},
+    {"id": "propose", "label": "Proposes structured action", "shape": "rect"},
+    {"id": "planner", "label": "Constrained planner: in fixed allowlist?", "shape": "diamond"},
+    {"id": "scope", "label": "Capability scope check", "shape": "diamond"},
+    {"id": "exec", "label": "Execute under least privilege", "shape": "rect"},
+    {"id": "deny", "label": "Deny and log", "shape": "stadium"},
+    {"id": "noexfil", "label": "No network capability = no exfiltration even if hijacked", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "untrust", "target": "reader"},
+    {"source": "reader", "target": "propose"},
+    {"source": "propose", "target": "planner"},
+    {"source": "planner", "target": "scope", "label": "in allowlist"},
+    {"source": "planner", "target": "deny", "label": "not in allowlist"},
+    {"source": "scope", "target": "exec", "label": "within scope"},
+    {"source": "scope", "target": "deny", "label": "out of scope"},
+    {"source": "reader", "target": "noexfil", "label": "capability isolation"}
+  ]
+}
+```
+
+### Gradient-based attacks (GCG)
+
+For open-weight models, attackers optimize an adversarial suffix that maximizes the probability of an unsafe completion — a search, not a clever phrase. The runtime implication: string-matching filters are useless against optimized suffixes, and transferability means a suffix tuned offline can hit a deployed model. Defenses must be behavioral (output checking, perplexity filters), not lexical.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "target", "label": "Target unsafe completion", "shape": "circle"},
+    {"id": "surrogate", "label": "Optimize on open-weight surrogate", "shape": "rect"},
+    {"id": "init", "label": "Init adversarial suffix", "shape": "rect"},
+    {"id": "grad", "label": "Coordinate gradient on token logits", "shape": "rect"},
+    {"id": "swap", "label": "Greedy top-k token swap", "shape": "rect"},
+    {"id": "elicit", "label": "Loss decreased / target elicited?", "shape": "diamond"},
+    {"id": "ppl", "label": "Perplexity / behavioral filter (defense)", "shape": "diamond"},
+    {"id": "transfer", "label": "Transfers to deployed black-box model", "shape": "stadium"},
+    {"id": "blocked", "label": "Blocked: anomalous suffix", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "target", "target": "surrogate"},
+    {"source": "surrogate", "target": "init"},
+    {"source": "init", "target": "grad"},
+    {"source": "grad", "target": "swap"},
+    {"source": "swap", "target": "elicit"},
+    {"source": "elicit", "target": "grad", "label": "no: iterate"},
+    {"source": "elicit", "target": "ppl", "label": "yes"},
+    {"source": "ppl", "target": "blocked", "label": "high perplexity"},
+    {"source": "ppl", "target": "transfer", "label": "evades lexical filter"}
+  ]
+}
+```
+
+### The arms race: defense as a measured loop
+
+There is no static fix; defenses decay as attacks evolve. The runtime posture is continuous: maintain an attack corpus, run it in CI against every model/prompt change, and feed new in-the-wild attacks back into the suite — the same loop discipline as [red teaming](/red-teaming). Treating prompt security as a one-time hardening is the core mistake.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "corpus", "label": "Versioned attack corpus", "shape": "circle"},
+    {"id": "wild", "label": "In-the-wild attack capture", "shape": "rect"},
+    {"id": "ci", "label": "CI run on every model / prompt change", "shape": "rect"},
+    {"id": "gate", "label": "Attack success rate < threshold?", "shape": "diamond"},
+    {"id": "ship", "label": "Ship release", "shape": "stadium"},
+    {"id": "harden", "label": "Harden defenses", "shape": "rect"},
+    {"id": "grow", "label": "Add new attack to corpus", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "wild", "target": "grow", "label": "novel attack"},
+    {"source": "corpus", "target": "ci"},
+    {"source": "ci", "target": "gate"},
+    {"source": "gate", "target": "ship", "label": "yes"},
+    {"source": "gate", "target": "harden", "label": "no: regression"},
+    {"source": "harden", "target": "grow"},
+    {"source": "grow", "target": "corpus", "label": "loop back"}
+  ]
+}
 ```
 
 ## Summary and Key Takeaways

@@ -2,6 +2,38 @@
 
 The quality of a retrieval-augmented generation system is fundamentally bounded by the quality of its chunks. No amount of sophisticated retrieval or reranking can recover information that was destroyed by poor chunking -- splitting a key argument across two chunks, burying a critical fact in an irrelevant passage, or producing chunks too small to carry coherent meaning. This article examines chunking strategies from first principles through production patterns, covering the full spectrum from naive fixed-size splitting to semantically aware document decomposition.
 
+## Mental Model
+
+The mental model for chunking is **the lossy compression step that sets the ceiling on everything downstream**. A chunk is the atomic unit your retriever can return; if a fact is split across two chunks or buried with noise in one, no reranker, no bigger model, and no clever prompt can reconstruct it. So chunking is not preprocessing — it is the single highest-leverage, hardest-to-reverse decision in a RAG pipeline, and it is fundamentally a trade-off between *retrievability* (small, focused chunks embed precisely) and *sufficiency* (large chunks carry enough context to answer).
+
+That tension organizes every technique here: fixed-size optimizes nothing but simplicity; structure-aware respects document boundaries; semantic/late/contextual chunking spend compute to keep meaning intact. The right point on the curve depends on the corpus and is only knowable by measuring end-to-end — which is why chunking cannot be evaluated in isolation but through [RAG evaluation](/rag-evaluation), and why the failure modes it creates are exactly what [advanced RAG](/advanced-rag) loops exist to recover from. It sits directly upstream of [retrieval strategies](/retrieval-strategies).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "doc", "label": "Source document", "shape": "circle"},
+    {"id": "split", "label": "Lossy split into atomic retrieval units", "shape": "rect"},
+    {"id": "tradeoff", "label": "Retrievability vs sufficiency", "shape": "diamond"},
+    {"id": "small", "label": "Small: embeds precisely, may be incomplete", "shape": "rect"},
+    {"id": "big", "label": "Big: sufficient context, dilutes the embedding", "shape": "rect"},
+    {"id": "irrev", "label": "Fact split across chunks or buried in noise?", "shape": "diamond"},
+    {"id": "lost", "label": "Unrecoverable: no reranker / model / prompt fixes it", "shape": "stadium"},
+    {"id": "ceiling", "label": "Sets the RAG quality ceiling", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "doc", "target": "split"},
+    {"source": "split", "target": "tradeoff"},
+    {"source": "tradeoff", "target": "small", "label": "lean small"},
+    {"source": "tradeoff", "target": "big", "label": "lean big"},
+    {"source": "small", "target": "irrev"},
+    {"source": "big", "target": "irrev"},
+    {"source": "irrev", "target": "lost", "label": "yes"},
+    {"source": "irrev", "target": "ceiling", "label": "no: measure end-to-end"}
+  ]
+}
+```
+
 ## Why Chunking Matters
 
 Embedding models produce a single vector for an input text. This vector must capture the "aboutness" of that text for similarity search to work. When a chunk contains a single coherent idea, the resulting embedding is a clear signal. When a chunk mixes unrelated topics, the embedding becomes an average that represents nothing well -- a phenomenon researchers call "topic dilution."
@@ -736,6 +768,131 @@ def production_chunking_pipeline(document: str, doc_type: str) -> list[dict]:
 
     return processed
 ```
+
+## Runtime Internals
+
+The "lossy split sets the ceiling" model hides the mechanics that decide whether a chunk is retrievable *and* sufficient.
+
+### Recursive splitting with a separator hierarchy
+
+The workhorse splitter does not cut at a fixed offset; it tries an ordered separator list (paragraph → sentence → word) and recurses, falling back only when a unit exceeds the size budget. This keeps semantic units intact when possible. The runtime knob is the separator order — wrong order (splitting on whitespace before paragraphs) shreds structure.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "block", "label": "Text block", "shape": "circle"},
+    {"id": "budget", "label": "Size budget (max tokens)", "shape": "rect"},
+    {"id": "fit", "label": "Fits budget?", "shape": "diamond"},
+    {"id": "emit", "label": "Emit chunk", "shape": "circle"},
+    {"id": "order", "label": "Separator order correct?", "shape": "diamond"},
+    {"id": "para", "label": "Split on paragraph", "shape": "rect"},
+    {"id": "sent", "label": "Split on sentence", "shape": "rect"},
+    {"id": "word", "label": "Split on word (last resort)", "shape": "rect"},
+    {"id": "shred", "label": "Wrong order shreds structure", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "block", "target": "fit"},
+    {"source": "budget", "target": "fit"},
+    {"source": "fit", "target": "emit", "label": "yes"},
+    {"source": "fit", "target": "order", "label": "no"},
+    {"source": "order", "target": "shred", "label": "whitespace before paragraph"},
+    {"source": "order", "target": "para", "label": "coarse to fine"},
+    {"source": "para", "target": "sent", "label": "still too big"},
+    {"source": "sent", "target": "word", "label": "still too big"},
+    {"source": "word", "target": "fit", "label": "recurse"}
+  ]
+}
+```
+
+### Overlap as boundary insurance
+
+Fixed overlap (sliding window) exists so a fact straddling a boundary survives in at least one chunk. The runtime cost is duplication: too much overlap inflates index size and returns near-duplicate chunks that waste the context window; too little reintroduces the boundary-loss failure. Overlap is a recall/redundancy dial, tuned against measured boundary-miss rate.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "stream", "label": "Token stream", "shape": "circle"},
+    {"id": "win", "label": "Window + stride", "shape": "rect"},
+    {"id": "ov", "label": "Overlap = window minus stride", "shape": "rect"},
+    {"id": "dial", "label": "Overlap vs measured boundary-miss rate", "shape": "diamond"},
+    {"id": "low", "label": "Too little: straddling fact lost", "shape": "stadium"},
+    {"id": "high", "label": "Too much: index bloat + near-dup context waste", "shape": "stadium"},
+    {"id": "tuned", "label": "Calibrated?", "shape": "diamond"},
+    {"id": "safe", "label": "Straddling fact survives in at least one chunk", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "stream", "target": "win"},
+    {"source": "win", "target": "ov"},
+    {"source": "ov", "target": "dial"},
+    {"source": "dial", "target": "low", "label": "under-tuned"},
+    {"source": "dial", "target": "high", "label": "over-tuned"},
+    {"source": "dial", "target": "tuned", "label": "at minimum miss-rate"},
+    {"source": "tuned", "target": "safe", "label": "yes"}
+  ]
+}
+```
+
+### Parent-child (small-to-big) retrieval
+
+A powerful runtime pattern: embed *small* child chunks for precise matching, but return the *parent* span to the LLM for sufficiency. This decouples the retrieval unit from the context unit, resolving the core trade-off — at the cost of a parent-store and an extra lookup hop.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "Query", "shape": "circle"},
+    {"id": "child", "label": "Search small child chunks (precise match)", "shape": "rect"},
+    {"id": "hit", "label": "Child hit", "shape": "diamond"},
+    {"id": "store", "label": "Parent-store lookup (extra hop)", "shape": "rect"},
+    {"id": "parent", "label": "Return large parent span (sufficient)", "shape": "rect"},
+    {"id": "decouple", "label": "Retrieval unit decoupled from context unit", "shape": "stadium"},
+    {"id": "llm", "label": "LLM answers", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "q", "target": "child"},
+    {"source": "child", "target": "hit"},
+    {"source": "hit", "target": "store", "label": "map child id to parent id"},
+    {"source": "store", "target": "parent"},
+    {"source": "parent", "target": "decouple"},
+    {"source": "decouple", "target": "llm"}
+  ]
+}
+```
+
+### Contextual / late chunking
+
+Naive chunks lose document context ("it" refers to what?). Contextual chunking prepends an LLM-generated situating sentence per chunk; late chunking embeds the *whole document* first, then pools per-chunk so each vector carries global context. Both spend compute at index time to raise retrieval precision — an explicit cost/quality trade, the same shape as model [distillation & compression](/distillation-compression).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "doc", "label": "Full document", "shape": "circle"},
+    {"id": "lost", "label": "Naive chunk loses doc context (dangling 'it')", "shape": "stadium"},
+    {"id": "mode", "label": "Contextual or late chunking?", "shape": "diamond"},
+    {"id": "ctx", "label": "Contextual: LLM situating sentence per chunk", "shape": "rect"},
+    {"id": "late", "label": "Late: embed whole doc, then pool per chunk", "shape": "rect"},
+    {"id": "cost", "label": "Index-time compute spent", "shape": "rect"},
+    {"id": "moved", "label": "Measured retrieval precision actually moved?", "shape": "diamond"},
+    {"id": "vec", "label": "Context-aware vectors", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "doc", "target": "lost"},
+    {"source": "lost", "target": "mode"},
+    {"source": "mode", "target": "ctx", "label": "contextual"},
+    {"source": "mode", "target": "late", "label": "late"},
+    {"source": "ctx", "target": "cost"},
+    {"source": "late", "target": "cost"},
+    {"source": "cost", "target": "moved"},
+    {"source": "moved", "target": "vec", "label": "yes: keep"},
+    {"source": "moved", "target": "lost", "label": "no: not worth the compute"}
+  ]
+}
+```
+
+The recurring theme: every advanced chunking method spends index-time compute to push the [RAG](/rag) quality ceiling higher — only worth it if measured retrieval precision actually moves.
 
 ## Summary and Key Takeaways
 

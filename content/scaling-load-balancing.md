@@ -2,6 +2,31 @@
 
 Operating large language models at scale demands a deep understanding of distributed systems principles applied to GPU-centric workloads. Unlike CPU-based web services where horizontal scaling is relatively straightforward, LLM serving must contend with models that exceed single-GPU memory, heterogeneous hardware, and inference patterns where a single request may consume billions of floating-point operations. This article explores the parallelism strategies, cluster management techniques, and load balancing approaches that make production-scale LLM inference viable.
 
+## Mental Model
+
+The mental model for scaling LLM serving is **the model is too big for one box, so you split the model *and* replicate the splits — two orthogonal axes**. Axis one is *model parallelism* (tensor/pipeline): one model is sharded across GPUs because its weights + KV cache exceed a single device. Axis two is *data parallelism*: you run many copies of that sharded model to serve more concurrent requests. Almost every scaling decision is choosing a point on this grid — and the routing layer on top decides which replica a request lands on.
+
+The defining constraint, unlike CPU web services, is that requests are *not interchangeable*: a 4k-token generation costs ~1000× a 10-token one, and GPU memory (KV cache) is the bottleneck, not CPU. So load balancing is not round-robin; it is GPU-memory-aware and length-aware. The shard count is dictated by [model architectures](/model-architectures) (attention variant sets KV size) and [scaling laws](/scaling-laws) (how big the model had to be); when the per-replica box is a small device instead of a cluster, this becomes [edge deployment](/edge-deployment).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "model", "label": "Model too big\nfor 1 GPU", "shape": "circle"},
+    {"id": "mp", "label": "Model parallel\n(shard weights)", "shape": "rect"},
+    {"id": "dp", "label": "Data parallel\n(replicate shards)", "shape": "rect"},
+    {"id": "route", "label": "Memory/length-\naware router", "shape": "diamond"},
+    {"id": "serve", "label": "Scaled serving", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "model", "target": "mp", "label": "fit"},
+    {"source": "mp", "target": "dp", "label": "throughput"},
+    {"source": "dp", "target": "route"},
+    {"source": "route", "target": "serve"}
+  ]
+}
+```
+
 ## Why LLM Scaling Is Different
 
 Traditional web services scale by adding stateless replicas behind a load balancer. LLM serving breaks this model in several ways. First, the model itself may not fit on a single GPU -- a 70B parameter model in FP16 requires ~140GB of GPU memory, exceeding even an H100's 80GB. Second, the KV-cache grows with context length and batch size, creating dynamic memory pressure that changes per-request. Third, GPU resources are expensive (an H100 costs $2-3/hour in the cloud), so utilization efficiency directly impacts economics.
@@ -475,6 +500,148 @@ For batch workloads and non-latency-sensitive traffic, spot/preemptible instance
 2. Route batch and background traffic to spot instances
 3. Implement request draining on interruption notice
 4. Maintain enough on-demand capacity to absorb spot interruptions
+
+## Runtime Internals
+
+The "split and replicate" model hides the mechanics that decide whether scaling adds throughput or just latency.
+
+### Tensor vs pipeline parallelism
+
+Tensor parallelism shards each layer across GPUs and all-reduces every layer — high communication, so it needs fast intra-node links (NVLink) and rarely crosses nodes. Pipeline parallelism splits layers into stages with lower bandwidth need but introduces a pipeline bubble. The runtime rule: tensor-parallel within a node, pipeline-parallel across nodes; getting this backwards makes interconnect the bottleneck.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "model", "label": "Model too big for one GPU", "shape": "circle"},
+    {"id": "scope", "label": "Sharding within a node?", "shape": "diamond"},
+    {"id": "tp", "label": "Tensor parallel: shard each layer", "shape": "rect"},
+    {"id": "ar", "label": "All-reduce every layer (heavy comm)", "shape": "rect"},
+    {"id": "pp", "label": "Pipeline parallel: stages across nodes", "shape": "rect"},
+    {"id": "bubble", "label": "Pipeline bubble: idle stages", "shape": "stadium"},
+    {"id": "link", "label": "Fast NVLink for the all-reduce?", "shape": "diamond"},
+    {"id": "bottleneck", "label": "Backwards mapping: interconnect is the bottleneck", "shape": "stadium"},
+    {"id": "micro", "label": "Micro-batch to shrink the bubble", "shape": "rect"},
+    {"id": "serve", "label": "Throughput-positive sharded replica", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "model", "target": "scope"},
+    {"source": "scope", "target": "tp", "label": "yes: intra-node"},
+    {"source": "scope", "target": "pp", "label": "no: cross-node"},
+    {"source": "tp", "target": "ar"},
+    {"source": "ar", "target": "link"},
+    {"source": "link", "target": "serve", "label": "NVLink"},
+    {"source": "link", "target": "bottleneck", "label": "cross-node TP"},
+    {"source": "pp", "target": "bubble"},
+    {"source": "bubble", "target": "micro"},
+    {"source": "micro", "target": "serve"}
+  ]
+}
+```
+
+### KV-cache-aware load balancing
+
+A replica's real capacity is free KV-cache memory, not CPU. Round-robin routes a long-context request to a replica that then OOMs or evicts, tanking everyone on it. The runtime tracks per-replica KV utilization and routes by *available memory and estimated request length* — and prefix-cache-aware routing sends requests sharing a prefix to the same replica for a cache hit.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "req", "label": "Incoming request", "shape": "circle"},
+    {"id": "rr", "label": "Naive round-robin?", "shape": "diamond"},
+    {"id": "oom", "label": "Long-context lands on full replica: OOM / evict", "shape": "stadium"},
+    {"id": "est", "label": "Estimate request length + prefix hash", "shape": "rect"},
+    {"id": "kv", "label": "Replica with free KV memory?", "shape": "diamond"},
+    {"id": "prefix", "label": "Replica already holds this prefix?", "shape": "diamond"},
+    {"id": "affinity", "label": "Route for prefix-cache hit", "shape": "rect"},
+    {"id": "shed", "label": "Queue / shed (all saturated)", "shape": "stadium"},
+    {"id": "route", "label": "Route to chosen replica", "shape": "rect"},
+    {"id": "ok", "label": "Balanced by real capacity", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "req", "target": "rr"},
+    {"source": "rr", "target": "oom", "label": "yes: ignores KV"},
+    {"source": "rr", "target": "est", "label": "no: KV-aware"},
+    {"source": "est", "target": "kv"},
+    {"source": "kv", "target": "prefix", "label": "yes"},
+    {"source": "kv", "target": "shed", "label": "none free"},
+    {"source": "prefix", "target": "affinity", "label": "yes"},
+    {"source": "prefix", "target": "route", "label": "no"},
+    {"source": "affinity", "target": "ok"},
+    {"source": "route", "target": "ok"}
+  ]
+}
+```
+
+### Autoscaling on the right signal
+
+CPU-based HPA is useless here. The runtime scales on GPU-relevant signals — queue depth, time-to-first-token, KV utilization — and must account for slow cold starts: loading a 70B shard set takes minutes, so scale-up must be predictive (lead the demand) not reactive, with warm pools to bridge the gap.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "start", "label": "Demand signal", "shape": "circle"},
+    {"id": "metric", "label": "Which scaling signal?", "shape": "diamond"},
+    {"id": "cpu", "label": "CPU-based HPA: useless for GPU inference", "shape": "stadium"},
+    {"id": "gpu", "label": "Queue depth / TTFT / KV utilization", "shape": "rect"},
+    {"id": "thr", "label": "Over threshold?", "shape": "diamond"},
+    {"id": "predict", "label": "Predictive (lead demand) or reactive?", "shape": "diamond"},
+    {"id": "late", "label": "Reactive: cold start (minutes) misses the spike", "shape": "stadium"},
+    {"id": "warm", "label": "Promote a warm-pool replica", "shape": "rect"},
+    {"id": "refill", "label": "Refill warm pool in background", "shape": "rect"},
+    {"id": "cap", "label": "Added capacity before saturation", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "start", "target": "metric"},
+    {"source": "metric", "target": "cpu", "label": "CPU"},
+    {"source": "metric", "target": "gpu", "label": "GPU-relevant"},
+    {"source": "gpu", "target": "thr"},
+    {"source": "thr", "target": "predict", "label": "rising"},
+    {"source": "predict", "target": "late", "label": "reactive"},
+    {"source": "predict", "target": "warm", "label": "predictive"},
+    {"source": "warm", "target": "refill"},
+    {"source": "warm", "target": "cap"},
+    {"source": "refill", "target": "cap"}
+  ]
+}
+```
+
+### Cost model: tokens per dollar
+
+The runtime decision metric is $/M-tokens: (GPU $/hr × replicas) ÷ (throughput tokens/hr). It exposes that under-utilized large shards can cost more than the API, and that batching/quantization move this number more than raw replica count. Quantizing to fit fewer GPUs is the same trade as [distillation & compression](/distillation-compression) — smaller footprint for a measured quality cost — and at the extreme, pushing inference to the client is [edge deployment](/edge-deployment).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "cfg", "label": "Serving config (replicas, batch, precision)", "shape": "circle"},
+    {"id": "calc", "label": "$/M-tokens = (GPU $/hr x replicas) / throughput", "shape": "rect"},
+    {"id": "util", "label": "Shards well-utilized?", "shape": "diamond"},
+    {"id": "idle", "label": "Idle large shards cost more than the API", "shape": "stadium"},
+    {"id": "vs", "label": "Beats hosted API $/M-tokens?", "shape": "diamond"},
+    {"id": "lever", "label": "Biggest lever: batching / quantization", "shape": "rect"},
+    {"id": "quant", "label": "Quantize to fit fewer GPUs (measured quality cost)", "shape": "rect"},
+    {"id": "rightsize", "label": "Right-size GPU count to throughput", "shape": "rect"},
+    {"id": "edge", "label": "Extreme: push inference to the client (edge)", "shape": "stadium"},
+    {"id": "ship", "label": "Deploy self-hosted", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "cfg", "target": "calc"},
+    {"source": "calc", "target": "util"},
+    {"source": "util", "target": "idle", "label": "no"},
+    {"source": "util", "target": "vs", "label": "yes"},
+    {"source": "idle", "target": "lever"},
+    {"source": "vs", "target": "ship", "label": "yes"},
+    {"source": "vs", "target": "lever", "label": "no"},
+    {"source": "lever", "target": "quant"},
+    {"source": "lever", "target": "rightsize"},
+    {"source": "quant", "target": "calc", "label": "recompute"},
+    {"source": "rightsize", "target": "calc"},
+    {"source": "lever", "target": "edge", "label": "extreme case"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

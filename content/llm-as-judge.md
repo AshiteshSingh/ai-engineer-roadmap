@@ -2,6 +2,33 @@
 
 The most promising solution for evaluating the flood of AI-generated text is not a team of human experts -- it is another AI. In the MT-Bench study by Zheng et al. (2023), GPT-4's evaluations matched human preferences over 80% of the time, rivaling human-human agreement rates -- at a fraction of the cost and latency. But this LLM-as-Judge paradigm, where one language model evaluates the output of another, carries hidden risks: position bias can flip verdicts in up to 30% of cases, verbosity bias inflates scores for longer-but-not-better responses, and self-enhancement bias means models quietly favor their own outputs. This article examines the methodology, calibration techniques, known biases, and concrete mitigation code for deploying LLM judges in evaluation pipelines.
 
+## Mental Model
+
+The mental model for LLM-as-judge is **a cheap, scalable, *biased* sensor that you must calibrate against ground truth before you trust its readings**. It is not "automated truth" — it is a measuring instrument with known systematic errors (position, verbosity, self-enhancement bias) and random noise. The entire discipline is the same as any instrumentation problem: characterize the bias, correct for it, quantify residual uncertainty, and validate against a human-labeled reference. A judge score reported without an agreement-with-humans number is an uncalibrated ruler.
+
+So treat the judge as a component in a measurement pipeline, not an oracle. Bias mitigations (swap positions, anchor to a reference, normalize for length) are the calibration; multi-judge consensus reduces variance; the human-labeled set is the standard it is calibrated against. This is the scalable engine that powers [eval fundamentals](/eval-fundamentals) and [benchmark design](/benchmark-design) at volume, but it is only trustworthy where validated against [human evaluation](/human-evaluation).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "out", "label": "Model output", "shape": "circle"},
+    {"id": "judge", "label": "LLM judge\n(biased sensor)", "shape": "rect"},
+    {"id": "mit", "label": "Bias mitigations\n(swap/anchor/norm)", "shape": "rect"},
+    {"id": "cal", "label": "Agrees with\nhuman ref?", "shape": "diamond"},
+    {"id": "use", "label": "Trusted score", "shape": "circle"},
+    {"id": "fix", "label": "Recalibrate", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "out", "target": "judge"},
+    {"source": "judge", "target": "mit"},
+    {"source": "mit", "target": "cal"},
+    {"source": "cal", "target": "use", "label": "yes"},
+    {"source": "cal", "target": "fix", "label": "no"}
+  ]
+}
+```
+
 ## The Case for LLM Judges
 
 Human evaluation remains the gold standard for assessing language model outputs on subjective dimensions like helpfulness, harmlessness, and honesty. But human evaluation is slow (days to weeks for a study), expensive ($10-50+ per annotation depending on expertise required), and difficult to reproduce. For iterative development, where you might evaluate thousands of prompt variations across dozens of model configurations, human evaluation is simply not feasible at every decision point.
@@ -813,6 +840,113 @@ class ProductionJudge:
         self.logger.log(question, answer_a, answer_b,
                        result_ab, result_ba, verdict)
         return verdict
+```
+
+## Runtime Internals
+
+The "biased sensor" model hides the mechanics that decide whether a judge pipeline is trustworthy or self-deluding.
+
+### Position-bias correction by swapping
+
+Pairwise judges favor whichever response is in position A (or B) regardless of content — up to ~30% verdict flips. The runtime correction is to run *both orderings* and only count a win if it survives the swap; disagreements become ties. This doubles cost but converts a systematic bias into measured uncertainty, the single most important judge fix.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "pair", "label": "A vs B", "shape": "circle"},
+    {"id": "o1", "label": "Judge (A,B)", "shape": "rect"},
+    {"id": "o2", "label": "Judge (B,A)", "shape": "rect"},
+    {"id": "agree", "label": "Same winner?", "shape": "diamond"},
+    {"id": "win", "label": "Confident verdict", "shape": "circle"},
+    {"id": "tie", "label": "Tie (position bias)", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "pair", "target": "o1"},
+    {"source": "pair", "target": "o2"},
+    {"source": "o1", "target": "agree"},
+    {"source": "o2", "target": "agree"},
+    {"source": "agree", "target": "win", "label": "yes"},
+    {"source": "agree", "target": "tie", "label": "no"}
+  ]
+}
+```
+
+### Calibration against a human-labeled set
+
+A judge is only usable once its agreement with humans is measured (Cohen's κ / correlation) on a representative labeled set. The runtime loop: score the set with the judge, compare to human labels, adjust the rubric/prompt, repeat until agreement clears a threshold. Skipping this means every downstream number inherits an unknown error — the [human evaluation](/human-evaluation) anchor is non-optional.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "set", "label": "Human-labeled\nset", "shape": "circle"},
+    {"id": "run", "label": "Judge scores it", "shape": "rect"},
+    {"id": "kappa", "label": "Agreement ≥ τ?", "shape": "diamond"},
+    {"id": "trust", "label": "Deploy judge", "shape": "rect"},
+    {"id": "tune", "label": "Tune rubric/\nprompt", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "set", "target": "run"},
+    {"source": "run", "target": "kappa"},
+    {"source": "kappa", "target": "trust", "label": "yes"},
+    {"source": "kappa", "target": "tune", "label": "no"},
+    {"source": "tune", "target": "run"}
+  ]
+}
+```
+
+### Tiered judging for cost
+
+A strong-model judge on every sample is expensive. The runtime tiers it: a cheap heuristic or small-model judge handles the confident majority; only low-confidence or high-stakes cases escalate to the expensive judge or to humans. Picking the escalation threshold is a precision/cost dial tuned on the calibration set — the same cascade economics as model routing.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "case", "label": "Eval case", "shape": "circle"},
+    {"id": "cheap", "label": "Cheap judge", "shape": "rect"},
+    {"id": "conf", "label": "Confident?", "shape": "diamond"},
+    {"id": "strong", "label": "Strong judge /\nhuman", "shape": "rect"},
+    {"id": "score", "label": "Final score", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "case", "target": "cheap"},
+    {"source": "cheap", "target": "conf"},
+    {"source": "conf", "target": "score", "label": "yes"},
+    {"source": "conf", "target": "strong", "label": "no"},
+    {"source": "strong", "target": "score"}
+  ]
+}
+```
+
+### Multi-judge consensus reduces variance
+
+A single judge is noisy and may share blind spots with the model under test (self-enhancement bias). The runtime mitigation is an ensemble of diverse judge models with majority vote or averaged scores; disagreement itself is a useful signal (route to human). Using the *same family* as judge and target reintroduces the bias the ensemble was meant to remove.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "resp", "label": "Response", "shape": "circle"},
+    {"id": "j1", "label": "Judge model A", "shape": "rect"},
+    {"id": "j2", "label": "Judge model B", "shape": "rect"},
+    {"id": "j3", "label": "Judge model C", "shape": "rect"},
+    {"id": "agree", "label": "Consensus?", "shape": "diamond"},
+    {"id": "out", "label": "Score", "shape": "circle"},
+    {"id": "human", "label": "Escalate to human", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "resp", "target": "j1"},
+    {"source": "resp", "target": "j2"},
+    {"source": "resp", "target": "j3"},
+    {"source": "j1", "target": "agree"},
+    {"source": "j2", "target": "agree"},
+    {"source": "j3", "target": "agree"},
+    {"source": "agree", "target": "out", "label": "yes"},
+    {"source": "agree", "target": "human", "label": "split"}
+  ]
+}
 ```
 
 ## Summary and Key Takeaways

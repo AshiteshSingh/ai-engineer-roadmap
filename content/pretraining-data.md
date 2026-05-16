@@ -2,6 +2,33 @@
 
 Pre-training is where a language model acquires the vast majority of its knowledge and capabilities, yet the data engineering behind pre-training remains one of the least transparent aspects of modern AI. While frontier labs invest hundreds of millions of dollars in training compute, the quality, composition, and curation of training data often matters as much as scale. This article examines the full pre-training pipeline — from web scraping and deduplication through quality filtering and data mixing — alongside the training objectives and curriculum strategies that determine how models learn from their data.
 
+## Mental Model
+
+The mental model for pre-training data is a **refinery, not a warehouse**: petabytes of raw web crude enter, and every stage (extraction → dedup → quality filtering → PII removal → mixing) *removes* far more than it keeps. The output is not "more tokens" but a *distribution* — the model literally becomes the weighted average of what survives. Two corollaries: the filters are the product (a quality classifier's bias is the model's bias), and mixing weights are a design decision, not a default.
+
+This is the upstream sibling of [dataset curation](/dataset-curation) (which curates *task* data) and the foundation everything else stands on — a flaw here cannot be patched by [fine-tuning fundamentals](/fine-tuning-fundamentals) later, only masked. Think of it as setting the prior; fine-tuning only nudges the posterior.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "raw", "label": "Common Crawl\n(petabytes)", "shape": "circle"},
+    {"id": "ext", "label": "Text extract\n+ lang ID", "shape": "rect"},
+    {"id": "dedup", "label": "Dedup", "shape": "rect"},
+    {"id": "qual", "label": "Quality filter", "shape": "rect"},
+    {"id": "mix", "label": "Domain mix\n(weights)", "shape": "diamond"},
+    {"id": "corpus", "label": "Training corpus\n(a distribution)", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "raw", "target": "ext"},
+    {"source": "ext", "target": "dedup"},
+    {"source": "dedup", "target": "qual"},
+    {"source": "qual", "target": "mix"},
+    {"source": "mix", "target": "corpus"}
+  ]
+}
+```
+
 ## The Pre-training Data Pipeline
 
 A modern pre-training data pipeline processes petabytes of raw web crawl data into a curated, deduplicated, filtered corpus. The pipeline typically has four stages: acquisition, deduplication, quality filtering, and mixing.
@@ -446,6 +473,106 @@ Pre-training data curation intersects with significant ethical and legal questio
 - **Bias**: web text reflects the biases of its authors and platforms. Data filtering can amplify or mitigate biases depending on the criteria used.
 
 **Longpre et al. (2023)** in the Data Provenance Initiative documented the provenance and licensing status of 1800+ text datasets, finding significant ambiguity in licensing terms and frequent chain-of-custody issues where datasets are derived from other datasets without preserving license constraints.
+
+## Runtime Internals
+
+The refinery metaphor hides the mechanics that decide whether a trillion-token run is usable.
+
+### Dedup at web scale
+
+Exact dedup is a hash join; the one that matters is *near*-dedup via MinHash + LSH, because verbatim duplicates inflate memorization and waste compute. The runtime tension: Jaccard threshold too high keeps near-dups; too low destroys legitimately repeated facts. This is the same machinery as in [dataset curation](/dataset-curation), just at 10000× the scale where O(n²) is impossible.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "doc", "label": "Documents", "shape": "circle"},
+    {"id": "sh", "label": "Shingle", "shape": "rect"},
+    {"id": "mh", "label": "MinHash sig", "shape": "rect"},
+    {"id": "lsh", "label": "LSH bucket", "shape": "diamond"},
+    {"id": "keep", "label": "Keep one", "shape": "circle"},
+    {"id": "drop", "label": "Drop dups", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "doc", "target": "sh"},
+    {"source": "sh", "target": "mh"},
+    {"source": "mh", "target": "lsh"},
+    {"source": "lsh", "target": "drop", "label": "same bucket"},
+    {"source": "lsh", "target": "keep", "label": "unique"}
+  ]
+}
+```
+
+### Quality filtering: classifier vs perplexity
+
+Two runtime strategies dominate: a trained quality classifier (often "is this like reference high-quality text?") and perplexity filtering under a small reference model. Both silently shape the corpus toward the reference's distribution — over-filtering collapses diversity and is a measurable cause of degraded reasoning. Whether it helped is an [evaluation fundamentals](/eval-fundamentals) question, measured on downstream tasks, not eyeballed.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "doc", "label": "Document", "shape": "circle"},
+    {"id": "clf", "label": "Quality classifier\nor perplexity", "shape": "rect"},
+    {"id": "thr", "label": "score ≥ τ?", "shape": "diamond"},
+    {"id": "keep", "label": "Keep", "shape": "circle"},
+    {"id": "drop", "label": "Drop", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "doc", "target": "clf"},
+    {"source": "clf", "target": "thr"},
+    {"source": "thr", "target": "keep", "label": "yes"},
+    {"source": "thr", "target": "drop", "label": "no"}
+  ]
+}
+```
+
+### Data mixing and epochs
+
+Domain weights (web vs code vs books vs math) are an explicit knob: up-weighting code improves reasoning but can hurt fluency. Equally important is *epoch budget* — repeating high-quality data a few times beats diluting with low-quality web, up to a repetition limit beyond which memorization dominates.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "pools", "label": "Domain pools", "shape": "circle"},
+    {"id": "w", "label": "Mixing weights", "shape": "diamond"},
+    {"id": "rep", "label": "Epoch budget\n(repeat limit)", "shape": "rect"},
+    {"id": "sched", "label": "Token schedule", "shape": "rect"},
+    {"id": "train", "label": "Training stream", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "pools", "target": "w"},
+    {"source": "w", "target": "rep"},
+    {"source": "rep", "target": "sched"},
+    {"source": "sched", "target": "train"}
+  ]
+}
+```
+
+### Decontamination against benchmarks
+
+Before the run, training data overlapping evaluation benchmarks must be removed or every reported number is inflated. n-gram overlap is the fast first pass; embedding similarity catches paraphrased leakage. Skipping this is the most common reason "frontier" results fail to replicate.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "cand", "label": "Train candidate", "shape": "circle"},
+    {"id": "ng", "label": "n-gram vs\nbenchmarks", "shape": "rect"},
+    {"id": "emb", "label": "Embedding sim", "shape": "rect"},
+    {"id": "hit", "label": "Overlap?", "shape": "diamond"},
+    {"id": "rm", "label": "Remove", "shape": "stadium"},
+    {"id": "ok", "label": "Safe to train", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "cand", "target": "ng"},
+    {"source": "ng", "target": "emb"},
+    {"source": "emb", "target": "hit"},
+    {"source": "hit", "target": "rm", "label": "yes"},
+    {"source": "hit", "target": "ok", "label": "no"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 

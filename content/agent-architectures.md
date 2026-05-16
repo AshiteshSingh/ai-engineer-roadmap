@@ -2,6 +2,34 @@
 
 The design of agent architectures determines how language models reason, plan, and act in complex environments. From the foundational ReAct framework that interleaves reasoning with action, to sophisticated cognitive architectures that incorporate reflection, search, and hierarchical planning, the field has rapidly evolved beyond simple prompt-response patterns. This article provides a deep technical examination of the major agent architecture paradigms, their theoretical foundations, implementation patterns, and practical tradeoffs observed in production systems.
 
+## Mental Model
+
+The mental model for agent architectures is **a control loop wrapped around a stateless reasoner, and the architecture is the shape of that loop**. Chain-of-thought just thinks; an agent *acts, observes, and re-decides*. Every named pattern is a different answer to two questions: "when does the loop stop?" and "how much structure constrains the next step?". ReAct is the minimal loop (think→act→observe, repeat); Plan-and-Execute front-loads a plan to reduce per-step drift; Reflexion adds a memory of past failures; tree search (LATS) explores multiple loop futures and backtracks. More structure buys reliability and costs flexibility and latency.
+
+So choosing an architecture is choosing where on the *autonomy-vs-control* spectrum a task belongs, not picking a favorite framework. The loop body is one [transformer](/transformer-architecture) forward pass plus tool calls; "act" is almost always [function calling](/function-calling) with validated arguments; durable state across loop iterations is a [memory architectures](/memory-architectures) problem; and whether the loop actually succeeds is judged by [agent evaluation](/agent-evaluation) on the *trajectory*, not just the final answer.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "goal", "label": "Goal", "shape": "circle"},
+    {"id": "think", "label": "Reason", "shape": "rect"},
+    {"id": "act", "label": "Act (tool call)", "shape": "rect"},
+    {"id": "obs", "label": "Observe", "shape": "rect"},
+    {"id": "done", "label": "Goal met /\nbudget hit?", "shape": "diamond"},
+    {"id": "out", "label": "Answer", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "goal", "target": "think"},
+    {"source": "think", "target": "act"},
+    {"source": "act", "target": "obs"},
+    {"source": "obs", "target": "done"},
+    {"source": "done", "target": "think", "label": "no: loop"},
+    {"source": "done", "target": "out", "label": "yes"}
+  ]
+}
+```
+
 ## Foundations: From Chain-of-Thought to Agents
 
 Before examining specific architectures, it is worth understanding the conceptual progression that led to modern agent designs. Chain-of-Thought prompting (Wei et al., 2022) demonstrated that LLMs could perform multi-step reasoning when prompted to "think step by step" (see [Article 08: Few-Shot & Chain-of-Thought](/few-shot-chain-of-thought) for a thorough treatment). This was a passive capability -- the model reasoned but could not act on its reasoning.
@@ -639,6 +667,128 @@ async def stream_agent_execution(agent, task):
             yield f"Got result from {event['tool_name']}\n"
         elif event["type"] == "final_answer":
             yield f"\nAnswer: {event['content']}\n"
+```
+
+## Runtime Internals
+
+The "control loop around a reasoner" model hides the mechanics that decide whether an agent converges or spirals.
+
+### ReAct: the interleave and its failure mode
+
+ReAct alternates a Thought, an Action, and an Observation, re-prompting the model with the growing trace each step. The runtime fragility is *context growth*: every observation is appended, so a long trajectory blows the window and degrades reasoning. Production ReAct needs observation summarization and a hard step cap — an unbounded loop is the default failure, not an edge case.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "thought", "label": "Thought", "shape": "circle"},
+    {"id": "action", "label": "Action (tool call)", "shape": "rect"},
+    {"id": "obs", "label": "Observation", "shape": "rect"},
+    {"id": "trace", "label": "Append to running trace", "shape": "rect"},
+    {"id": "win", "label": "trace tokens < window budget?", "shape": "diamond"},
+    {"id": "cap", "label": "step < max_steps?", "shape": "diamond"},
+    {"id": "summ", "label": "Summarize old observations", "shape": "stadium"},
+    {"id": "force", "label": "Forced final answer", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "thought", "target": "action"},
+    {"source": "action", "target": "obs"},
+    {"source": "obs", "target": "trace"},
+    {"source": "trace", "target": "win"},
+    {"source": "win", "target": "cap", "label": "fits"},
+    {"source": "win", "target": "summ", "label": "bloated"},
+    {"source": "summ", "target": "cap"},
+    {"source": "cap", "target": "thought", "label": "under cap"},
+    {"source": "cap", "target": "force", "label": "cap hit"}
+  ]
+}
+```
+
+### Plan-and-Execute: front-loaded structure
+
+This pattern generates a full plan once, then executes steps with a cheaper model, optionally re-planning on failure. The runtime trade: fewer expensive reasoning calls and less per-step drift, but a brittle plan if the world changes mid-execution. The key knob is the *re-plan trigger* — too eager wastes the plan, too lazy follows a stale one off a cliff.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "goal", "label": "Goal", "shape": "circle"},
+    {"id": "planner", "label": "Planner: strong model, one call", "shape": "rect"},
+    {"id": "plan", "label": "Static step list", "shape": "rect"},
+    {"id": "exec", "label": "Execute step: cheap model", "shape": "rect"},
+    {"id": "trigger", "label": "Re-plan trigger fired?", "shape": "diamond"},
+    {"id": "more", "label": "Steps remaining?", "shape": "diamond"},
+    {"id": "stale", "label": "Stale-plan drift risk", "shape": "stadium"},
+    {"id": "done", "label": "Goal reached", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "goal", "target": "planner"},
+    {"source": "planner", "target": "plan"},
+    {"source": "plan", "target": "exec"},
+    {"source": "exec", "target": "trigger"},
+    {"source": "trigger", "target": "planner", "label": "yes: re-plan (costly)"},
+    {"source": "trigger", "target": "stale", "label": "too lazy: follows stale plan"},
+    {"source": "trigger", "target": "more", "label": "no: on track"},
+    {"source": "more", "target": "exec", "label": "next step"},
+    {"source": "more", "target": "done", "label": "complete"}
+  ]
+}
+```
+
+### Reflexion: self-critique as memory
+
+Reflexion adds a loop *around* the loop: after a failed attempt, the agent writes a verbal lesson to memory and retries with that lesson in context. The runtime requirement is a real success/failure signal (a test, an evaluator) — without a reliable verdict, the reflection reinforces noise. It improves *without* weight updates, a [memory architectures](/memory-architectures) pattern.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "attempt", "label": "Attempt task", "shape": "circle"},
+    {"id": "evaluator", "label": "Evaluator (test / verifier)", "shape": "rect"},
+    {"id": "reliable", "label": "Verdict signal reliable?", "shape": "diamond"},
+    {"id": "noise", "label": "Reflection reinforces noise", "shape": "stadium"},
+    {"id": "pass", "label": "Success: stop", "shape": "stadium"},
+    {"id": "reflect", "label": "Generate verbal self-critique", "shape": "rect"},
+    {"id": "mem", "label": "Episodic memory store", "shape": "rect"},
+    {"id": "retry", "label": "Retry with lesson in context", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "attempt", "target": "evaluator"},
+    {"source": "evaluator", "target": "reliable"},
+    {"source": "reliable", "target": "noise", "label": "no: weak signal"},
+    {"source": "reliable", "target": "pass", "label": "yes + passed"},
+    {"source": "reliable", "target": "reflect", "label": "yes + failed"},
+    {"source": "reflect", "target": "mem"},
+    {"source": "mem", "target": "retry", "label": "no weight update"},
+    {"source": "retry", "target": "attempt"}
+  ]
+}
+```
+
+### Tree search (LATS): explore and backtrack
+
+LATS treats agent steps as a search tree: expand candidate actions, score states with a value estimate, expand the most promising, and backtrack from dead ends. The runtime cost is a branching × depth blowup of LLM calls plus a need for a state evaluator. It is the highest-reliability, highest-cost end of the spectrum — justified only when a wrong action is expensive and a verifier exists.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "root", "label": "State", "shape": "circle"},
+    {"id": "exp", "label": "Expand actions", "shape": "rect"},
+    {"id": "val", "label": "Score states", "shape": "rect"},
+    {"id": "good", "label": "Promising?", "shape": "diamond"},
+    {"id": "deep", "label": "Descend", "shape": "rect"},
+    {"id": "back", "label": "Backtrack", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "root", "target": "exp"},
+    {"source": "exp", "target": "val"},
+    {"source": "val", "target": "good"},
+    {"source": "good", "target": "deep", "label": "yes"},
+    {"source": "good", "target": "back", "label": "no"},
+    {"source": "deep", "target": "exp"}
+  ]
+}
 ```
 
 ## Summary and Key Takeaways

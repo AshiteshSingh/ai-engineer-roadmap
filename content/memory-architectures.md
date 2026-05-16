@@ -4,6 +4,34 @@ Language models are stateless functions. Each inference call receives a prompt, 
 
 This article provides a comprehensive treatment of memory architectures for LLM-based systems, organized around the cognitive science taxonomy that has become the dominant framing in the field: working memory, episodic memory, semantic memory, and procedural memory. It covers the theoretical foundations, concrete implementation patterns, and the hybrid architectures that combine multiple memory types into production systems. For the foundational treatment of agent memory concepts including MemGPT and the Generative Agents architecture, see [Agent Memory](/agent-memory). For context window management strategies and budget allocation, see [Context Engineering](/context-engineering). For the vector storage layer that underpins most long-term memory systems, see [Vector Databases](/vector-databases).
 
+## Mental Model
+
+The mental model for memory architectures is **a stateless function dressed up as a stateful agent by an external store you design**. Every LLM call is pure: same input → same distribution, zero recall. "Memory" is entirely the system *around* the model — what it writes after a turn, what it retrieves before the next, and how it compresses the unbounded past into a bounded prompt. The cognitive taxonomy (working / episodic / semantic / procedural) is not biology trivia; it is a *design checklist* of four distinct stores with different write triggers, retrieval cues, and lifetimes.
+
+So the engineering question is never "does it remember?" but "for each memory type, what is the write policy, the retrieval policy, and the eviction policy?". Working memory is the context window (a [dynamic context assembly](/dynamic-context-assembly) problem); episodic/semantic memory live in external stores keyed by retrieval; procedural memory is learned skills, often surfaced as tools via [function calling](/function-calling). Making those stores return *clean, typed* records the model can consume is itself a [structured output](/structured-output) discipline.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "model", "label": "Stateless LLM", "shape": "circle"},
+    {"id": "work", "label": "Working\n(context window)", "shape": "rect"},
+    {"id": "epi", "label": "Episodic\n(experiences)", "shape": "rect"},
+    {"id": "sem", "label": "Semantic\n(facts/entities)", "shape": "rect"},
+    {"id": "proc", "label": "Procedural\n(skills/tools)", "shape": "rect"},
+    {"id": "agent", "label": "Apparently\nstateful agent", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "model", "target": "work"},
+    {"source": "work", "target": "epi", "label": "write after turn"},
+    {"source": "work", "target": "sem"},
+    {"source": "proc", "target": "model", "label": "retrieve before turn"},
+    {"source": "epi", "target": "agent"},
+    {"source": "sem", "target": "agent"}
+  ]
+}
+```
+
 ## The Stateless Inference Problem
 
 ### Why LLMs Cannot Remember
@@ -1703,6 +1731,112 @@ For the full treatment of RAG patterns, see [Context Engineering](/context-engin
 ### Shared Memory Across Agents
 
 In multi-agent systems, memory sharing becomes an architectural concern. Should agents share a common memory store, maintain private memories with a shared read layer, or communicate memories through explicit message passing? The answer depends on the trust model and the agents' roles. For multi-agent coordination patterns, see the agent architecture literature and the coordination mechanisms discussed in the broader agent systems literature.
+
+## Runtime Internals
+
+The "four stores around a stateless model" view hides the policies that decide whether memory helps or quietly corrupts the agent.
+
+### Write policy: significance before storage
+
+Persisting every turn floods episodic memory with noise that later drowns relevant recall. The runtime gates writes by significance (was this turn an outcome, a decision, a correction?), deduplicates against existing memories, and consolidates near-duplicates. A store without a write filter degrades monotonically — more rows, worse precision.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "turn", "label": "Turn / outcome", "shape": "circle"},
+    {"id": "sig", "label": "Significant?", "shape": "diamond"},
+    {"id": "dup", "label": "Duplicate?", "shape": "diamond"},
+    {"id": "merge", "label": "Consolidate", "shape": "rect"},
+    {"id": "store", "label": "Write", "shape": "rect"},
+    {"id": "drop", "label": "Discard", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "turn", "target": "sig"},
+    {"source": "sig", "target": "drop", "label": "no"},
+    {"source": "sig", "target": "dup", "label": "yes"},
+    {"source": "dup", "target": "merge", "label": "yes"},
+    {"source": "dup", "target": "store", "label": "no"},
+    {"source": "merge", "target": "store"}
+  ]
+}
+```
+
+### Retrieval: precision over recall
+
+Each retrieved memory costs context budget and risks distraction, so the runtime favors precision: embed the current state as a cue, search, rerank, and apply a similarity floor — recall *nothing* rather than inject a confidently irrelevant memory. Returning typed records (not raw text blobs) keeps the model from misparsing them, a [structured output](/structured-output) requirement on the memory layer.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "cue", "label": "State cue", "shape": "circle"},
+    {"id": "search", "label": "Embed + search", "shape": "rect"},
+    {"id": "rr", "label": "Rerank +\nfloor", "shape": "rect"},
+    {"id": "ok", "label": "Above floor?", "shape": "diamond"},
+    {"id": "inj", "label": "Inject typed\nrecord", "shape": "rect"},
+    {"id": "skip", "label": "Recall nothing", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "cue", "target": "search"},
+    {"source": "search", "target": "rr"},
+    {"source": "rr", "target": "ok"},
+    {"source": "ok", "target": "inj", "label": "yes"},
+    {"source": "ok", "target": "skip", "label": "no"}
+  ]
+}
+```
+
+### Virtual context (MemGPT) paging
+
+When working memory overflows, the MemGPT pattern treats the window as paged RAM: evict the least-relevant span to an external tier and page it back via an explicit recall "function call". The runtime hazards are thrash (evict→immediately recall) and a corrupted working set after a bad eviction — the same failure surface as OS paging, surfaced through [function calling](/function-calling) memory ops.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "full", "label": "Window full", "shape": "circle"},
+    {"id": "evict", "label": "Evict LRU span", "shape": "rect"},
+    {"id": "ext", "label": "External tier", "shape": "rect"},
+    {"id": "need", "label": "Needed again?", "shape": "diamond"},
+    {"id": "page", "label": "Recall (fn call)", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "full", "target": "evict"},
+    {"source": "evict", "target": "ext"},
+    {"source": "ext", "target": "need"},
+    {"source": "need", "target": "page", "label": "yes"},
+    {"source": "page", "target": "full", "label": "watch thrash"}
+  ]
+}
+```
+
+### Hybrid routing across memory types
+
+Production systems combine all four stores, so a runtime router decides *which* memory a given need hits: recent dialogue → working; "have we done this before?" → episodic; "what is X?" → semantic; "how do I do Y?" → procedural. Mis-routing returns a confident answer from the wrong store. The retrieved set is then merged into one [dynamic context assembly](/dynamic-context-assembly) budget.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "need", "label": "Information need", "shape": "circle"},
+    {"id": "route", "label": "Which store?", "shape": "diamond"},
+    {"id": "w", "label": "Working", "shape": "rect"},
+    {"id": "e", "label": "Episodic", "shape": "rect"},
+    {"id": "s", "label": "Semantic", "shape": "rect"},
+    {"id": "asm", "label": "Assemble into\none budget", "shape": "circle"}
+  ],
+  "edges": [
+    {"source": "need", "target": "route"},
+    {"source": "route", "target": "w", "label": "recent"},
+    {"source": "route", "target": "e", "label": "experience"},
+    {"source": "route", "target": "s", "label": "fact"},
+    {"source": "w", "target": "asm"},
+    {"source": "e", "target": "asm"},
+    {"source": "s", "target": "asm"}
+  ]
+}
+```
 
 ## Summary and Key Takeaways
 
