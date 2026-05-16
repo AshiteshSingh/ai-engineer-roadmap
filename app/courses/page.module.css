@@ -1,0 +1,6 @@
+/* Co-located styles for app/courses/page.tsx — no global CSS.
+   Global `courses-page`/`course-card` classes left as-is per scope. */
+.empty {
+  color: var(--ds-text-faint);
+  font-size: var(--text-sm, 0.875rem);
+}

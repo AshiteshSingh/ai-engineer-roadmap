@@ -1,6 +1,7 @@
 import { Topbar } from "@/components/topbar";
 import { getAllUdemyCoursesByGroup, TOPIC_GROUP_ORDER } from "@/lib/db/queries";
 import type { ExternalCourse } from "@/lib/db/queries";
+import styles from "./page.module.css";
 
 export const metadata = {
   title: "AI/ML Courses — Udemy",
@@ -111,7 +112,7 @@ export default async function CoursesPage() {
         </div>
 
         {orderedGroups.length === 0 ? (
-          <p style={{ color: "var(--gray-9)", fontSize: "0.875rem" }}>
+          <p className={styles.empty}>
             No courses yet — run <code>pnpm scrape:udemy</code> to populate.
           </p>
         ) : (
