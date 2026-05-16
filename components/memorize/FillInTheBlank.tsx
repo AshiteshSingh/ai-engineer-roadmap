@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { Button, Flex, Text } from "@radix-ui/themes";
 import type { MemorizeItem } from "@/lib/memorize-types";
 import { LiveDemo } from "./LiveDemo";
+import s from "./FillInTheBlank.module.css";
 
 interface FillInTheBlankProps {
   items: MemorizeItem[];
@@ -106,10 +107,10 @@ export function FillInTheBlank({
 
   return (
     <div className="fill-blank-container">
-      <Text size="2" color="gray" mb="3" style={{ display: "block" }}>
+      <Text size="2" color="gray" mb="3" className={s.promptLine}>
         {isCssMode ? (
           <>Fill in the value for{" "}
-            <code style={{ fontFamily: "var(--font-mono)", background: "var(--violet-3)", padding: "1px 6px", borderRadius: "var(--radius-1)" }}>
+            <code className={s.propChip}>
               {challenge.blankLabel}
             </code>:
           </>

@@ -1,5 +1,7 @@
 import { concepts, steps, courses, getCourseStats } from "@/lib/langgraph-data";
 import type { LangGraphCourse } from "@/lib/langgraph-data";
+import { cx } from "@/components/ui";
+import s from "./langgraph-extra.module.css";
 
 function StarRating({ rating }: { rating: number }) {
   const full = Math.floor(rating);
@@ -143,7 +145,7 @@ export function LangGraphExtra() {
           <h2 className="lg-section-title">Recommended Udemy Courses</h2>
           <span className="se-topic-count">{stats.courseCount} courses</span>
         </div>
-        <p className="lg-prose" style={{ marginBottom: 20 }}>
+        <p className={cx("lg-prose", s.coursesIntro)}>
           {(stats.totalStudents / 1000).toFixed(0)}K+ students enrolled across{" "}
           {stats.courseCount} courses, averaging {stats.avgRating} stars from{" "}
           {(stats.totalReviews / 1000).toFixed(0)}K+ reviews.

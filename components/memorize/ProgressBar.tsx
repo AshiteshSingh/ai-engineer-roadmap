@@ -1,7 +1,10 @@
 "use client";
 
 import { memo } from "react";
+import type { CSSProperties } from "react";
 import { Text, Flex } from "@radix-ui/themes";
+import { cx } from "@/components/ui";
+import s from "./ProgressBar.module.css";
 
 interface ProgressBarProps {
   pMastery: number;
@@ -29,7 +32,7 @@ export const ProgressBar = memo(function ProgressBar({
     <div>
       {showLabel && (
         <Flex justify="between" align="center">
-          <Text size="1" color="gray" style={{ textTransform: "capitalize" }}>
+          <Text size="1" color="gray" className={s.level}>
             {level}
           </Text>
           <Text size="1" color="gray">
@@ -37,10 +40,14 @@ export const ProgressBar = memo(function ProgressBar({
           </Text>
         </Flex>
       )}
-      <div className="memorize-progress">
+      <div className={cx("memorize-progress", s.track)}>
         <div
-          className={`memorize-progress-fill memorize-progress-fill--${level}`}
-          style={{ width: `${pct}%` }}
+          className={cx(
+            "memorize-progress-fill",
+            `memorize-progress-fill--${level}`,
+            s.fill,
+          )}
+          style={{ "--memorize-progress-pct": `${pct}%` } as CSSProperties}
         />
       </div>
     </div>

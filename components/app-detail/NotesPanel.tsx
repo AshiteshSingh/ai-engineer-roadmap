@@ -24,6 +24,7 @@ import remarkGfm from "remark-gfm";
 import type { ReactElement } from "react";
 import { MermaidFlow } from "@/components/mermaid-flow";
 import type { TabBaseProps } from "./types";
+import s from "./NotesPanel.module.css";
 
 interface Note {
   id: string;
@@ -178,7 +179,7 @@ export function NotesPanel({
                 onChange={(e) => setNewContent(e.target.value)}
                 placeholder={contentPlaceholder}
                 rows={10}
-                style={{ minHeight: 200 }}
+                className={s.editArea}
               />
             </Box>
           </Flex>
@@ -213,8 +214,8 @@ export function NotesPanel({
 
       {/* Notes list */}
       {notes.length === 0 && (
-        <Card style={{ borderLeft: "3px solid var(--amber-6)", borderRadius: 0 }}>
-          <Flex direction="column" align="center" justify="center" gap="2" py="6" style={{ opacity: 0.7 }}>
+        <Card className={s.noteCard}>
+          <Flex direction="column" align="center" justify="center" gap="2" py="6" className={s.emptyBody}>
             <Text size="2" color="gray">{emptyLabel}</Text>
             {isAdmin && (
               <Button variant="soft" size="1" mt="1" onClick={() => setCreating(true)}>
@@ -226,7 +227,7 @@ export function NotesPanel({
       )}
 
       {notes.map((note) => (
-        <Card key={note.id} style={{ borderLeft: "3px solid var(--amber-6)", borderRadius: 0 }}>
+        <Card key={note.id} className={s.noteCard}>
           {editingId === note.id ? (
             <Flex direction="column" gap="2">
               <TextField.Root
@@ -238,7 +239,7 @@ export function NotesPanel({
                 value={contentValue}
                 onChange={(e) => setContentValue(e.target.value)}
                 rows={10}
-                style={{ minHeight: 200 }}
+                className={s.editArea}
               />
               <Flex gap="2" justify="end">
                 <Button variant="soft" color="gray" size="1" onClick={() => setEditingId(null)}>
@@ -289,32 +290,32 @@ export function NotesPanel({
                       <Heading size="5" mb="2" mt="4">{children}</Heading>
                     ),
                     h2: ({ children }) => (
-                      <Box mt="5" mb="2" pt="4" style={{ borderTop: "1px solid var(--gray-4)" }}>
+                      <Box mt="5" mb="2" pt="4" className={s.mdH2Rule}>
                         <Heading size="4">{children}</Heading>
                       </Box>
                     ),
                     h3: ({ children }) => (
-                      <Box mt="4" mb="2" p="3" style={{ backgroundColor: "var(--amber-2)", borderLeft: "3px solid var(--amber-8)", borderRadius: 0 }}>
+                      <Box mt="4" mb="2" p="3" className={s.mdH3Box}>
                         <Heading size="3">{children}</Heading>
                       </Box>
                     ),
                     p: ({ children }) => (
-                      <Text as="p" size="2" mb="2" style={{ lineHeight: 1.7 }}>{children}</Text>
+                      <Text as="p" size="2" mb="2" className={s.mdP}>{children}</Text>
                     ),
                     strong: ({ children }) => (
-                      <strong style={{ fontWeight: 600 }}>{children}</strong>
+                      <strong className={s.mdStrong}>{children}</strong>
                     ),
                     ul: ({ children }) => (
-                      <ul style={{ paddingLeft: 20, lineHeight: 1.8, marginBottom: 12 }}>{children}</ul>
+                      <ul className={s.mdList}>{children}</ul>
                     ),
                     ol: ({ children }) => (
-                      <ol style={{ paddingLeft: 20, lineHeight: 1.8, marginBottom: 12 }}>{children}</ol>
+                      <ol className={s.mdList}>{children}</ol>
                     ),
                     li: ({ children }) => (
-                      <li style={{ lineHeight: 1.7, marginBottom: 4, fontSize: "var(--font-size-2)" }}>{children}</li>
+                      <li className={s.mdLi}>{children}</li>
                     ),
                     blockquote: ({ children }) => (
-                      <Box mb="3" pl="3" style={{ borderLeft: "3px solid var(--gray-6)", color: "var(--gray-11)" }}>
+                      <Box mb="3" pl="3" className={s.mdBlockquote}>
                         {children}
                       </Box>
                     ),
@@ -332,18 +333,18 @@ export function NotesPanel({
                     code: ({ children, className }) => {
                       const isBlock = className?.includes("language-");
                       return isBlock ? (
-                        <Box mb="3" p="3" style={{ backgroundColor: "var(--gray-2)", borderRadius: "var(--radius-2)", overflowX: "auto" }}>
-                          <pre style={{ margin: 0, fontSize: "var(--font-size-1)", fontFamily: "var(--font-mono, monospace)", lineHeight: 1.6 }}>
+                        <Box mb="3" p="3" className={s.mdCodeBlock}>
+                          <pre className={s.mdCodeBlockPre}>
                             <code>{children}</code>
                           </pre>
                         </Box>
                       ) : (
-                        <code style={{ backgroundColor: "var(--gray-3)", padding: "1px 5px", borderRadius: "var(--radius-1)", fontSize: "0.9em", fontFamily: "var(--font-mono, monospace)" }}>
+                        <code className={s.mdCodeInline}>
                           {children}
                         </code>
                       );
                     },
-                    hr: () => <Box mb="4" style={{ borderTop: "1px solid var(--gray-4)" }} />,
+                    hr: () => <Box mb="4" className={s.mdHrRule} />,
                   }}
                 >
                   {note.content}

@@ -8,6 +8,7 @@ import remarkGfm from "remark-gfm";
 import type { ReactElement } from "react";
 import type { TabBaseProps } from "./types";
 import { MermaidFlow } from "@/components/mermaid-flow";
+import s from "./InterviewPrepTab.module.css";
 
 const POLL_INTERVAL = 4_000;
 
@@ -61,7 +62,7 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
 
   if (!prepContent) {
     return (
-      <Card style={{ borderLeft: "3px solid var(--violet-6)", borderRadius: 0 }}>
+      <Card className={s.card}>
         <Flex direction="column" align="center" justify="center" gap="3" py="8">
           {running ? (
             <>
@@ -102,7 +103,7 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
   }
 
   return (
-    <Card style={{ borderLeft: "3px solid var(--violet-6)", borderRadius: 0 }}>
+    <Card className={s.card}>
       <Flex justify="between" align="center" mb="4">
         <Heading size="4">Interview Prep</Heading>
         {isAdmin && (
@@ -122,36 +123,36 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
           remarkPlugins={[remarkGfm]}
           components={{
             h1: ({ children }) => (
-              <Heading size="5" mb="2" mt="4" style={{ color: "var(--violet-11)" }}>{children}</Heading>
+              <Heading size="5" mb="2" mt="4" className={s.mdH1}>{children}</Heading>
             ),
             h2: ({ children }) => (
-              <Box mt="5" mb="2" pt="4" style={{ borderTop: "1px solid var(--gray-4)" }}>
-                <Heading size="4" style={{ color: "var(--violet-11)" }}>{children}</Heading>
+              <Box mt="5" mb="2" pt="4" className={s.mdH2}>
+                <Heading size="4" className={s.mdH2Title}>{children}</Heading>
               </Box>
             ),
             h3: ({ children }) => (
-              <Box mt="4" mb="2" p="3" style={{ borderLeft: "3px solid var(--violet-8)", borderRadius: 0 }}>
+              <Box mt="4" mb="2" p="3" className={s.mdH3}>
                 <Heading size="3">{children}</Heading>
               </Box>
             ),
             p: ({ children }) => (
-              <Text as="p" size="2" mb="2" style={{ lineHeight: 1.7 }}>{children}</Text>
+              <Text as="p" size="2" mb="2" className={s.mdParagraph}>{children}</Text>
             ),
             strong: ({ children }) => (
-              <strong style={{ fontWeight: 600 }}>{children}</strong>
+              <strong className={s.mdStrong}>{children}</strong>
             ),
             em: ({ children }) => <em>{children}</em>,
             ul: ({ children }) => (
-              <ul style={{ paddingLeft: 20, lineHeight: 1.8, marginBottom: 12 }}>{children}</ul>
+              <ul className={s.mdList}>{children}</ul>
             ),
             ol: ({ children }) => (
-              <ol style={{ paddingLeft: 20, lineHeight: 1.8, marginBottom: 12 }}>{children}</ol>
+              <ol className={s.mdList}>{children}</ol>
             ),
             li: ({ children }) => (
-              <li style={{ lineHeight: 1.7, marginBottom: 4, fontSize: "var(--font-size-2)" }}>{children}</li>
+              <li className={s.mdListItem}>{children}</li>
             ),
             blockquote: ({ children }) => (
-              <Box mb="3" pl="3" style={{ borderLeft: "3px solid var(--gray-6)", color: "var(--gray-11)" }}>
+              <Box mb="3" pl="3" className={s.mdQuote}>
                 {children}
               </Box>
             ),
@@ -169,18 +170,18 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
             code: ({ children, className }) => {
               const isBlock = className?.includes("language-");
               return isBlock ? (
-                <Box mb="3" p="3" style={{ backgroundColor: "var(--gray-2)", borderRadius: "var(--radius-2)", overflowX: "auto" }}>
-                  <pre style={{ margin: 0, fontSize: "var(--font-size-1)", fontFamily: "var(--font-mono, monospace)", lineHeight: 1.6 }}>
+                <Box mb="3" p="3" className={s.mdCodeBlock}>
+                  <pre className={s.mdCodeBlockPre}>
                     <code>{children}</code>
                   </pre>
                 </Box>
               ) : (
-                <code style={{ backgroundColor: "var(--gray-3)", padding: "1px 5px", borderRadius: "var(--radius-1)", fontSize: "0.9em", fontFamily: "var(--font-mono, monospace)" }}>
+                <code className={s.mdCodeInline}>
                   {children}
                 </code>
               );
             },
-            hr: () => <Box mb="4" style={{ borderTop: "1px solid var(--gray-4)" }} />,
+            hr: () => <Box mb="4" className={s.mdHr} />,
           }}
         >
           {prepContent}

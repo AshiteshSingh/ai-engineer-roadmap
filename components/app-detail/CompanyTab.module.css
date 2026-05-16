@@ -1,0 +1,42 @@
+/* Co-located styling for CompanyTab.
+   Static layout/visual primitives are tokenized here; the only dynamic
+   value (signal bar fill) stays inline via the --signal-pct property. */
+
+.logo {
+  /* --radius-2 is the Radix theme radius scale — kept raw (value-preserving). */
+  border-radius: var(--radius-2);
+  object-fit: contain;
+  background: var(--ds-surface-hover); /* = var(--gray-2) */
+}
+
+.headerBody {
+  flex: 1 1 auto;
+  min-width: 240px;
+}
+
+.analysisBody {
+  line-height: 1.7;
+  /* --font-size-2 is the Radix theme font scale — kept raw (value-preserving). */
+  font-size: var(--font-size-2);
+}
+
+.contactName {
+  min-width: 200px;
+}
+
+.signal {
+  min-width: 160px;
+}
+
+.signalTrack {
+  height: 4px;
+  background: var(--ds-border-subtle); /* = var(--gray-4) */
+  border-radius: var(--ds-radius-sm);
+  overflow: hidden;
+}
+
+.signalFill {
+  width: var(--signal-pct);
+  height: 100%;
+  background: var(--violet-9); /* Radix accent scale — keep raw */
+}

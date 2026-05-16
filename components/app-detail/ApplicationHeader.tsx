@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -26,6 +26,7 @@ import {
 } from "@radix-ui/react-icons";
 import type { AppData, ApplicationStatus } from "./types";
 import { formatDate, companyInitials, COLUMNS } from "./constants";
+import s from "./ApplicationHeader.module.css";
 
 interface ApplicationHeaderProps {
   app: AppData;
@@ -104,7 +105,7 @@ export function ApplicationHeader({ app, isAdmin, onUpdate, onSlugChange }: Appl
       <Flex justify="between" align="center" mb="4">
         <Flex align="center" gap="1">
           <Text size="1" color="gray" asChild>
-            <Link href="/applications" style={{ color: "inherit", textDecoration: "none" }}>
+            <Link href="/applications" className={s.crumbLink}>
               Applications
             </Link>
           </Text>
@@ -184,10 +185,10 @@ export function ApplicationHeader({ app, isAdmin, onUpdate, onSlugChange }: Appl
           fallback={initials}
           variant="soft"
           color="indigo"
-          style={{ flexShrink: 0 }}
+          className={s.avatar}
         />
-        <Box style={{ flex: 1, minWidth: 0, width: "100%" }}>
-          <Heading size={{ initial: "5", sm: "6", md: "7" }} mb="1" style={{ wordBreak: "break-word" }}>
+        <Box className={s.headerBody}>
+          <Heading size={{ initial: "5", sm: "6", md: "7" }} mb="1" className={s.title}>
             {displayTitle}
           </Heading>
           <Flex align="center" gap="2" wrap="wrap">
@@ -198,7 +199,8 @@ export function ApplicationHeader({ app, isAdmin, onUpdate, onSlugChange }: Appl
               color={statusCol?.color ?? "gray"}
               variant="soft"
               size="2"
-              style={{ boxShadow: `0 0 6px ${statusCssColor}` }}
+              className={s.statusBadge}
+              style={{ "--status": statusCssColor } as CSSProperties}
             >
               {statusCol?.label ?? app.status}
             </Badge>
@@ -231,7 +233,7 @@ export function ApplicationHeader({ app, isAdmin, onUpdate, onSlugChange }: Appl
                 href={jobUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--accent-11)", textDecoration: "none" }}
+                className={s.jobLink}
               >
                 <Text size="1">Job posting</Text>
                 <ExternalLinkIcon width={12} height={12} />

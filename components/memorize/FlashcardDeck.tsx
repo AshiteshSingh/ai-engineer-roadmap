@@ -2,8 +2,10 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Button, Text, Badge } from "@radix-ui/themes";
+import { cx } from "@/components/ui";
 import type { MemorizeItem, MemorizeCategory } from "@/lib/memorize-types";
 import { LiveDemo } from "./LiveDemo";
+import s from "./FlashcardDeck.module.css";
 
 interface FlashcardDeckProps {
   items: MemorizeItem[];
@@ -77,7 +79,7 @@ export function FlashcardDeck({
   }
 
   return (
-    <div className="flashcard-split-wrapper" style={!item.demo ? { gridTemplateColumns: "1fr" } : undefined}>
+    <div className={cx("flashcard-split-wrapper", !item.demo && s.singleColumn)}>
       {/* Left: test / quiz */}
       <div className="flashcard-left" onClick={toggle}>
         <div className="flashcard-counter">
@@ -91,7 +93,7 @@ export function FlashcardDeck({
             size="1"
             color={cat.color as "violet"}
             variant="soft"
-            style={{ marginBottom: 16 }}
+            className={s.badgeSpacing}
           >
             {cat.icon} {cat.name}
           </Badge>
@@ -143,7 +145,7 @@ export function FlashcardDeck({
           <Text
             size="1"
             color="gray"
-            style={{ marginTop: "auto", paddingTop: 16 }}
+            className={s.revealHint}
           >
             Click or press <span className="memorize-kbd">Space</span> to
             reveal

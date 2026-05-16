@@ -3,8 +3,10 @@
 import { useState, useMemo } from "react";
 import { Text, Badge, Button } from "@radix-ui/themes";
 import type { MemorizeItem, MemorizeCategory } from "@/lib/memorize-types";
+import { cx } from "@/components/ui";
 import { LiveDemo } from "./LiveDemo";
 import { ProgressBar } from "./ProgressBar";
+import s from "./PropertyExplorer.module.css";
 
 interface PropertyExplorerProps {
   categories: MemorizeCategory[];
@@ -119,13 +121,13 @@ export function PropertyExplorer({
                   )}
 
                   {item.context && (
-                    <Text size="1" color="gray" mb="2" style={{ display: "block" }}>
+                    <Text size="1" color="gray" mb="2" className={s.contextBlock}>
                       {item.context}
                     </Text>
                   )}
 
                   {item.mnemonicHint && (
-                    <div className="flashcard-hint" style={{ marginBottom: 12 }}>
+                    <div className={cx("flashcard-hint", s.hintSpacing)}>
                       {item.mnemonicHint}
                     </div>
                   )}

@@ -1,0 +1,82 @@
+/* Co-located styling for InterviewPrepTab.
+   The global/JS-queried class .interview-prep-md is styled in
+   app/globals.css and intentionally left literal in the TSX — it is
+   NOT migrated here.
+   NOTE: the app theme accent is INDIGO (layout.tsx accentColor="indigo"),
+   so --violet-* is its own Radix scale with NO exact --ds-* alias and is
+   kept raw (value-preserving) — it must NOT be rewritten to --accent-*. */
+
+/* --- Card frame (empty state + content) --- */
+.card {
+  border-left: 3px solid var(--violet-6); /* Radix violet scale — kept raw */
+  border-radius: 0; /* exact original — no token equals 0 */
+}
+
+/* --- Markdown renderers --- */
+.mdH1,
+.mdH2Title {
+  color: var(--violet-11); /* Radix violet scale — kept raw (accent is indigo) */
+}
+
+.mdH2 {
+  border-top: var(--ds-hairline-subtle); /* = 1px solid var(--gray-4) */
+}
+
+.mdH3 {
+  border-left: 3px solid var(--violet-8); /* Radix violet scale — kept raw */
+  border-radius: 0; /* exact original — no token equals 0 */
+}
+
+.mdParagraph {
+  line-height: 1.7; /* exact original — --ds-leading-body is 1.6, NOT value-preserving */
+}
+
+.mdStrong {
+  font-weight: 600;
+}
+
+.mdList {
+  padding-left: 20px; /* exact original — --space-5 is 24px, NOT value-preserving */
+  line-height: 1.8; /* exact original — no token equals 1.8 */
+  margin-bottom: var(--space-3); /* = 12px */
+}
+
+.mdListItem {
+  line-height: 1.7; /* exact original — --ds-leading-body is 1.6, NOT value-preserving */
+  margin-bottom: var(--space-1); /* = 4px */
+  /* --font-size-2 is the Radix theme font scale — kept raw (value-preserving) */
+  font-size: var(--font-size-2);
+}
+
+.mdQuote {
+  border-left: 3px solid var(--gray-6); /* Radix gray scale — kept raw (--ds-border is gray-5) */
+  color: var(--ds-text); /* = var(--gray-11) */
+}
+
+.mdCodeBlock {
+  background-color: var(--ds-surface-hover); /* = var(--gray-2) */
+  /* --radius-2 is the Radix theme radius scale — kept raw (value-preserving) */
+  border-radius: var(--radius-2);
+  overflow-x: auto;
+}
+
+.mdCodeBlockPre {
+  margin: 0;
+  /* --font-size-1 is the Radix theme font scale — kept raw (value-preserving) */
+  font-size: var(--font-size-1);
+  font-family: var(--font-mono, monospace);
+  line-height: 1.6; /* exact original — == --ds-leading-body, kept literal for parity with siblings */
+}
+
+.mdCodeInline {
+  background-color: var(--ds-surface-sub); /* = var(--gray-3) */
+  padding: 1px 5px;
+  /* --radius-1 is the Radix theme radius scale — kept raw (value-preserving) */
+  border-radius: var(--radius-1);
+  font-size: 0.9em;
+  font-family: var(--font-mono, monospace);
+}
+
+.mdHr {
+  border-top: var(--ds-hairline-subtle); /* = 1px solid var(--gray-4) */
+}

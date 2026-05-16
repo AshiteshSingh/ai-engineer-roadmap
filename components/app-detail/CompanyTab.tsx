@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   Heading,
   Flex,
@@ -21,6 +21,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { TabBaseProps } from "./types";
+import s from "./CompanyTab.module.css";
 
 interface Company {
   id: number;
@@ -166,10 +167,10 @@ export function CompanyTab({ app }: TabBaseProps) {
               alt={company.name}
               width={64}
               height={64}
-              style={{ borderRadius: "var(--radius-2)", objectFit: "contain", background: "var(--gray-2)" }}
+              className={s.logo}
             />
           ) : null}
-          <Box style={{ flex: "1 1 auto", minWidth: 240 }}>
+          <Box className={s.headerBody}>
             <Flex align="center" gap="3" mb="1" wrap="wrap">
               <Heading size="5">{company.name}</Heading>
               <Badge color={CATEGORY_COLOR[company.category.toLowerCase()] ?? "gray"} variant="soft">
@@ -216,7 +217,7 @@ export function CompanyTab({ app }: TabBaseProps) {
             <RocketIcon />
             <Heading size="4">Deep Analysis</Heading>
           </Flex>
-          <Box style={{ lineHeight: 1.7, fontSize: "var(--font-size-2)" }}>
+          <Box className={s.analysisBody}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {company.deep_analysis}
             </ReactMarkdown>
@@ -273,7 +274,7 @@ export function CompanyTab({ app }: TabBaseProps) {
           <Flex direction="column" gap="3">
             {contacts.map((c) => (
               <Flex key={c.id} justify="between" align="center" gap="3" wrap="wrap">
-                <Box style={{ minWidth: 200 }}>
+                <Box className={s.contactName}>
                   <Text size="2" weight="medium" as="div">
                     {c.first_name} {c.last_name}
                     {c.is_decision_maker ? (
@@ -306,22 +307,17 @@ export function CompanyTab({ app }: TabBaseProps) {
 function Signal({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
   return (
-    <Box style={{ minWidth: 160 }}>
+    <Box className={s.signal}>
       <Text size="1" color="gray" as="div">{label}</Text>
       <Flex align="center" gap="2">
         <Text size="3" weight="medium">{pct}</Text>
         <Text size="1" color="gray">/ 100</Text>
       </Flex>
-      <Box
-        mt="1"
-        style={{
-          height: 4,
-          background: "var(--gray-4)",
-          borderRadius: 2,
-          overflow: "hidden",
-        }}
-      >
-        <Box style={{ width: `${pct}%`, height: "100%", background: "var(--violet-9)" }} />
+      <Box mt="1" className={s.signalTrack}>
+        <Box
+          className={s.signalFill}
+          style={{ "--signal-pct": `${pct}%` } as CSSProperties}
+        />
       </Box>
     </Box>
   );

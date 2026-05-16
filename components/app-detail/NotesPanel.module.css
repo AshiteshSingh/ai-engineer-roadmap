@@ -1,0 +1,87 @@
+/* Co-located styling for NotesPanel.
+   Static layout/visual primitives are tokenized here. DS tokens are used
+   only where the resolved value EXACTLY matches the original literal;
+   Radix theme scales (--amber-*, --gray-6, --radius-1/2, --font-size-*,
+   --font-mono) and the prose line-heights (1.7 / 1.8 — not the 1.6
+   --ds-leading-body) are kept raw to preserve the exact rendered value. */
+
+.noteCard {
+  /* --amber-6: Radix accent scale, no exact --ds- alias — keep raw. */
+  border-left: 3px solid var(--amber-6);
+  border-radius: 0;
+}
+
+.emptyBody {
+  opacity: 0.7;
+}
+
+.editArea {
+  min-height: 200px;
+}
+
+/* --- Markdown render primitives --- */
+
+.mdH2Rule {
+  border-top: 1px solid var(--ds-border-subtle); /* = var(--gray-4) */
+}
+
+.mdH3Box {
+  background-color: var(--amber-2); /* Radix accent scale — keep raw */
+  border-left: 3px solid var(--amber-8); /* Radix accent scale — keep raw */
+  border-radius: 0;
+}
+
+.mdP {
+  /* 1.7 — intentionally NOT --ds-leading-body (1.6); value-preserving. */
+  line-height: 1.7;
+}
+
+.mdStrong {
+  font-weight: 600;
+}
+
+.mdList {
+  padding-left: 20px;
+  line-height: 1.8;
+  margin-bottom: 12px;
+}
+
+.mdLi {
+  line-height: 1.7;
+  margin-bottom: 4px;
+  /* --font-size-2: Radix theme font scale — keep raw (value-preserving). */
+  font-size: var(--font-size-2);
+}
+
+.mdBlockquote {
+  border-left: 3px solid var(--gray-6); /* Radix gray scale, no --ds- alias — raw */
+  color: var(--ds-text); /* = var(--gray-11) */
+}
+
+.mdCodeBlock {
+  background-color: var(--ds-surface-hover); /* = var(--gray-2) */
+  /* --radius-2: Radix theme radius scale — keep raw (value-preserving). */
+  border-radius: var(--radius-2);
+  overflow-x: auto;
+}
+
+.mdCodeBlockPre {
+  margin: 0;
+  /* --font-size-1 / --font-mono: Radix theme scales — keep raw. */
+  font-size: var(--font-size-1);
+  font-family: var(--font-mono, monospace);
+  line-height: var(--ds-leading-body); /* = 1.6 */
+}
+
+.mdCodeInline {
+  background-color: var(--ds-surface-sub); /* = var(--gray-3) */
+  padding: 1px 5px;
+  /* --radius-1: Radix theme radius scale — keep raw (value-preserving). */
+  border-radius: var(--radius-1);
+  font-size: 0.9em;
+  font-family: var(--font-mono, monospace);
+}
+
+.mdHrRule {
+  border-top: 1px solid var(--ds-border-subtle); /* = var(--gray-4) */
+}

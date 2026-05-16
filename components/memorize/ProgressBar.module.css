@@ -1,0 +1,31 @@
+/* Co-located styling for ProgressBar.tsx.
+ * Scope is limited to component-level ad-hoc inline styles that were not
+ * part of the css-memorize.css globals. The .memorize-progress* global
+ * classes (track height/background, fill color + width transition) and the
+ * Radix <Text color="gray"> accent are intentionally left untouched. */
+
+/* Was style={{ textTransform: "capitalize" }} on the mastery-level <Text>.
+ * Plain layout property — no design-system token applies. */
+.level {
+  text-transform: capitalize;
+}
+
+/* The fill width is DYNAMIC (rounded mastery %), so it stays inline via a
+ * CSS custom property set by the component; this rule reads it. The literal
+ * global .memorize-progress-fill still owns color + `transition: width`. */
+.fill {
+  width: var(--memorize-progress-pct, 0%);
+}
+
+/* Additive reduced-motion guard. The global .memorize-progress-fill carries
+ * `transition: width 0.4s ease` and has NO reduced-motion guard anywhere
+ * (verified: globals.css guards are all selector-scoped, css-memorize.css
+ * has none, and css-memorize.css is forbidden to edit). Scoping under the
+ * co-located `.track` class gives this rule specificity (0,2,0), which
+ * cleanly beats the global single-class (0,1,0) without specificity hacks
+ * or touching any global stylesheet. */
+@media (prefers-reduced-motion: reduce) {
+  .track .fill {
+    transition: none;
+  }
+}

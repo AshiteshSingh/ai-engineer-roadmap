@@ -1,0 +1,23 @@
+/* Co-located component styling for FlashcardDeck.
+   Layout/structure remain in the global css-memorize.css (.flashcard-* classes);
+   this module only holds genuine component-level static styling that was
+   previously expressed as ad-hoc inline style={{}} on Radix primitives. */
+
+/* Single-column layout when the item has no visual demo.
+   Composed (via cx) onto the global .flashcard-split-wrapper; state-driven
+   by `!item.demo` in the component instead of an inline literal. */
+.singleColumn {
+  grid-template-columns: 1fr;
+}
+
+/* Badge spacing under the category chip. 16px == --space-4 (tokens.css). */
+.badgeSpacing {
+  margin-bottom: var(--space-4);
+}
+
+/* Pre-reveal hint pinned to the bottom of the flex column.
+   `auto` has no token equivalent (kept literal); 16px == --space-4. */
+.revealHint {
+  margin-top: auto;
+  padding-top: var(--space-4);
+}

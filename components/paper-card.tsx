@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { ResearchPaper } from "@/lib/research-papers";
+import { cx } from "@/components/ui";
+import s from "./paper-card.module.css";
 
 const SOURCE_COLORS: Record<string, string> = {
   arXiv: "var(--red-9)",
@@ -25,9 +27,9 @@ export function PaperCard({ paper }: { paper: ResearchPaper }) {
     : `${paper.authors[0]} et al.`;
 
   return (
-    <div className="se-paper-card">
-      <div className="se-paper-header">
-        <h4 className="se-paper-title">
+    <div className={s.card}>
+      <div className={s.header}>
+        <h4 className={s.title}>
           {paper.url ? (
             <a href={paper.url} target="_blank" rel="noopener noreferrer">
               {paper.title}
@@ -41,7 +43,7 @@ export function PaperCard({ paper }: { paper: ResearchPaper }) {
             href={paper.pdf_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="se-pdf-link"
+            className={s.pdfLink}
             title="PDF"
           >
             PDF
@@ -49,14 +51,14 @@ export function PaperCard({ paper }: { paper: ResearchPaper }) {
         )}
       </div>
 
-      <div className="se-paper-meta">
-        <span className="se-paper-authors">{authors}</span>
-        {paper.year && <span className="se-paper-year">{paper.year}</span>}
+      <div className={s.meta}>
+        <span className={s.authors}>{authors}</span>
+        {paper.year && <span className={s.year}>{paper.year}</span>}
         {paper.citation_count != null && paper.citation_count > 0 && (
-          <span className="se-paper-cites">{paper.citation_count} cites</span>
+          <span className={s.cites}>{paper.citation_count} cites</span>
         )}
         <span
-          className="se-source-badge"
+          className={s.sourceBadge}
           style={{ backgroundColor: SOURCE_COLORS[paper.source] || "var(--gray-8)" }}
         >
           {paper.source}
@@ -64,11 +66,11 @@ export function PaperCard({ paper }: { paper: ResearchPaper }) {
       </div>
 
       {displayAbstract && (
-        <p className="se-paper-abstract">
+        <p className={s.abstract}>
           {displayAbstract}
           {hasLongAbstract && (
             <button
-              className="se-expand-btn"
+              className={cx(s.expandBtn)}
               onClick={() => setExpanded(!expanded)}
             >
               {expanded ? "less" : "more"}

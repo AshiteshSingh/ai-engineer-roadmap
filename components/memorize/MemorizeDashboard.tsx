@@ -22,6 +22,7 @@ import {
   type PostSessionState,
   type PracticeMode,
 } from "@/lib/session-tracking";
+import s from "./MemorizeDashboard.module.css";
 
 export type MasteryMap = Record<
   string,
@@ -443,10 +444,10 @@ export function MemorizeDashboard({
       </div>
 
       {/* Smart practice CTA */}
-      <Box mt="5" p="4" style={{ borderRadius: "var(--radius-3)", borderLeft: "3px solid var(--violet-8)" }}>
+      <Box mt="5" p="4" className={s.smartPractice}>
         <Flex justify="between" align="center" wrap="wrap" gap="3">
           <div>
-            <Text size="4" weight="bold" style={{ display: "block" }}>
+            <Text size="4" weight="bold" className={s.smartPracticeTitle}>
               Smart Practice
             </Text>
             <Text size="3" color="gray">

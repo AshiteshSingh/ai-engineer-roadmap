@@ -1,0 +1,62 @@
+/* Co-located styles for TechStackTab.
+   Radix Themes runtime vars (--gray-*, --green-*, --radius-1) are kept raw:
+   they have no exact --ds- token equivalent (--radius-1 is a scaling-based
+   calc; --ds-radius-sm 4px != Radix --radius-1 ~3px*scaling). */
+
+.emptyState {
+  opacity: 0.7;
+}
+
+.cardMuted {
+  opacity: 0.7;
+}
+
+.helpCard {
+  background-color: var(--gray-2);
+}
+
+.techLink {
+  text-decoration: none;
+}
+
+.techBadge {
+  cursor: pointer;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.iconTrailing {
+  opacity: 0.6;
+}
+
+/* Dismiss / restore buttons share geometry; color differs via modifier. */
+.actionButton {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--radius-1);
+  border-bottom-right-radius: var(--radius-1);
+  height: 22px;
+  width: 20px;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dismissButton {
+  background: var(--gray-a3);
+  color: var(--gray-11);
+}
+
+.restoreButton {
+  background: var(--green-a3);
+  color: var(--green-11);
+}
+
+.dismissedBadge {
+  text-decoration: line-through;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  opacity: 0.6;
+}

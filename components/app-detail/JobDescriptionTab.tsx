@@ -14,6 +14,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AppData, TabBaseProps } from "./types";
+import s from "./JobDescriptionTab.module.css";
 
 interface JobDescriptionTabProps extends TabBaseProps {
   onUpdate: (updated: AppData) => void;
@@ -83,13 +84,13 @@ export function JobDescriptionTab({
             </Flex>
           </Flex>
         ) : app.jobDescription ? (
-          <Box className="deep-dive-content" style={{ lineHeight: 1.7, fontSize: "var(--font-size-2)" }}>
-            <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0 }}>
+          <Box className={`deep-dive-content ${s.jdBody}`}>
+            <pre className={s.jdPre}>
               {app.jobDescription}
             </pre>
           </Box>
         ) : (
-          <Flex direction="column" align="center" justify="center" gap="2" py="6" style={{ opacity: 0.7 }}>
+          <Flex direction="column" align="center" justify="center" gap="2" py="6" className={s.empty}>
             <InfoCircledIcon width={24} height={24} color="var(--gray-8)" />
             <Text size="2" color="gray">No job description yet.</Text>
             {isAdmin && (
@@ -118,49 +119,49 @@ export function JobDescriptionTab({
               remarkPlugins={[remarkGfm]}
               components={{
                 h1: ({ children }) => (
-                  <Heading size="5" mb="2" mt="4" style={{ color: "var(--violet-11)" }}>{children}</Heading>
+                  <Heading size="5" mb="2" mt="4" className={s.mdH1}>{children}</Heading>
                 ),
                 h2: ({ children }) => (
                   <Box mt="5" mb="2" pt="4">
-                    <Heading size="4" style={{ color: "var(--violet-11)" }}>{children}</Heading>
+                    <Heading size="4" className={s.mdH2Title}>{children}</Heading>
                   </Box>
                 ),
                 h3: ({ children }) => (
-                  <Box mt="4" mb="2" p="3" style={{ borderRadius: "var(--radius-2)" }}>
+                  <Box mt="4" mb="2" p="3">
                     <Heading size="3">{children}</Heading>
                   </Box>
                 ),
                 p: ({ children }) => (
-                  <Text as="p" size="2" mb="2" style={{ lineHeight: 1.7 }}>{children}</Text>
+                  <Text as="p" size="2" mb="2" className={s.mdParagraph}>{children}</Text>
                 ),
                 strong: ({ children }) => (
-                  <strong style={{ fontWeight: 600 }}>{children}</strong>
+                  <strong className={s.mdStrong}>{children}</strong>
                 ),
                 em: ({ children }) => <em>{children}</em>,
                 ul: ({ children }) => (
-                  <ul style={{ paddingLeft: 20, lineHeight: 1.8, marginBottom: 12 }}>{children}</ul>
+                  <ul className={s.mdList}>{children}</ul>
                 ),
                 ol: ({ children }) => (
-                  <ol style={{ paddingLeft: 20, lineHeight: 1.8, marginBottom: 12 }}>{children}</ol>
+                  <ol className={s.mdList}>{children}</ol>
                 ),
                 li: ({ children }) => (
-                  <li style={{ lineHeight: 1.7, marginBottom: 4, fontSize: "var(--font-size-2)" }}>{children}</li>
+                  <li className={s.mdListItem}>{children}</li>
                 ),
                 blockquote: ({ children }) => (
-                  <Box mb="3" pl="3" style={{ color: "var(--gray-11)" }}>
+                  <Box mb="3" pl="3" className={s.mdQuote}>
                     {children}
                   </Box>
                 ),
                 code: ({ children, className }) => {
                   const isBlock = className?.includes("language-");
                   return isBlock ? (
-                    <Box mb="3" p="3" style={{ backgroundColor: "var(--gray-2)", borderRadius: "var(--radius-2)", overflowX: "auto" }}>
-                      <pre style={{ margin: 0, fontSize: "var(--font-size-1)", fontFamily: "var(--font-mono, monospace)", lineHeight: 1.6 }}>
+                    <Box mb="3" p="3" className={s.mdCodeBlock}>
+                      <pre className={s.mdCodeBlockPre}>
                         <code>{children}</code>
                       </pre>
                     </Box>
                   ) : (
-                    <code style={{ backgroundColor: "var(--gray-3)", padding: "1px 5px", borderRadius: "var(--radius-1)", fontSize: "0.9em", fontFamily: "var(--font-mono, monospace)" }}>
+                    <code className={s.mdCodeInline}>
                       {children}
                     </code>
                   );

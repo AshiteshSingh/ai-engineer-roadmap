@@ -1,0 +1,14 @@
+/* Co-located static-style extractions for PropertyExplorer.
+   Visual styling otherwise lives in the global css-memorize.css
+   (literal .explorer-* / .flashcard-* classes) and is left untouched. */
+
+/* Radix <Text> renders as an inline <span> by default; this context
+   needs block flow so the trailing margin (mb="2") collapses correctly. */
+.contextBlock {
+  display: block;
+}
+
+/* Spacing below the mnemonic hint. 12px === var(--space-3) in tokens.css. */
+.hintSpacing {
+  margin-bottom: var(--space-3);
+}

@@ -1,0 +1,72 @@
+/* Co-located styles for JobDescriptionTab.
+   Global/JS-queried classes (.deep-dive-content, .interview-prep-md,
+   .interview-prep-table*) are styled in app/globals.css and intentionally
+   left literal in the TSX — they are NOT migrated here. */
+
+/* --- Job description body --- */
+.jdBody {
+  line-height: 1.7; /* exact original — --ds-leading-body is 1.6, NOT value-preserving */
+  font-size: var(--text-base);
+}
+
+.jdPre {
+  white-space: pre-wrap;
+  font-family: inherit;
+  margin: 0;
+}
+
+/* --- Empty state --- */
+.empty {
+  opacity: 0.7;
+}
+
+/* --- Interview prep markdown renderers --- */
+.mdH1,
+.mdH2Title {
+  color: var(--violet-11); /* exact original — app accent is indigo, violet-11 is a distinct Radix scale; --accent-11 would CHANGE the color */
+}
+
+.mdParagraph {
+  line-height: 1.7; /* exact original — --ds-leading-body is 1.6, NOT value-preserving */
+}
+
+.mdStrong {
+  font-weight: 600;
+}
+
+.mdList {
+  padding-left: 20px; /* exact original — --space-5 is 24px, NOT value-preserving */
+  line-height: 1.8;
+  margin-bottom: var(--space-3);
+}
+
+.mdListItem {
+  line-height: 1.7; /* exact original — --ds-leading-body is 1.6, NOT value-preserving */
+  margin-bottom: var(--space-1);
+  font-size: var(--text-base);
+}
+
+.mdQuote {
+  color: var(--ds-text);
+}
+
+.mdCodeBlock {
+  background-color: var(--ds-surface-hover);
+  border-radius: var(--ds-radius);
+  overflow-x: auto;
+}
+
+.mdCodeBlockPre {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-family: var(--font-mono, monospace);
+  line-height: 1.7; /* exact original — --ds-leading-body is 1.6, NOT value-preserving */
+}
+
+.mdCodeInline {
+  background-color: var(--ds-surface-sub);
+  padding: 1px 5px;
+  border-radius: var(--ds-radius-sm);
+  font-size: 0.9em;
+  font-family: var(--font-mono, monospace);
+}

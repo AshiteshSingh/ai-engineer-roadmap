@@ -1,0 +1,17 @@
+/* Co-located styling for MemorizeDashboard.tsx.
+ * Scope is limited to component-level ad-hoc inline styles that were not
+ * part of the css-memorize.css globals. The .memorize-* global classes and
+ * Radix accents are intentionally left untouched. */
+
+/* Smart Practice CTA — was an inline style={{}} on a Radix <Box>.
+ * --radius-3 and --violet-8 are Radix design-system tokens; kept raw to
+ * preserve exact visual parity (accent + radius scale, not raw hex/gray). */
+.smartPractice {
+  border-radius: var(--radius-3);
+  border-left: 3px solid var(--violet-8);
+}
+
+/* Was style={{ display: "block" }} on the CTA's title Text. */
+.smartPracticeTitle {
+  display: block;
+}

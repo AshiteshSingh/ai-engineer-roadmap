@@ -1,0 +1,42 @@
+/* Co-located styles for CollapsibleSection. Static presentation only;
+   the open/closed height transition stays on the global
+   .collapsible-body / .collapsible-open hooks in app/globals.css
+   (reference-only here). Dynamic spacing (mb) remains a Radix prop. */
+
+.toggle {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Additive a11y: keyboard focus ring on the toggle row. No global
+   :focus-visible rule covers this element; aria/behavior unchanged. */
+.toggle:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
+  border-radius: var(--ds-radius-sm);
+}
+
+/* Parity: Radix Text size="1" => --text-xs (11px); color="gray"
+   resolves to gray-11 (= --ds-text); weight="medium" => 500. */
+.label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ds-text);
+}
+
+.chevron {
+  color: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+/* Reduced-motion guard for the expand/collapse transition. The
+   .collapsible-body rule lives in app/globals.css (not editable here)
+   and is NOT covered by any existing prefers-reduced-motion block, so
+   neutralize it additively & module-scoped via :global(). */
+@media (prefers-reduced-motion: reduce) {
+  :global(.collapsible-body) {
+    transition: none;
+  }
+}

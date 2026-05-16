@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Heading, Flex, Text, Box, Card, Badge, Button, Spinner } from "@radix-ui/themes";
 import { InfoCircledIcon, ExternalLinkIcon, Cross2Icon, PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import type { TabBaseProps } from "./types";
+import s from "./TechStackTab.module.css";
 
 interface TechBadge {
   tag: string;
@@ -185,7 +186,7 @@ export function TechStackTab({ app, isAdmin }: TabBaseProps) {
   if (techs.length === 0) {
     return (
       <Card>
-        <Flex direction="column" align="center" justify="center" gap="2" py="8" style={{ opacity: 0.7 }}>
+        <Flex direction="column" align="center" justify="center" gap="2" py="8" className={s.emptyState}>
           <InfoCircledIcon width={24} height={24} color="var(--gray-8)" />
           <Text size="2" color="gray">No technologies detected in the job description.</Text>
         </Flex>
@@ -242,43 +243,25 @@ export function TechStackTab({ app, isAdmin }: TabBaseProps) {
                       href={`/${tech.tag}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ textDecoration: "none" }}
+                      className={s.techLink}
                     >
                       <Badge
                         size="2"
                         color={CATEGORY_COLORS[category] || "gray"}
                         variant={tech.relevance === "primary" ? "solid" : "soft"}
                         highContrast={tech.relevance === "primary"}
-                        style={{
-                          cursor: "pointer",
-                          borderTopRightRadius: 0,
-                          borderBottomRightRadius: 0,
-                        }}
+                        className={s.techBadge}
                       >
                         <Flex align="center" gap="1">
                           {tech.label}
-                          <ExternalLinkIcon width={10} height={10} style={{ opacity: 0.6 }} />
+                          <ExternalLinkIcon width={10} height={10} className={s.iconTrailing} />
                         </Flex>
                       </Badge>
                     </a>
                     <button
                       onClick={() => toggleDismiss(tech.tag)}
                       title="Dismiss — won't generate study material"
-                      style={{
-                        borderTopLeftRadius: 0,
-                        borderBottomLeftRadius: 0,
-                        borderTopRightRadius: "var(--radius-1)",
-                        borderBottomRightRadius: "var(--radius-1)",
-                        height: 22,
-                        width: 20,
-                        cursor: "pointer",
-                        border: "none",
-                        background: "var(--gray-a3)",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--gray-11)",
-                      }}
+                      className={`${s.actionButton} ${s.dismissButton}`}
                     >
                       <Cross2Icon width={10} height={10} />
                     </button>
@@ -292,7 +275,7 @@ export function TechStackTab({ app, isAdmin }: TabBaseProps) {
 
       {/* Dismissed technologies */}
       {dismissedTechs.length > 0 && (
-        <Card style={{ opacity: 0.7 }}>
+        <Card className={s.cardMuted}>
           <Flex align="center" gap="2" mb="2">
             <Text size="2" weight="bold" color="gray">Dismissed</Text>
           </Flex>
@@ -303,33 +286,14 @@ export function TechStackTab({ app, isAdmin }: TabBaseProps) {
                   size="2"
                   color="gray"
                   variant="outline"
-                  style={{
-                    textDecoration: "line-through",
-                    borderTopRightRadius: 0,
-                    borderBottomRightRadius: 0,
-                    opacity: 0.6,
-                  }}
+                  className={s.dismissedBadge}
                 >
                   {tech.label}
                 </Badge>
                 <button
                   onClick={() => toggleDismiss(tech.tag)}
                   title="Restore — include in study material"
-                  style={{
-                    borderTopLeftRadius: 0,
-                    borderBottomLeftRadius: 0,
-                    borderTopRightRadius: "var(--radius-1)",
-                    borderBottomRightRadius: "var(--radius-1)",
-                    height: 22,
-                    width: 20,
-                    cursor: "pointer",
-                    border: "none",
-                    background: "var(--green-a3)",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--green-11)",
-                  }}
+                  className={`${s.actionButton} ${s.restoreButton}`}
                 >
                   <PlusIcon width={10} height={10} />
                 </button>
@@ -340,7 +304,7 @@ export function TechStackTab({ app, isAdmin }: TabBaseProps) {
       )}
 
       {/* Help text */}
-      <Card style={{ backgroundColor: "var(--gray-2)" }}>
+      <Card className={s.helpCard}>
         <Flex align="center" gap="2">
           <InfoCircledIcon width={14} height={14} color="var(--gray-9)" />
           <Text size="1" color="gray">

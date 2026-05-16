@@ -1,0 +1,9 @@
+/* Static layout-only styling lifted off inline JSX.
+   All visual styling for .lg-* / .course-* / .badge-pill lives in
+   global app/globals.css and is JS/string-built — left untouched. */
+
+.coursesIntro {
+  /* was style={{ marginBottom: 20 }}; no --space-* maps to 20px exactly,
+     keep literal to preserve rendered output (parity, no regression) */
+  margin-bottom: 20px;
+}

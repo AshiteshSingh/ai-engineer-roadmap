@@ -1,0 +1,21 @@
+/* Co-located styles for FillInTheBlank — relocated from static inline
+   style={{}} in FillInTheBlank.tsx. Layout/visual classes remain in the
+   global css-memorize.css (.fill-blank-*); only the genuine component-level
+   inline styles live here. */
+
+/* Radix <Text> rendered as a block-level prompt line. */
+.promptLine {
+  display: block;
+}
+
+/* Inline <code> chip naming the CSS property to fill in. Radix scale vars
+   kept raw — consistent with the global .fill-blank-input rule and no exact
+   DS-token alias exists (--font-mono / --violet-3 / --radius-1 are Radix
+   runtime vars; --ds-radius-sm 4px is not a guaranteed match for --radius-1).
+   padding kept literal: no exact --space-* token equals 1px or 6px. */
+.propChip {
+  font-family: var(--font-mono);
+  background: var(--violet-3);
+  padding: 1px 6px;
+  border-radius: var(--radius-1);
+}
