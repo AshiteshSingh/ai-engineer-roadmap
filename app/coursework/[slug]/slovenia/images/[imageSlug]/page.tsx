@@ -3,7 +3,6 @@
 import {
   Box,
   Button,
-  Container,
   Flex,
   Heading,
   Link as RadixLink,
@@ -33,6 +32,8 @@ import {
   PreviewDialog,
   triggerDownload,
 } from "../_canvas";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 
 function navTitle(detailSlug: string): string {
   if (detailSlug === PHRASES_DETAIL_SLUG) return "Cuvinte de bază";
@@ -53,7 +54,7 @@ export default function SloveniaSingleImagePage() {
 
   if (!found) {
     return (
-      <Container size="3" py="8" className="cw-container">
+      <Section className="cw-container">
         <Flex align="center" gap="2" mb="4">
           <RadixLink asChild color="gray" size="2">
             <NextLink href={galleryHref}>
@@ -69,7 +70,7 @@ export default function SloveniaSingleImagePage() {
         <Text color="gray" size="3" as="p">
           Nu am găsit nicio imagine cu acest slug. Întoarceți-vă la galerie pentru a alege alta.
         </Text>
-      </Container>
+      </Section>
     );
   }
 
@@ -81,7 +82,7 @@ export default function SloveniaSingleImagePage() {
       : null;
 
   return (
-    <Container size="3" py="8" className="cw-container">
+    <Section className="cw-container">
       <Flex align="center" gap="2" mb="4" justify="between" wrap="wrap">
         <RadixLink asChild color="gray" size="2">
           <NextLink href={galleryHref}>
@@ -123,7 +124,7 @@ export default function SloveniaSingleImagePage() {
       {found.kind === "phrases" && <PhrasesDetailContent />}
 
       {found.kind === "stema_sheet" && <StemaSheetDetailContent />}
-    </Container>
+    </Section>
   );
 }
 
@@ -146,33 +147,21 @@ function ImageDetailContent({
 }) {
   return (
     <>
-      <Heading size="8" mb="3">
+      <DSHeading as="h1" size="xl">
         {title}
-      </Heading>
+      </DSHeading>
       <Box
         mb="4"
-        style={{
-          width: "100%",
-          maxHeight: "75vh",
-          background: bg ?? "var(--gray-3)",
-          borderRadius: "var(--radius-4)",
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        className={styles.imgFrame}
+        style={bg ? ({ "--frame-bg": bg } as React.CSSProperties) : undefined}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
           alt={title}
           crossOrigin="anonymous"
-          style={{
-            width: "100%",
-            maxHeight: "75vh",
-            objectFit: fit ?? "contain",
-            display: "block",
-          }}
+          className={styles.img}
+          style={{ "--fit": fit ?? "contain" } as React.CSSProperties}
         />
       </Box>
       <Text size="3" color="gray" as="p" mb="5">
@@ -214,29 +203,26 @@ function ImageDetailContent({
 function PhrasesDetailContent() {
   return (
     <>
-      <Heading size="8" mb="3">
+      <DSHeading as="h1" size="xl">
         Cuvinte de bază în slovenă
-      </Heading>
+      </DSHeading>
       <Text size="3" color="gray" as="p" mb="4">
         De memorat pentru prezentare — repetați cu pronunția:
       </Text>
       <Box
         mb="5"
         p="4"
-        style={{
-          background: "var(--gray-2)",
-          borderRadius: "var(--radius-4)",
-        }}
+        className={styles.panel}
       >
         <Flex direction="column" gap="3">
           {PHRASES.map((p) => (
             <Flex key={p.sl} align="baseline" gap="3" wrap="wrap">
-              <Text size="5" weight="bold" style={{ minWidth: 220, color: "var(--blue-11)" }}>
+              <Text size="5" weight="bold" className={styles.phraseSl}>
                 {p.sl}
               </Text>
               <Text size="4">{p.ro}</Text>
               {p.ipa && (
-                <Text size="2" color="gray" style={{ fontStyle: "italic" }}>
+                <Text size="2" color="gray" className={styles.ipa}>
                   {p.ipa}
                 </Text>
               )}
@@ -276,9 +262,9 @@ function PhrasesDetailContent() {
 function StemaSheetDetailContent() {
   return (
     <>
-      <Heading size="8" mb="3">
+      <DSHeading as="h1" size="xl">
         Stema Sloveniei — fișă pentru decupat
-      </Heading>
+      </DSHeading>
       <Text size="3" color="gray" as="p" mb="4">
         O stemă mare sus + 9 mai mici (3×3) jos, pe o singură pagină A4 — pentru
         printat și decupat. Util la lipirea pe ecusoane sau steaguri mici la
