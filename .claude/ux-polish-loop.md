@@ -76,11 +76,11 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [x] components/app-detail/NotesPanel.tsx — DONE (5a87b91, value-verified) → main.
 - [x] components/app-detail/NotesTab.tsx — NO-OP (ux3-13 silent-idle; orchestrator-verified): pure config pass-through wrapper around `<NotesPanel>` (which is already DONE 5a87b91) — zero markup/className/inline styling of its own (identical to DebriefTab). Do not re-pick.
 - [x] components/app-detail/TechStackTab.tsx — DONE (c1efb69, 0 token swaps) → main.
-- [ ] components/app-detail/StudyRoadmap.tsx
+- [x] components/app-detail/StudyRoadmap.tsx — NO-OP (ux1-14 silent-idle; orchestrator-verified): only inline style is `style={{ height }}` (runtime-computed React-Flow container height — dynamic, must stay inline); all visual chrome via global `.roadmap-container`. Nothing static co-locatable. Do not re-pick.
 - [x] components/memorize/* — **TIER COMPLETE (all 14 accounted).** DONE: MemorizeDashboard (ef4c48e), FlashcardDeck (3dcb286, --space-4=16px exact), ProgressBar (16d4388, 0 swaps), FillInTheBlank (d7328f5, 0 swaps), PropertyExplorer (b7bf0c4, --space-3=12px exact), **DueForReview (af32a1b — value-EXACT: `padding:"4px 0"`→`var(--space-1) 0`, --space-1=4px exact; flex/minWidth literal; global due-review-* kept literal)**, **ModeTip (af32a1b — value-safe: only `.fill{flex:1}`/`.citation{font-style:italic}`, 0 tokens; global mode-tip/mode-tip-dismiss kept literal)**, **PreSessionCheckIn (2247d5f — value-EXACT: `marginBottom:16`→`var(--space-4)`, --space-4=16px exact; display:block literal; global session-checkin-* kept literal)**, **LearningScienceSidebar (873298b — value-EXACT: `marginBottom:12`→`--space-3`(12px), `marginTop:4`→`--space-1`(4px); kept literal w/ comments: font-size:20px, line-height:1.5, display:block, flex:1; global science-* kept literal)**, **PostSessionSummary (873298b — value-EXACT: `marginBottom:12`→`--space-3`(12px); display:block literal; global session-summary-* kept literal)**. NO-OP: TimedDrill (ux2-8), VisualMatcher (ux2-9), **LearningInsights (ux2-10: produced nothing — pure global-class component, no co-locatable styling; do not re-pick)**.
-- [ ] components/roadmap-graph/index.tsx
+- [x] components/roadmap-graph/index.tsx — NO-OP (ux2-14 silent-idle; orchestrator-verified): only inline style is dynamic CSS-var passthrough `style={{ "--graph-h": `${graphH}px` }}` (runtime value — sanctioned dynamic pattern); chrome via global `.mermaid-flow-container` + library `.react-flow*`. Nothing static co-locatable. Do not re-pick.
 - [ ] components/roadmap-graph/nodes.tsx
-- [ ] components/mermaid-flow/index.tsx
+- [x] components/mermaid-flow/index.tsx — NO-OP (ux3-14 silent-idle; orchestrator-verified): only inline style is `style={{ height: result.height }}` (runtime mermaid-render height — dynamic, must stay inline); global `.mermaid-flow-container` + library SVG. Nothing static co-locatable. Do not re-pick.
 - [ ] components/mermaid-flow/nodes.tsx
 - [ ] components/xyflow-direct/index.tsx
 - [ ] components/problems/problem-workspace.tsx
@@ -102,6 +102,14 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 
 ## Tick log
 
+- **tick (reconcile):** ux1-14 StudyRoadmap / ux2-14 roadmap-graph/index /
+  ux3-14 mermaid-flow/index → all NO-OP. All silent-idled (no rationale);
+  orchestrator-verified each has exactly 1 inline style and it is
+  dynamic/functional (runtime height / CSS-var passthrough — must stay
+  inline; React-Flow/mermaid container case). Lane aligned (`4601daa`),
+  clean FF, no recovery. Backlog now: roadmap-graph/nodes,
+  mermaid-flow/nodes, xyflow-direct, problems/problem-workspace, then
+  Tier-B pages.
 - **tick (reconcile):** ux1-13 category-grid → NO-OP (100% global,
   JS-queried, a11y complete). ux3-13 NotesTab silent-idled → orchestrator
   verified it's a pure `<NotesPanel>` config pass-through (NotesPanel
