@@ -40,7 +40,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 - [x] app/coursework/[slug]/page.tsx
 - [x] app/coursework/[slug]/slovenia/page.tsx
 - [x] app/coursework/[slug]/slovenia/ideas/page.tsx
-- [ ] app/coursework/[slug]/slovenia/images/page.tsx
+- [x] app/coursework/[slug]/slovenia/images/page.tsx
 - [ ] app/coursework/[slug]/slovenia/images/[imageSlug]/page.tsx
 - [ ] app/problems/page.tsx
 - [ ] app/problems/[slug]/page.tsx
@@ -62,6 +62,7 @@ that page's file + a co-located `*.module.css`, `pnpm run build`, then
 (append `<page> — <one-line summary>` per completed tick)
 
 - app/page.tsx — already on Section/Eyebrow/Heading; moved inline `paddingBottom:0` → `page.module.css` (.flushBottom). Build green (c16f94d). Conservative: homepage is the live redesign; existing global classes left untouched per no-new-global scope.
+- app/coursework/[slug]/slovenia/images/page.tsx — large gallery: `Container size=3` → `<Section>` (cw-container kept); title → ui Heading; ~20 static inline objects → `page.module.css`; undefined `--radius-2/3`→`--ds-radius[-md]`, raw `--gray-3/4/5`→`--ds-*`; dynamic bg/objectFit/selected-outline via CSS vars + conditional `.selected` class; teal accent + functional overlay rgba/blur kept. Build green (1471a98).
 - app/coursework/[slug]/slovenia/ideas/page.tsx — `Container size=3` → `<Section>` (cw-container kept); title → ui Heading; ~17 static inline objects (12+ identical list styles via replace_all, label/grow/pairBox/wordBox/badge80) → `page.module.css`; raw `--gray-2`→`--ds-surface-sub`, `borderRadius:8`→`--ds-radius`; teal accent kept. Build green (5a0e272).
 - app/coursework/[slug]/slovenia/page.tsx — `Container size=3` → `<Section>` (cw-container kept); event title → ui `<Heading as=h1 size=xl>`; 9 static inline objects → `page.module.css` (.grow0/.grow/.tealCard/.linkCard/.list/.emoji). Teal route accent + Radix size=4 card subheads kept (conservative). Build green (9ccd1ee).
 - app/coursework/[slug]/page.tsx — near-identical to /coursework: 3× `Container size=3` → `<Section>` (cw-container kept); learner-name title → ui `<Heading as=h1 size=xl>`; raw `--accent-9` → `--ds-accent`; 8 static inline objects → `page.module.css`. notFound block had mixed indentation (open 4-sp, close 6-sp) → grep-verified + fixed dangling close. Build green (9d989da).
