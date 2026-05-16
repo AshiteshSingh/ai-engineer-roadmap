@@ -1546,81 +1546,6 @@
 }
 
 /* ================================================================
-   RELATED LESSONS
-   ================================================================ */
-.related-section {
-  margin-top: 3em;
-  padding-top: 2em;
-}
-.related-heading {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--gray-8);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.related-heading::before,
-.related-heading::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gray-5), transparent);
-}
-.related-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.related-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  border-radius: 12px;
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--cat-from) 6%, transparent),
-    color-mix(in srgb, var(--cat-to) 3%, transparent)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  text-decoration: none;
-  color: inherit;
-  transition: all 0.2s ease;
-}
-.related-card:hover {
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--cat-from) 12%, transparent),
-    color-mix(in srgb, var(--cat-to) 8%, transparent)
-  );
-  border-color: color-mix(in srgb, var(--cat-from) 25%, transparent);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-}
-.related-card-num {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--gray-8);
-  font-variant-numeric: tabular-nums;
-}
-.related-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gray-11);
-  line-height: 1.4;
-}
-.related-card:hover .related-card-title { color: var(--gray-12); }
-.related-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: auto;
-}
-
-/* ================================================================
    AUDIO PLAYER
    ================================================================ */
 .audio-player {
@@ -1896,8 +1821,6 @@
   .article-banner-title { font-size: 1.5rem; }
 
   .search-results { padding: 0 16px 48px; }
-
-  .related-grid { grid-template-columns: 1fr; }
 
   .yc-topbar { font-size: 11px; padding: 0 12px; }
 
