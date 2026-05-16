@@ -4004,7 +4004,7 @@
   position: relative;
   overflow: hidden;
   padding: var(--space-section-y) var(--space-section-x) var(--space-8);
-  border-bottom: 1px solid var(--ds-border-subtle);
+  border-bottom: var(--ds-hairline-subtle);
   background: var(--ds-bg);
 }
 .hx-aura {
@@ -4065,7 +4065,7 @@
   margin: 0 0 var(--space-4);
   font-size: var(--hero-title-size);
   font-weight: 800;
-  line-height: 1.05;
+  line-height: var(--ds-leading-tight);
   letter-spacing: -0.03em;
   color: var(--ds-ink);
 }
@@ -4077,7 +4077,7 @@
   margin: 0 0 var(--space-5);
   max-width: 48ch;
   font-size: var(--text-lg);
-  line-height: 1.6;
+  line-height: var(--ds-leading-body);
   color: var(--ds-text);
 }
 .hx-topics {
@@ -4116,7 +4116,7 @@
   letter-spacing: 0.01em;
   text-decoration: none;
   color: var(--ds-on-accent);
-  background: var(--ds-accent);
+  background: var(--ds-accent-gradient);
   border: 1px solid var(--ds-accent-border);
   border-radius: var(--ds-radius-md);
   box-shadow: var(--ds-shadow-2);
@@ -4127,6 +4127,9 @@
 .hx-cta:hover {
   background: var(--ds-accent-hover);
   transform: translateY(-1px);
+}
+.hx-cta:focus-visible {
+  box-shadow: var(--ds-shadow-2), var(--ds-shadow-focus);
 }
 .hx-cta-arrow {
   display: inline-block;
@@ -4144,7 +4147,7 @@
   font-weight: 600;
   text-decoration: none;
   color: var(--ds-text);
-  border-bottom: 1px solid var(--ds-border);
+  border-bottom: var(--ds-hairline);
   transition: color var(--ds-dur) var(--ds-ease);
 }
 .hx-cta-ghost:hover {
@@ -4159,7 +4162,7 @@
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-radius-lg);
-  box-shadow: var(--ds-shadow-3);
+  box-shadow: var(--ds-shadow-raised);
 }
 .hx-panel-head {
   display: flex;
@@ -4167,7 +4170,7 @@
   gap: var(--space-2);
   margin-bottom: var(--space-5);
   padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--ds-border-subtle);
+  border-bottom: var(--ds-hairline-subtle);
 }
 .hx-panel-tag {
   font-size: var(--text-sm);
@@ -4216,7 +4219,7 @@
 }
 .hx-row-track {
   position: relative;
-  height: 4px;
+  height: var(--space-1);
   border-radius: var(--ds-radius-pill);
   background: var(--ds-surface-sub);
   overflow: hidden;
@@ -4227,7 +4230,7 @@
   transform-origin: left center;
   transform: scaleX(0);
   border-radius: var(--ds-radius-pill);
-  background: var(--ds-accent);
+  background: var(--ds-accent-gradient-sheen);
   transition: transform var(--ds-dur-slow) var(--ds-ease);
 }
 
@@ -4291,7 +4294,7 @@
       color-mix(in srgb, var(--ds-surface) 70%, transparent) 0%,
       var(--ds-overlay) 100%
     );
-  border-bottom: 1px solid var(--ds-border-subtle);
+  border-bottom: var(--ds-hairline-subtle);
   transition:
     box-shadow var(--ds-dur) var(--ds-ease),
     border-color var(--ds-dur) var(--ds-ease),
@@ -4299,7 +4302,7 @@
 }
 .yc-topbar--scrolled {
   border-bottom-color: var(--ds-border);
-  box-shadow: var(--ds-shadow-2);
+  box-shadow: var(--ds-shadow-raised);
 }
 .yc-topbar a {
   margin-right: 0;
@@ -4329,7 +4332,7 @@
   width: 14px;
   height: 14px;
   border-radius: var(--ds-radius-sm);
-  background: linear-gradient(135deg, var(--ds-accent), var(--ds-accent-hover));
+  background: var(--ds-accent-gradient);
   box-shadow: 0 0 0 1px var(--ds-accent-border);
   flex-shrink: 0;
   display: inline-flex;
@@ -4412,13 +4415,15 @@
   color: var(--ds-text);
   text-decoration: none;
   border-radius: var(--ds-radius-pill);
-  transition:
-    background var(--ds-dur) var(--ds-ease),
-    color var(--ds-dur) var(--ds-ease);
+  transition: var(--ds-transition-colors);
 }
 .yc-topbar-seg-link:hover {
   color: var(--ds-ink);
   background: var(--ds-surface-hover);
+}
+.yc-topbar-seg-link:focus-visible,
+.yc-topbar-signin--pill:focus-visible {
+  box-shadow: var(--ds-shadow-focus);
 }
 
 /* ── ZONE 3: identity / actions ────────────────────────────── */
@@ -4450,7 +4455,7 @@
   width: 26px;
   height: 26px;
   border-radius: var(--ds-radius-pill);
-  background: linear-gradient(135deg, var(--ds-accent), var(--ds-accent-hover));
+  background: var(--ds-accent-gradient);
   color: var(--ds-on-accent);
   font-size: var(--text-2xs);
   font-weight: 700;
@@ -4528,11 +4533,7 @@
   width: 100%;
   height: 2px;
   transform-origin: left;
-  background: linear-gradient(
-    90deg,
-    var(--ds-accent),
-    var(--ds-accent-text)
-  );
+  background: var(--ds-accent-gradient-sheen);
   box-shadow: 0 0 8px color-mix(in srgb, var(--ds-accent) 60%, transparent);
   z-index: 1;
   pointer-events: none;
