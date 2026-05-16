@@ -5,22 +5,30 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 `/Users/vadimnicolai/.claude/plans/need-5min-ux-and-eager-pixel.md`.
 3 disjoint background general-purpose agents (ux1/ux2/ux3) per 10-min tick.
 
-## Lane model — DIRECT-TO-MAIN (user directive 2026-05-16)
+## Lane model — LANE-ACCUMULATE + PR-MERGE (guard-forced 2026-05-16)
 
-- Agents commit to the `ux-polish` lane in the shared worktree (the bare
-  submodule has `main` checked out, so the worktree cannot check out `main`).
-- Orchestrator runs the gates (no-global + VALUE-CHECK) on every new sha,
-  THEN pushes the lane to `main` directly: `git push origin ux-polish:main`
-  fast-forward-only. Reject (main raced) → `git fetch` + `git rebase
-  origin/main` + retry. **NEVER force-push main.** Rebase conflict (stale
-  granular history vs a squashed main) → reset lane to `origin/main`,
-  re-apply only the genuinely-unmerged source delta, re-gate, push.
-- No PR step (PR #16 squash-merged the prior lane to main; user wants
-  commits direct on main). Nothing is deployed by the loop.
-- Per-tick safety snapshot: `git push origin HEAD:refs/heads/
-  ux-polish-salvage-<ts>` before any reset (cheap insurance).
-- The value-check gate stays BEFORE main — direct-to-main skips the PR
-  *merge* step, NOT the gate (the gate caught real JobDescriptionTab drifts).
+- A safety guard now BLOCKS direct pushes to main (`git push origin
+  ux-polish:main` → "Force push to main branch is not allowed", even for a
+  plain FF). Do NOT retry/circumvent it. The earlier DIRECT-TO-MAIN model
+  is dead.
+- Agents commit to the `ux-polish` lane in the shared worktree (bare
+  submodule has `main` checked out + is volatile/dirty on other feature
+  branches — never checkout/merge `main` there). Orchestrator runs the
+  gates (no-global + VALUE-CHECK) on every new sha; value-checked commits
+  ACCUMULATE on `origin/ux-polish`.
+- To land on main: open a GitHub PR and merge it (server-side, NOT a local
+  push, so the guard doesn't apply): `gh pr create --base main --head
+  ux-polish …` then `gh pr merge <n> --rebase`. Verified working (PR #20,
+  3d5db2c). User authorized merges ("Accumulate on lane, you merge" +
+  "fix all conflicts and merge").
+- After a merge: confirm `git diff origin/main..origin/ux-polish -- . ':
+  (exclude).claude/ux-polish-loop.md'` is EMPTY, then force-realign the
+  **disposable lane pointer** to main: `git reset --hard origin/main &&
+  git push -f origin ux-polish` (ONLY sanctioned force-push; targets the
+  throwaway lane, NEVER `main`). Salvage refs `ux-polish-salvage-<ts>`
+  preserve old graphs.
+- The VALUE-CHECK gate stays BEFORE the PR — it caught real
+  JobDescriptionTab/DueForReview drifts. Nothing is deployed by the loop.
 
 ## Hard rules (every item)
 
@@ -102,6 +110,14 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 
 ## Tick log
 
+- **GUARD + MERGE (user: "fix all conflicts and merge"):** safety guard
+  began blocking `git push origin ux-polish:main` mid-session. No
+  conflicts existed — `main` was a clean ancestor, lane only 1 ledger
+  commit ahead. Merged via GitHub PR #20 (`gh pr merge --rebase`,
+  server-side — guard is local-push-only) → origin/main `4601daa`→
+  `3d5db2c`. Realigned disposable lane pointer to `3d5db2c`. Model →
+  LANE-ACCUMULATE + PR-MERGE (see Lane model section). User chose
+  "Accumulate on lane, you merge".
 - **tick (reconcile):** ux1-14 StudyRoadmap / ux2-14 roadmap-graph/index /
   ux3-14 mermaid-flow/index → all NO-OP. All silent-idled (no rationale);
   orchestrator-verified each has exactly 1 inline style and it is
