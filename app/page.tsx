@@ -5,6 +5,7 @@ import { Search } from "@/components/search";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { RoadmapGraph } from "@/components/roadmap-graph";
+import { buildLessonLookup } from "@/components/roadmap-graph/lesson-lookup";
 import { buildRoadmapModel } from "@/lib/roadmap-flow";
 import { Section, Eyebrow, Heading } from "@/components/ui";
 
@@ -14,6 +15,7 @@ export default async function HomePage() {
   const total = allLessons.length;
   const wordCount = allLessons.reduce((sum, l) => sum + l.wordCount, 0);
   const roadmapModel = buildRoadmapModel(groups);
+  const lessonLookup = buildLessonLookup(groups);
   return (
     <div>
       <a href="#lessons" className="skip-link">Skip to lessons</a>
@@ -25,7 +27,7 @@ export default async function HomePage() {
             <Eyebrow>The Path</Eyebrow>
             <Heading as="h2">AI Engineer Roadmap</Heading>
           </Section>
-          <RoadmapGraph model={roadmapModel} />
+          <RoadmapGraph model={roadmapModel} lessonLookup={lessonLookup} />
         </section>
       </ScrollReveal>
 
@@ -37,7 +39,7 @@ export default async function HomePage() {
             <div className="research-collections-grid">
               <Link href="/kv-quant" className="cat-card">
                 <div className="cat-card-header">
-                  <span className="cat-card-icon">🗜️</span>
+                  <span className="cat-card-icon" aria-hidden="true">🗜️</span>
                   <span className="cat-card-name">KV-Cache Quantization</span>
                 </div>
                 <p className="cat-card-desc">Research papers on quantizing key-value caches for efficient LLM inference — compression, pruning, and long-context methods.</p>

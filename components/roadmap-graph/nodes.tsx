@@ -1,107 +1,179 @@
 "use client";
 
-import { Handle, Position, type NodeProps, type NodeTypes, type Node } from "@xyflow/react";
-import type { RoadmapPhaseNode } from "@/lib/roadmap-flow";
-import { navigateToHref } from "./navigate";
+import { memo } from "react";
+import {
+  Handle,
+  Position,
+  type NodeProps,
+  type NodeTypes,
+  type Node,
+} from "@xyflow/react";
+import type {
+  RoadmapNode,
+  RoadmapPhaseNode,
+  RoadmapLessonNode,
+} from "@/lib/roadmap-flow";
+import type { NodeStatus } from "@/lib/roadmap-progress";
+import { statusClass } from "@/lib/roadmap-progress";
 
-// ── Phase / Appendix / Ship node ────────────────────────────────────────────
+// Per-node runtime extras injected by the renderer (kept off the pure model).
+export interface NodeExtras {
+  status: NodeStatus;
+  onSelect: (id: string) => void;
+}
 
-export function PhaseNode({ data }: NodeProps<Node<RoadmapPhaseNode>>) {
-  const { kind, title, phaseLabel, icon, href, lessonCount, totalMinutes, difficultyHint } = data;
+export type RfNodeData = RoadmapNode & NodeExtras;
 
+const DIFFICULTY_LABEL: Record<string, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+  mixed: "Mixed",
+};
+
+const STATUS_LABEL: Record<NodeStatus, string> = {
+  todo: "Not started",
+  "in-progress": "In progress",
+  done: "Done",
+  skipped: "Skipped",
+};
+
+// Pointer activation is handled by ReactFlow's onNodeClick (which also keeps
+// .react-flow__node pointer-events enabled); here we only add keyboard
+// activation for the focusable inner element.
+function useActivate(id: string, onSelect: (id: string) => void) {
+  return {
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onSelect(id);
+      }
+    },
+  };
+}
+
+// ── Phase / Appendix / Entry / Ship header node ───────────────────────────────
+
+function PhaseNodeImpl({ data }: NodeProps<Node<RfNodeData>>) {
+  const d = data as RoadmapPhaseNode & NodeExtras;
+  const {
+    id,
+    kind,
+    title,
+    phaseLabel,
+    icon,
+    lessonCount,
+    totalMinutes,
+    difficultyHint,
+  } = d;
+  const isMarker = kind === "entry" || kind === "ship";
   const hasMeta = lessonCount > 0;
+  const act = useActivate(id, d.onSelect);
 
-  const ariaLabel = hasMeta
-    ? `${phaseLabel ? phaseLabel + " — " : ""}${title}: ${lessonCount} lesson${lessonCount !== 1 ? "s" : ""}, ${totalMinutes} minutes, ${difficultyHint}. Open section.`
-    : `${title}. ${kind === "ship" ? "You have reached the end of the core path." : "Navigate."}`;
-
-  function handleClick() {
-    navigateToHref(href);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      navigateToHref(href);
-    }
-  }
+  const ariaLabel = isMarker
+    ? `${title}. Open details.`
+    : `${phaseLabel ? phaseLabel + " — " : ""}${title}: ${lessonCount} lesson${
+        lessonCount !== 1 ? "s" : ""
+      }, ${totalMinutes} minutes, ${difficultyHint}. Open details.`;
 
   return (
     <div
-      className={`rg-node rg-node--${kind}`}
-      role="link"
+      className={`rg-node rg-node--${kind} ${statusClass[d.status] ?? ""}`}
+      role="button"
       tabIndex={0}
       aria-label={ariaLabel}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
+      {...act}
     >
-      {/* Handles */}
       <Handle type="target" position={Position.Top} id="top" className="rg-handle" />
-      <Handle type="target" position={Position.Left} id="left" className="rg-handle" />
-      <Handle type="source" position={Position.Bottom} id="bottom" className="rg-handle" />
-      <Handle type="source" position={Position.Right} id="right" className="rg-handle" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        className="rg-handle"
+      />
+      <Handle type="source" position={Position.Left} id="left" className="rg-handle" />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className="rg-handle"
+      />
 
-      {/* Icon */}
-      <span className="rg-node__icon" aria-hidden="true">{icon}</span>
-
-      {/* Body */}
+      <span className="rg-node__icon" aria-hidden="true">
+        {icon}
+      </span>
       <div className="rg-node__body">
-        {phaseLabel && (
+        {phaseLabel && !isMarker && (
           <span className="rg-node__eyebrow">{phaseLabel}</span>
         )}
         <span className="rg-node__title">{title}</span>
-        {hasMeta && (
+        {hasMeta && !isMarker && (
           <span className="rg-node__meta">
-            {lessonCount} lesson{lessonCount !== 1 ? "s" : ""} · {totalMinutes}m · {difficultyHint}
+            {lessonCount} lesson{lessonCount !== 1 ? "s" : ""} · {totalMinutes}m ·{" "}
+            {DIFFICULTY_LABEL[difficultyHint] ?? difficultyHint}
           </span>
         )}
       </div>
-
-      {/* Chevron */}
-      <span className="rg-node__chevron" aria-hidden="true">→</span>
+      {!isMarker && (
+        <span className="rg-node__chevron" aria-hidden="true">
+          →
+        </span>
+      )}
     </div>
   );
 }
 
-// ── Entry node (compact pill) ────────────────────────────────────────────────
+// ── Lesson node (compact, branches off a phase header) ────────────────────────
 
-export function EntryNode({ data }: NodeProps<Node<RoadmapPhaseNode>>) {
-  const { title, icon, href } = data;
-
-  function handleClick() {
-    navigateToHref(href);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      navigateToHref(href);
-    }
-  }
+function LessonNodeImpl({ data }: NodeProps<Node<RfNodeData>>) {
+  const d = data as RoadmapLessonNode & NodeExtras;
+  const { id, title, number, difficulty } = d;
+  const act = useActivate(id, d.onSelect);
 
   return (
     <div
-      className="rg-node rg-node--entry"
-      role="link"
+      className={`rg-node rg-node--lesson rg-node--diff-${difficulty} ${
+        statusClass[d.status] ?? ""
+      }`}
+      role="button"
       tabIndex={0}
-      aria-label={`${title} — begin the roadmap`}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
+      aria-label={`Lesson ${number}: ${title}. ${STATUS_LABEL[d.status]}. Open details.`}
+      {...act}
     >
-      <Handle type="source" position={Position.Bottom} id="bottom" className="rg-handle" />
-      <Handle type="source" position={Position.Right} id="right" className="rg-handle" />
+      <Handle type="target" position={Position.Left} id="left" className="rg-handle" />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right"
+        className="rg-handle"
+      />
 
-      <span className="rg-node__icon" aria-hidden="true">{icon}</span>
-      <div className="rg-node__body">
-        <span className="rg-node__title">{title}</span>
-      </div>
+      <span className="rg-lesson__dot" aria-hidden="true">
+        {d.status === "done" ? (
+          <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
+            <path
+              d="M3.5 8.5 6.5 11.5 12.5 4.5"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </svg>
+        ) : (
+          <span className="rg-lesson__num">{number}</span>
+        )}
+      </span>
+      <span className="rg-lesson__title">{title}</span>
     </div>
   );
 }
 
-// ── NodeTypes registry ───────────────────────────────────────────────────────
+export const PhaseNode = memo(PhaseNodeImpl);
+export const LessonNode = memo(LessonNodeImpl);
 
 export const roadmapNodeTypes: NodeTypes = {
   phaseNode: PhaseNode,
-  entryNode: EntryNode,
+  entryNode: PhaseNode,
+  lessonNode: LessonNode,
 };

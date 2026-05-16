@@ -150,6 +150,15 @@ fn extract_content(resp: deepseek::ChatResponse) -> Result<String> {
     Ok(content)
 }
 
+/// Retry policy for `ask()`: transient transport / 5xx are retryable;
+/// 4xx and unknown errors are not. Mirrors deepseek-loop's own heuristic.
+fn is_retryable_error(msg: &str) -> bool {
+    msg.contains("API error (5")
+        || msg.contains("HTTP error")
+        || msg.contains("connection")
+        || msg.contains("timed out")
+}
+
 async fn ask(
     client: &DeepSeekClient<ReqwestClient>,
     model: &DeepSeekModel,
@@ -166,13 +175,20 @@ async fn ask(
             tokio::time::sleep(std::time::Duration::from_secs(d)).await;
         }
         match client.chat(&req).await {
-            Ok(resp) => return extract_content(resp),
+            Ok(resp) => match extract_content(resp) {
+                Ok(c) => return Ok(c),
+                Err(e) => {
+                    // empty / no-choice completion — usually transient; retry
+                    // within the existing backoff budget, then fail clearly.
+                    if attempt == delays.len() - 1 {
+                        return Err(e);
+                    }
+                    last = Some(e.to_string());
+                }
+            },
             Err(e) => {
                 let msg = e.to_string();
-                let retryable = msg.contains("API error (5")
-                    || msg.contains("HTTP error")
-                    || msg.contains("connection")
-                    || msg.contains("timed out");
+                let retryable = is_retryable_error(&msg);
                 if !retryable || attempt == delays.len() - 1 {
                     return Err(anyhow::anyhow!("DeepSeek call failed: {msg}"));
                 }
@@ -347,6 +363,17 @@ pub async fn generate_article(cfg: GenerateConfig) -> Result<GenerateOutcome> {
 mod tests {
     use super::*;
     use crate::generate::quality::check_quality;
+
+    #[test]
+    fn is_retryable_error_policy() {
+        assert!(is_retryable_error("API error (500): boom"));
+        assert!(is_retryable_error("API error (503): unavailable"));
+        assert!(is_retryable_error("HTTP error: connection reset"));
+        assert!(is_retryable_error("operation timed out"));
+        assert!(!is_retryable_error("API error (400): bad request"));
+        assert!(!is_retryable_error("API error (401): unauthorized"));
+        assert!(!is_retryable_error("totally unknown failure"));
+    }
 
     #[test]
     fn extract_content_rejects_empty_and_no_choices() {

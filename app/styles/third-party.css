@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 264px;
+  width: 100%;
   min-height: 64px;
   padding: 12px 16px;
   background: var(--ds-surface);
@@ -140,6 +140,11 @@
 .roadmap-graph .react-flow__pane:active {
   cursor: grabbing;
 }
+/* Keep nodes clickable even though they are not selectable/draggable. */
+.roadmap-graph .react-flow__node {
+  pointer-events: all;
+  cursor: pointer;
+}
 .roadmap-graph .react-flow__edge-path {
   stroke: var(--ds-border-strong);
   stroke-width: 1.5;
@@ -177,8 +182,9 @@
 
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .rg-node {
-    width: 220px;
+  /* Mobile keeps fixed coords; fitView scales the whole tree down. */
+  .rg-node--lesson .rg-lesson__title {
+    -webkit-line-clamp: 2;
   }
 }
 
@@ -190,6 +196,103 @@
   .rg-node:hover {
     transform: none;
   }
+}
+
+/* ── Phase / appendix headers span their lesson fan ───────────────── */
+.rg-node--phase,
+.rg-node--appendix {
+  height: 100%;
+}
+
+/* ── Lesson node (compact, branches off a header) ─────────────────── */
+.rg-node--lesson {
+  gap: 9px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border-radius: var(--ds-radius-md);
+}
+
+.rg-lesson__dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rg-lesson__num {
+  line-height: 1;
+}
+
+.rg-lesson__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ds-ink);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Difficulty tint on the lesson marker (no layout shift). */
+.rg-node--diff-beginner .rg-lesson__dot {
+  border-color: var(--ds-success, #3fb950);
+}
+.rg-node--diff-intermediate .rg-lesson__dot {
+  border-color: var(--ds-warn, #d29922);
+}
+.rg-node--diff-advanced .rg-lesson__dot {
+  border-color: var(--ds-danger, #f85149);
+}
+
+/* ── Progress status variants ─────────────────────────────────────── */
+.rg-node--done {
+  border-color: var(--ds-success, #3fb950);
+  background: color-mix(
+    in srgb,
+    var(--ds-success, #3fb950) 12%,
+    var(--ds-surface)
+  );
+}
+.rg-node--done .rg-lesson__dot {
+  background: var(--ds-success, #3fb950);
+  border-color: transparent;
+  color: #fff;
+}
+.rg-node--in-progress {
+  border-color: var(--ds-accent, #6e7bf2);
+}
+.rg-node--in-progress .rg-lesson__dot {
+  border-color: var(--ds-accent, #6e7bf2);
+  color: var(--ds-accent-text, var(--ds-accent, #6e7bf2));
+}
+.rg-node--skipped {
+  opacity: 0.5;
+}
+.rg-node--skipped .rg-lesson__title,
+.rg-node--skipped .rg-node__title {
+  text-decoration: line-through;
+}
+
+/* ── Container: clamp height; fitView scales the tall canvas in ───── */
+.mermaid-flow-container.roadmap-graph-wrap {
+  height: clamp(560px, 90vh, 900px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Legend hint ──────────────────────────────────────────────────── */
+.rg-legend__item--hint {
+  color: var(--ds-text-faint);
+  font-style: italic;
 }
 
 /* === END T-XYFLOW === */

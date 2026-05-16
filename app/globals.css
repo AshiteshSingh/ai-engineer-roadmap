@@ -3969,3 +3969,295 @@
 /* <<< TEAM-E <<< */
 
 /* ===== END MANAGED REGIONS ===== */
+
+/* ================================================================
+   ROADMAP GRAPH — progress bar + node detail drawer
+   (mirrors the .toc-mobile-drawer pattern; scoped under .rg-*)
+   ================================================================ */
+
+/* ── Progress summary bar ─────────────────────────────────────────── */
+.rg-progress {
+  max-width: 1120px;
+  margin: 16px auto 8px;
+  padding: 0 16px;
+}
+.rg-progress__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 8px;
+}
+.rg-progress__pct {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ds-ink);
+}
+.rg-progress__label {
+  font-size: 12px;
+  color: var(--ds-text-muted);
+  margin-right: 4px;
+}
+.rg-progress__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ds-text-muted);
+}
+.rg-progress__count--done {
+  color: var(--ds-success, #3fb950);
+  font-weight: 600;
+}
+.rg-progress__count--doing {
+  color: var(--ds-accent-text, var(--ds-accent, #6e7bf2));
+  font-weight: 600;
+}
+.rg-progress__count--skip {
+  color: var(--ds-text-faint);
+}
+.rg-progress__reset {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text-muted);
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: var(--ds-radius-pill);
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease;
+}
+.rg-progress__reset:hover {
+  color: var(--ds-ink);
+  border-color: var(--ds-accent-border);
+}
+.rg-progress__track {
+  position: relative;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border-subtle);
+  overflow: hidden;
+}
+.rg-progress__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--ds-success, #3fb950);
+  transition: width 0.3s ease, left 0.3s ease;
+}
+.rg-progress__fill--skip {
+  background: var(--ds-text-faint);
+  opacity: 0.5;
+}
+
+/* ── Backdrop ─────────────────────────────────────────────────────── */
+.rg-drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 80;
+}
+.rg-drawer-backdrop--open {
+  display: block;
+}
+
+/* ── Drawer panel — desktop = right side-over ─────────────────────── */
+.rg-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(440px, 92vw);
+  background: var(--gray-2);
+  border-left: 1px solid var(--gray-4);
+  padding: 56px 24px 32px;
+  z-index: 90;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  visibility: hidden;
+}
+.rg-drawer--open {
+  transform: translateX(0);
+  visibility: visible;
+}
+.rg-drawer__handle {
+  display: none;
+}
+.rg-drawer__close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border);
+  border-radius: 9999px;
+  color: var(--ds-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease;
+}
+.rg-drawer__close:hover {
+  color: var(--ds-ink);
+  border-color: var(--ds-accent-border);
+}
+.rg-drawer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rg-drawer__eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-accent-text);
+}
+.rg-drawer__title {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--ds-ink);
+  margin: 0;
+}
+.rg-drawer__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rg-drawer__pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text-muted);
+  text-transform: capitalize;
+}
+.rg-drawer__excerpt {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ds-text);
+  margin: 4px 0;
+}
+.rg-drawer__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ds-border-subtle);
+  margin-top: 4px;
+}
+.rg-drawer__section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ds-text-muted);
+}
+.rg-drawer__outcomes {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--ds-text);
+}
+.rg-drawer__group-progress {
+  font-size: 12px;
+  color: var(--ds-text-muted);
+  margin: 0;
+}
+.rg-drawer__segmented {
+  display: flex;
+  gap: 6px;
+}
+.rg-drawer__seg {
+  flex: 1;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 6px;
+  border-radius: var(--ds-radius);
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease,
+    background 0.18s ease;
+}
+.rg-drawer__seg:hover {
+  color: var(--ds-ink);
+  border-color: var(--ds-accent-border);
+}
+.rg-drawer__seg--active {
+  background: var(--ds-accent, #6e7bf2);
+  border-color: var(--ds-accent, #6e7bf2);
+  color: #fff;
+}
+.rg-drawer__clear {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--ds-text-faint);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+.rg-drawer__clear:hover {
+  color: var(--ds-text-muted);
+}
+
+/* ── Mobile = bottom sheet ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .rg-drawer {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    height: auto;
+    width: auto;
+    max-height: 80vh;
+    border-left: none;
+    border-top: 1px solid var(--gray-4);
+    border-radius: 16px 16px 0 0;
+    padding: 20px 16px 32px;
+    transform: translateY(100%);
+  }
+  .rg-drawer--open {
+    transform: translateY(0);
+  }
+  .rg-drawer__handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--gray-5);
+    margin: 0 auto 16px;
+  }
+  .rg-drawer__close {
+    top: 16px;
+  }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .rg-drawer,
+  .rg-progress__fill {
+    transition: none;
+  }
+}
