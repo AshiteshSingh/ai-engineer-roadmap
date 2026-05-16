@@ -167,76 +167,119 @@ export const CATEGORIES: [number, number, string][] = [
 // above this belong to the Appendix and are excluded from getFlowOrder().
 export const FLOW_MAX_NUMBER = 73;
 
+// Descriptions: parallel "outcome — concrete substrate" form, jargon-free.
+// Outcomes: falsifiable "you can now build/ship X" capability statements,
+// bound to the master article's Portfolio Levels where they line up.
 export const CATEGORY_META: Record<string, CategoryMeta> = {
   "Phase 0 · The AI Engineer on the Edge": {
     slug: "phase-0-orientation",
     icon: "🧭",
-    description: "What an AI engineer ships — and why the Cloudflare Workers runtime is the substrate for the whole roadmap",
+    description: "Understand what an AI engineer actually ships — and the one concrete runtime (Workers, Workers AI, Vectorize, D1) every later phase builds on",
     gradient: ["var(--orange-9)", "var(--amber-11)"],
-    outcomes: ["Understand the AI-engineer role on the edge", "Map the Workers/Workers AI/Vectorize/D1 stack", "Orient yourself in the roadmap spine"],
+    outcomes: [
+      "Explain how the AI-engineer role differs from ML engineer and data scientist",
+      "Name the Workers AI / Vectorize / D1 substrate each phase uses",
+      "Pick your entry point into the roadmap by experience level",
+    ],
   },
   "Phase 1 · Models & Inference on Workers AI": {
     slug: "phase-1-models",
     icon: "🧠",
-    description: "Pre-trained models and how inference actually runs — served from the edge via the Workers AI binding",
+    description: "Run real inference on pre-trained models — served from the edge through the Workers AI binding",
     gradient: ["var(--violet-9)", "var(--violet-11)"],
-    outcomes: ["Use the Workers AI model catalog and bindings", "Understand transformers, tokenization & scaling laws", "Reason about edge inference cost and latency"],
+    outcomes: [
+      "Call a Workers AI model and read its token and cost implications",
+      "Explain tokenization, attention and scaling laws in applied terms",
+      "Pick a model for a task by latency, cost and capability",
+    ],
   },
   "Phase 2 · Prompting & Structured Output": {
     slug: "phase-2-prompting",
     icon: "💬",
-    description: "Talk to Workers AI models reliably — prompts, tool/function calling, and JSON-shaped output",
+    description: "Make model output reliable — prompts, tool/function calling, and schema-valid JSON from Workers AI",
     gradient: ["var(--blue-9)", "var(--blue-11)"],
-    outcomes: ["Write system prompts and few-shot examples", "Drive function/tool calling from a Worker", "Enforce structured output and defend against injection"],
+    outcomes: [
+      "Write system prompts and few-shot examples that hold under variation",
+      "Drive function/tool calls from a Worker",
+      "Ship a Structured Data Extractor: text in, schema-validated JSON out (Portfolio L1)",
+    ],
   },
   "Phase 3 · Embeddings & RAG on Vectorize": {
     slug: "phase-3-rag",
     icon: "🔍",
-    description: "Connect models to your data with langchain-cloudflare embeddings and the Vectorize vector store",
+    description: "Ground answers in your own data — embeddings and retrieval on Vectorize with D1 metadata",
     gradient: ["var(--cyan-9)", "var(--cyan-11)"],
-    outcomes: ["Embed and index with CloudflareWorkersAIEmbeddings", "Build RAG on Vectorize + D1 metadata", "Choose chunking/retrieval strategies and evaluate them"],
+    outcomes: [
+      "Embed and index a corpus with CloudflareWorkersAIEmbeddings",
+      "Tune chunking and retrieval strategies, then measure them",
+      "Ship a Document Q&A System with citations and a faithfulness/relevance eval (Portfolio L1)",
+    ],
   },
   "Phase 4 · Agents, Memory & Orchestration": {
     slug: "phase-4-agents",
     icon: "🤖",
-    description: "Agents that reason and act — LangGraph checkpointed on D1, long-term memory on Vectorize, durable on Workers",
+    description: "Build agents that reason and act — LangGraph checkpointed on D1, long-term memory on Vectorize, durable on Workers",
     gradient: ["var(--amber-9)", "var(--amber-11)"],
-    outcomes: ["Checkpoint LangGraph with langgraph-checkpoint-cloudflare-d1", "Give agents memory via langmem-cloudflare-vectorize", "Orchestrate with Durable Objects, Queues & Workflows"],
+    outcomes: [
+      "Build a tool-using agent loop with persistent memory",
+      "Checkpoint and resume graphs on D1; orchestrate with Durable Objects, Queues & Workflows",
+      "Ship a Multi-Source Research Agent reusing Phase 2 tool calls and Phase 3 retrieval (Portfolio L2)",
+    ],
   },
   "Phase 5 · Evals, Safety & Observability": {
     slug: "phase-5-evals",
     icon: "🛡",
-    description: "Measure what matters and ship safely — evals, red-teaming, guardrails, and AI Gateway observability",
+    description: "Prove it works and ships safely — evals, red-teaming, guardrails, and AI Gateway observability",
     gradient: ["var(--crimson-9)", "var(--crimson-11)"],
-    outcomes: ["Design benchmarks and LLM-as-judge evals", "Add guardrails and mitigate hallucination/bias", "Observe and cap traffic through AI Gateway"],
+    outcomes: [
+      "Build an eval suite (benchmarks + LLM-as-judge) that gates a model change",
+      "Add guardrails and mitigate hallucination and bias",
+      "Ship an eval + red-team + observability harness over your Phase 4 agent (Portfolio L3)",
+    ],
   },
   "Phase 6 · Ship on Cloudflare": {
     slug: "phase-6-ship",
     icon: "🚀",
-    description: "Take it to production on the edge — deploy, scale, cost-control, CI/CD, and applied multimodal patterns",
+    description: "Take it to production on the edge — deploy, scale, cost-control, and CI/CD with Wrangler",
     gradient: ["var(--jade-9)", "var(--jade-11)"],
-    outcomes: ["Deploy and scale on Workers with Wrangler", "Control inference cost and observability", "Apply production, search and multimodal patterns"],
+    outcomes: [
+      "Deploy and scale on Workers with Wrangler",
+      "Cap inference cost and wire CI/CD-gated evals",
+      "Ship a cost-bounded, observable AI feature to production (e.g. an AI Code Review Bot)",
+    ],
   },
   "Appendix · Fine-tuning & Training": {
     slug: "appendix-fine-tuning",
     icon: "🔧",
-    description: "Beyond the edge — customizing models with LoRA, RLHF and dataset curation (off the continuous-play spine)",
+    description: "Optional track — customize models with LoRA, RLHF and dataset curation when prompting is not enough",
     gradient: ["var(--slate-9)", "var(--slate-11)"],
-    outcomes: ["Fine-tune with LoRA/QLoRA adapters", "Curate high-quality training datasets", "Apply RLHF and preference optimization"],
+    outcomes: [
+      "Decide when fine-tuning beats prompting, with a measured comparison",
+      "Fine-tune with LoRA/QLoRA on a curated dataset",
+      "Ship a domain-tuned assistant wrapped in a safety stack (Portfolio L3, senior signal)",
+    ],
   },
   "Appendix · Other Clouds & Platforms": {
     slug: "appendix-clouds",
     icon: "☁",
-    description: "Beyond the edge — GCP, containers and Kubernetes for comparison and context",
+    description: "Optional track — GCP, Docker and Kubernetes for portability and comparison off the Cloudflare path",
     gradient: ["var(--sky-9)", "var(--sky-11)"],
-    outcomes: ["Work with Google Cloud Platform", "Containerize with Docker", "Orchestrate with Kubernetes"],
+    outcomes: [
+      "Map Workers concepts onto GCP equivalents",
+      "Containerize a service with Docker",
+      "Run a workload on Kubernetes",
+    ],
   },
   "Appendix · Engineering & Communication": {
     slug: "appendix-engineering",
     icon: "🏗",
-    description: "Beyond the edge — timeless engineering principles, LlamaIndex, and communication skills",
+    description: "Optional track — software-engineering foundations (SOLID, ACID, SQL, CI/CD) plus LlamaIndex and communication",
     gradient: ["var(--slate-9)", "var(--slate-11)"],
-    outcomes: ["Apply SOLID and ACID guarantees", "Design microservices and CI/CD", "Communicate with structure and presence"],
+    outcomes: [
+      "Apply SOLID design and ACID guarantees",
+      "Reason about microservices, SQL joins and CI/CD",
+      "Communicate technical work with structure and presence",
+    ],
   },
 };
 

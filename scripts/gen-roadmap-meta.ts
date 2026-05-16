@@ -22,6 +22,7 @@ const categories = CATEGORIES.map(([lo, hi, name], i) => {
     description: meta.description,
     gradientFrom: meta.gradient[0],
     gradientTo: meta.gradient[1],
+    outcomes: meta.outcomes ?? [],
     sortOrder: i,
     lessonRangeLo: lo,
     lessonRangeHi: hi,

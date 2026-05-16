@@ -301,7 +301,7 @@ result = MyModel.model_validate_json(response.choices[0].message.content)
 
 ## Learning Path Recommendations
 
-### Phase 1: Foundations (Weeks 1-4)
+### Stage 1: Foundations (Weeks 1-4)
 
 **Goal**: Build and deploy a basic AI-powered application.
 
@@ -316,11 +316,11 @@ result = MyModel.model_validate_json(response.choices[0].message.content)
 - Full Stack Deep Learning course (practical ML engineering)
 - OpenAI Cookbook (practical examples)
 
-### Phase 2: Professional Skills (Weeks 5-12)
+### Stage 2: Professional Skills (Weeks 5-12)
 
 **Goal**: Build production-quality AI systems with evaluation and monitoring.
 
-1. **Master evaluation**: Build an eval suite for your Phase 1 project. Track quality metrics over time. Use [LLM-as-judge](/llm-as-judge) for subjective quality assessment. See [Eval Fundamentals](/eval-fundamentals) and [Benchmark Design](/benchmark-design).
+1. **Master evaluation**: Build an eval suite for your Stage 1 project. Track quality metrics over time. Use [LLM-as-judge](/llm-as-judge) for subjective quality assessment. See [Eval Fundamentals](/eval-fundamentals) and [Benchmark Design](/benchmark-design).
 2. **Learn agent patterns**: Implement a [ReAct agent](/agent-architectures) with [tool use](/function-calling). Build something that searches the web, queries databases, or interacts with APIs. See also [Agent Memory](/agent-memory) and [Code Agents](/code-agents).
 3. **Study retrieval in depth**: Experiment with different [chunking strategies](/chunking-strategies), [embedding models](/embedding-models), and [re-ranking](/retrieval-strategies). Measure retrieval quality with NDCG/MRR on a domain-specific dataset. See [RAG Evaluation](/rag-evaluation).
 4. **Implement production patterns**: Add [caching, fallback chains](/cost-optimization), [rate limiting](/ai-gateway), and [cost monitoring](/observability) to your application. See [Production AI Patterns](/production-patterns).
@@ -333,7 +333,7 @@ result = MyModel.model_validate_json(response.choices[0].message.content)
 - The RAG literature (Lewis et al., 2020, and subsequent work)
 - LangChain / LlamaIndex documentation and tutorials
 
-### Phase 3: Advanced (Months 3-6)
+### Stage 3: Advanced (Months 3-6)
 
 **Goal**: Develop specialization and contribute to the field.
 
@@ -622,27 +622,27 @@ For frameworks and libraries, the key question is whether the abstraction helps 
 
 ## Learning Path by Experience Level
 
-This knowledge base contains 55 articles organized into thematic tracks. Here is the recommended reading order depending on your starting point.
+This roadmap spans Phases 0–6 plus three appendices. Here is the recommended reading order depending on your starting point.
 
 ### Beginner Path (Software engineers new to AI)
 
 Start with the fundamentals that give you working intuition, then build practical skills immediately.
 
-**Phase 1 - Core Concepts (Articles 01, 03, 04, 07, 09)**:
+**Step 1 - Core Concepts**:
 1. [Transformer Architecture](/transformer-architecture) - understand the engine that powers everything
 2. [Tokenization](/tokenization) - understand the input/output mechanics
 3. [LLM Architectures Compared](/model-architectures) - know the landscape of available models
 4. [Prompt Engineering Fundamentals](/prompt-engineering-fundamentals) - your primary tool as an AI engineer
 5. [System Prompt Design](/system-prompts) - the foundation of every AI feature
 
-**Phase 2 - First Applications (Articles 08, 10, 13, 14, 15)**:
+**Step 2 - First Applications**:
 6. [Few-Shot & Chain-of-Thought](/few-shot-chain-of-thought) - essential prompting techniques
 7. [Structured Output](/structured-output) - getting reliable programmatic output from LLMs
 8. [Embedding Models](/embedding-models) - understand vector representations
 9. [Vector Databases](/vector-databases) - the storage layer for retrieval
 10. [Chunking Strategies](/chunking-strategies) - preparing data for retrieval
 
-**Phase 3 - Production Basics (Articles 16, 25, 31, 39, 44)**:
+**Step 3 - Production Basics**:
 11. [Retrieval Strategies](/retrieval-strategies) - hybrid search and re-ranking
 12. [Function Calling](/function-calling) - connecting LLMs to the real world
 13. [Eval Fundamentals](/eval-fundamentals) - measuring quality (start early)
@@ -879,6 +879,10 @@ The hiring signal is not "used the latest API" but evidence of the full loop: a 
 }
 ```
 
+### Where this roadmap runs it
+
+Everything above is deliberately vendor-neutral: the durable skills are retrieval, evaluation, prompt design, and system architecture, and they transfer across any model or provider. This roadmap teaches those skills on **one concrete substrate — Cloudflare Workers AI, Vectorize, and D1** — so every concept ships as running code instead of a diagram. Read the toolkit and decision tree above as the market map; read the phases that follow as one opinionated implementation of it. The principles are the point; the platform is the proof.
+
 ## Summary and Key Takeaways
 
 - **The AI engineer role** is distinct from ML engineer and data scientist, focused on building production applications with pre-trained models rather than training models or analyzing data
@@ -892,4 +896,4 @@ The hiring signal is not "used the latest API" but evidence of the full loop: a 
 - **Build a portfolio** that demonstrates end-to-end thinking: not just API calls, but [retrieval](/advanced-rag), [evaluation](/eval-fundamentals), [cost management](/cost-optimization), and [production reliability](/production-patterns) - the portfolio projects section above provides concrete starting points at every level
 - **The field is stabilizing** around core patterns and practices while continuing to expand in capability; investing in fundamentals (systems design, evaluation, reliability) will pay dividends regardless of which models or tools dominate in the future
 - **Community engagement** through writing, open-source contribution, and conference participation accelerates both learning and career growth in this rapidly evolving field
-- **This article is the navigation hub** for the full knowledge base of 55 articles - use the cross-references throughout to dive deep on any topic that matters to your current work
+- **This article is the navigation hub** for the full roadmap — Phases 0–6 plus appendices - use the cross-references throughout to dive deep on any topic that matters to your current work
