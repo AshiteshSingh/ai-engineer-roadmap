@@ -77,7 +77,7 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [ ] components/app-detail/NotesTab.tsx
 - [x] components/app-detail/TechStackTab.tsx — DONE (c1efb69, 0 token swaps) → main.
 - [ ] components/app-detail/StudyRoadmap.tsx
-- [~] components/memorize/* — DONE: MemorizeDashboard (ef4c48e), FlashcardDeck (3dcb286, --space-4=16px exact), ProgressBar (16d4388, 0 swaps), FillInTheBlank (d7328f5, 0 swaps), PropertyExplorer (b7bf0c4, --space-3=12px exact), **DueForReview (af32a1b — value-EXACT: `padding:"4px 0"`→`var(--space-1) 0`, --space-1=4px exact; flex/minWidth literal; global due-review-* kept literal)**, **ModeTip (af32a1b — value-safe: only `.fill{flex:1}`/`.citation{font-style:italic}`, 0 tokens; global mode-tip/mode-tip-dismiss kept literal)**. NO-OP: TimedDrill (ux2-8), VisualMatcher (ux2-9), **LearningInsights (ux2-10: produced nothing — pure global-class component, no co-locatable styling; do not re-pick)**. OPEN: PreSessionCheckIn, PostSessionSummary, LearningScienceSidebar.
+- [~] components/memorize/* — DONE: MemorizeDashboard (ef4c48e), FlashcardDeck (3dcb286, --space-4=16px exact), ProgressBar (16d4388, 0 swaps), FillInTheBlank (d7328f5, 0 swaps), PropertyExplorer (b7bf0c4, --space-3=12px exact), **DueForReview (af32a1b — value-EXACT: `padding:"4px 0"`→`var(--space-1) 0`, --space-1=4px exact; flex/minWidth literal; global due-review-* kept literal)**, **ModeTip (af32a1b — value-safe: only `.fill{flex:1}`/`.citation{font-style:italic}`, 0 tokens; global mode-tip/mode-tip-dismiss kept literal)**, **PreSessionCheckIn (2247d5f — value-EXACT: `marginBottom:16`→`var(--space-4)`, --space-4=16px exact; display:block literal; global session-checkin-* kept literal)**. NO-OP: TimedDrill (ux2-8), VisualMatcher (ux2-9), **LearningInsights (ux2-10: produced nothing — pure global-class component, no co-locatable styling; do not re-pick)**. OPEN: PostSessionSummary, LearningScienceSidebar (ux2-11/ux3-11 in flight).
 - [ ] components/roadmap-graph/index.tsx
 - [ ] components/roadmap-graph/nodes.tsx
 - [ ] components/mermaid-flow/index.tsx
@@ -94,12 +94,24 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 
 | Agent | Current item | Status |
 |-------|--------------|--------|
-| ux1 | memorize/PreSessionCheckIn | spawning |
-| ux2 | memorize/PostSessionSummary | spawning |
-| ux3 | memorize/LearningScienceSidebar | spawning |
+| ux1-12 | components/scroll-animations.tsx | spawning |
+| ux2-12 | components/markdown-prose.tsx | spawning |
+| ux3-12 | components/search.tsx | spawning |
+| ux2-11 | memorize/PostSessionSummary | in flight (no commit yet) |
+| ux3-11 | memorize/LearningScienceSidebar | in flight (no commit yet) |
 
 ## Tick log
 
+- **tick (direct-to-main):** PreSessionCheckIn DONE on main `2247d5f`
+  (value-EXACT `marginBottom:16`→`--space-4`=16px; no-global gate=0).
+  Same stale-granular-vs-squashed conflict on rebase → proven recovery
+  (snapshot `ux-polish-salvage-20260516-1237`, verified only-delta=
+  PreSessionCheckIn, reset to origin/main, re-apply, gate, FF-push to main).
+  ux2-11/ux3-11 (PostSessionSummary/LearningScienceSidebar) produced no
+  lane commit (slow / scratch wiped by per-tick clean) — left OPEN, not
+  re-spawned this tick to avoid same-file collision with possibly-live
+  agents. Spawned 3 non-colliding: scroll-animations, markdown-prose,
+  search.
 - **tick (DIRECT-TO-MAIN switch + reconcile):** user directed
   "commit directly on main". PR #16 "Ux polish" squash-merged the prior
   lane → `main` (all migrated modules + stale early ledger on main). Rebase
