@@ -60,13 +60,13 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 - [x] components/toc.tsx — DONE on main (globals migration).
 - [x] components/category-progress.tsx — DONE on main (globals migration).
 - [x] components/audio-player.tsx — DONE on main (globals migration).
-- [ ] components/markdown-prose.tsx
-- [ ] components/search.tsx
+- [x] components/markdown-prose.tsx — NO-OP (ux2-12): no commit produced; markdown prose styled by global `.prose`/`.markdown-*` stylesheet, no co-locatable static inline styling, no a11y gap. Do not re-pick.
+- [x] components/search.tsx — NO-OP (ux3-12 definitive): zero inline `style=`; 100% global classes (cmd-bar/cmd-search/cmd-suggest/cmd-filter/search-result-card, globals.css ~L1201–5024) that are runtime-toggled/JS-queried (forbidden to migrate); a11y already complete (aria-label/role/aria-pressed/aria-live/keyboard nav). Do not re-pick.
 - [ ] components/category-grid.tsx
 - [x] components/paper-card.tsx — DONE (4d19617, gate-clean) → on main.
 - [x] components/external-courses.tsx — NO-OP (ux2-4): 100% shared global contract classes; only dynamic verdict color; colors already Radix tokens. Do not re-pick.
 - [x] components/langgraph-extra.tsx — DONE (9d984b0, gate-clean) → on main.
-- [ ] components/page-analytics.tsx
+- [x] components/page-analytics.tsx — NO-OP (ux2-13): no commit produced; side-effect/tracking component, no rendered UI / co-locatable static styling, no a11y gap. Do not re-pick.
 - [x] components/app-detail/ApplicationHeader.tsx — DONE (19be462) → main.
 - [x] components/app-detail/CollapsibleSection.tsx — DONE (921ee2b) → main.
 - [x] components/app-detail/CompanyTab.tsx — DONE (62b92ff) → main.
@@ -102,6 +102,16 @@ Orchestrator-owned. Worktree `ai-engineer-roadmap-ux`, branch `ux-polish`
 
 ## Tick log
 
+- **tick (reconcile + LANE REALIGN):** ux2-12 markdown-prose, ux2-13
+  page-analytics, ux3-12 search → all NO-OP (no commits; global-class /
+  side-effect, a11y complete). KEY FIX: `origin/ux-polish` was stuck at
+  stale divergent `86a417b` (granular tail vs squashed main) — every agent
+  `git push -q` FF'd onto that old graph, forcing a reset+reapply recovery
+  each tick. Verified `origin/ux-polish` had ZERO source not on main, then
+  force-realigned the **disposable lane pointer** to `origin/main`
+  (`737cb7d`; salvage `-1237`/`-1242` preserve old graph; `main` NOT
+  force-pushed). Future agent pushes now FF cleanly → no more per-tick
+  recovery. ux1-13/ux3-13 (category-grid/NotesTab) still in flight.
 - **tick (direct-to-main):** LearningScienceSidebar + PostSessionSummary
   DONE on main `873298b` (both value-EXACT `marginBottom:12`→`--space-3`
   12px; LSS also `marginTop:4`→`--space-1` 4px; literals 20px/1.5 kept w/
