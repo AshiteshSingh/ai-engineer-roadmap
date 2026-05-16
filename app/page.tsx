@@ -1,5 +1,4 @@
 import { getGroupedLessons } from "@/lib/data";
-import { ResearchCollections } from "@/components/research-collections";
 import { Topbar } from "@/components/topbar";
 import { LearningPath } from "@/components/learning-path";
 import { Search } from "@/components/search";
@@ -33,11 +32,6 @@ export default async function HomePage() {
           </Section>
           <RoadmapGraph model={roadmapModel} />
         </section>
-      </ScrollReveal>
-
-      {/* Research Collections */}
-      <ScrollReveal delay={100}>
-        <ResearchCollections />
       </ScrollReveal>
 
       {/* Search + Bento Grid */}
