@@ -2,6 +2,8 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import type { AudioMeta, AudioChapter } from "@/lib/audio";
+import { cx } from "@/components/ui";
+import styles from "./audio-player.module.css";
 
 function formatTime(secs: number): string {
   const m = Math.floor(secs / 60);
@@ -245,19 +247,19 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
 
       {/* Chapter list overlay */}
       {showChapters && (
-        <div className="audio-chapters-backdrop" onClick={() => setShowChapters(false)}>
-          <div className="audio-chapters-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="audio-chapters-handle" />
-            <div className="audio-chapters-title">Chapters</div>
+        <div className={styles.audioChaptersBackdrop} onClick={() => setShowChapters(false)}>
+          <div className={styles.audioChaptersPanel} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.audioChaptersHandle} />
+            <div className={styles.audioChaptersTitle}>Chapters</div>
             {meta.chapters.map((ch) => (
               <button
                 key={ch.index}
-                className={`audio-chapter-item ${ch.index === currentChapterIndex ? "audio-chapter-item--active" : ""}`}
+                className={cx(styles.audioChapterItem, ch.index === currentChapterIndex && styles.audioChapterItemActive)}
                 onClick={() => seekToChapter(ch)}
               >
-                <span className="audio-chapter-idx">{ch.index + 1}</span>
-                <span className="audio-chapter-name">{ch.title}</span>
-                <span className="audio-chapter-time">{formatTime(ch.start_secs)}</span>
+                <span className={styles.audioChapterIdx}>{ch.index + 1}</span>
+                <span className={styles.audioChapterName}>{ch.title}</span>
+                <span className={styles.audioChapterTime}>{formatTime(ch.start_secs)}</span>
               </button>
             ))}
           </div>
@@ -265,10 +267,10 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
       )}
 
       {/* Player bar */}
-      <div className="audio-player">
-        <div className="audio-player-inner">
+      <div className={styles.audioPlayer}>
+        <div className={styles.audioPlayerInner}>
           {/* Play/Pause */}
-          <button className="audio-btn audio-btn--play" onClick={togglePlay} aria-label={isPlaying ? "Pause" : "Play"} aria-pressed={isPlaying}>
+          <button className={cx(styles.audioBtn, styles.audioBtnPlay)} onClick={togglePlay} aria-label={isPlaying ? "Pause" : "Play"} aria-pressed={isPlaying}>
             {isPlaying ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <rect x="6" y="4" width="4" height="16" rx="1" />
@@ -282,7 +284,7 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
           </button>
 
           {/* Skip back 15s */}
-          <button className="audio-btn" onClick={() => skip(-15)} aria-label="Back 15 seconds">
+          <button className={styles.audioBtn} onClick={() => skip(-15)} aria-label="Back 15 seconds">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M1 4v6h6" />
               <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
@@ -290,7 +292,7 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
           </button>
 
           {/* Skip forward 15s */}
-          <button className="audio-btn" onClick={() => skip(15)} aria-label="Forward 15 seconds">
+          <button className={styles.audioBtn} onClick={() => skip(15)} aria-label="Forward 15 seconds">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M23 4v6h-6" />
               <path d="M20.49 15a9 9 0 11-2.13-9.36L23 10" />
@@ -298,18 +300,18 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
           </button>
 
           {/* Info */}
-          <div className="audio-info">
-            <div className="audio-info-chapter">{currentChapter?.title}</div>
-            <div className="audio-info-time">
+          <div className={styles.audioInfo}>
+            <div className={styles.audioInfoChapter}>{currentChapter?.title}</div>
+            <div className={styles.audioInfoTime}>
               {formatTime(currentTime)} / {formatTime(duration || meta.duration_secs)}
             </div>
           </div>
 
           {/* Seek bar */}
-          <div className="audio-seek-wrap">
+          <div className={styles.audioSeekWrap}>
             <input
               type="range"
-              className="audio-seek"
+              className={styles.audioSeek}
               min={0}
               max={duration || meta.duration_secs}
               step={0.1}
@@ -322,13 +324,13 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
           </div>
 
           {/* Speed */}
-          <button className="audio-btn audio-btn--speed" onClick={cycleSpeed} aria-label={`Playback speed: ${playbackRate}x`}>
+          <button className={cx(styles.audioBtn, styles.audioBtnSpeed)} onClick={cycleSpeed} aria-label={`Playback speed: ${playbackRate}x`}>
             {playbackRate}x
           </button>
 
           {/* Chapters toggle */}
           <button
-            className="audio-btn"
+            className={styles.audioBtn}
             onClick={() => setShowChapters(!showChapters)}
             aria-label="Show chapters"
           >
