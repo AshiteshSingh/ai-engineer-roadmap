@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  Container,
   Heading,
   Text,
   Box,
@@ -42,21 +41,15 @@ import {
   PreviewDialog,
   shareOrDownloadAndMail,
 } from "./_canvas";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 
 function GalleryImage({ item }: { item: ImgItem }) {
   const fit = item.fit ?? "contain";
   return (
     <Box
-      style={{
-        width: "100%",
-        height: 240,
-        borderRadius: "var(--radius-3)",
-        overflow: "hidden",
-        background: item.bg ?? "var(--gray-3)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
+      className={styles.imgFrame}
+      style={item.bg ? ({ "--frame-bg": item.bg } as React.CSSProperties) : undefined}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -64,12 +57,8 @@ function GalleryImage({ item }: { item: ImgItem }) {
         alt={item.title}
         loading="lazy"
         crossOrigin="anonymous"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: fit,
-          display: "block",
-        }}
+        className={styles.img}
+        style={{ "--fit": fit } as React.CSSProperties}
       />
     </Box>
   );
@@ -90,18 +79,7 @@ function SelectionCheckbox({
       size="1"
       weight="medium"
       onClick={(e) => e.stopPropagation()}
-      style={{
-        position: "absolute",
-        top: 8,
-        right: 8,
-        zIndex: 2,
-        background: "rgba(255,255,255,0.92)",
-        borderRadius: "var(--radius-2)",
-        padding: "6px 10px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-        cursor: "pointer",
-        userSelect: "none",
-      }}
+      className={styles.selBadge}
     >
       <Flex align="center" gap="2">
         <Checkbox
@@ -129,18 +107,12 @@ function GalleryCard({
   extraAction?: React.ReactNode;
 }) {
   return (
-    <Card
-      style={{
-        outline: selected ? "3px solid var(--teal-9)" : undefined,
-        outlineOffset: selected ? -2 : undefined,
-        transition: "outline-color 120ms",
-      }}
-    >
+    <Card className={selected ? `${styles.card} ${styles.selected}` : styles.card}>
       <Flex direction="column" gap="2">
-        <Box style={{ position: "relative" }}>
+        <Box className={styles.rel}>
           <NextLink
             href={detailHref}
-            style={{ display: "block", textDecoration: "none", color: "inherit" }}
+            className={styles.linkBlock}
             aria-label={`Deschide pagina pentru ${item.title}`}
           >
             <GalleryImage item={item} />
@@ -153,9 +125,9 @@ function GalleryCard({
         </Box>
         <NextLink
           href={detailHref}
-          style={{ textDecoration: "none", color: "inherit" }}
+          className={styles.link}
         >
-          <Text size="3" weight="bold" as="div" style={{ cursor: "pointer" }}>
+          <Text size="3" weight="bold" as="div" className={styles.clickable}>
             {item.title}
           </Text>
         </NextLink>
@@ -191,14 +163,11 @@ function StemaSheetExtraAction({
   return (
     <Box
       mt="2"
-      style={{
-        borderTop: "1px solid var(--gray-4)",
-        paddingTop: "var(--space-2)",
-      }}
+      className={styles.divTop}
     >
       <Flex align="center" justify="between" gap="2" mb="2" wrap="wrap">
-        <NextLink href={detailHref} style={{ textDecoration: "none", color: "inherit" }}>
-          <Text size="2" weight="medium" style={{ cursor: "pointer" }}>
+        <NextLink href={detailHref} className={styles.link}>
+          <Text size="2" weight="medium" className={styles.clickable}>
             Fișă pentru decupat (10 copii)
           </Text>
         </NextLink>
@@ -207,7 +176,7 @@ function StemaSheetExtraAction({
           size="1"
           weight="medium"
           onClick={(e) => e.stopPropagation()}
-          style={{ cursor: "pointer", userSelect: "none" }}
+          className={styles.labelClick}
         >
           <Flex align="center" gap="2">
             <Checkbox
@@ -248,21 +217,14 @@ function PhrasesCard({
   detailHref: string;
 }) {
   return (
-    <Card
-      style={{
-        outline: selected ? "3px solid var(--teal-9)" : undefined,
-        outlineOffset: selected ? -2 : undefined,
-        transition: "outline-color 120ms",
-        position: "relative",
-      }}
-    >
+    <Card className={selected ? `${styles.cardRel} ${styles.selected}` : styles.cardRel}>
       <SelectionCheckbox
         checked={selected}
         onCheckedChange={onToggle}
         label="Selectează cardul cu cuvinte de bază"
       />
-      <NextLink href={detailHref} style={{ textDecoration: "none", color: "inherit" }}>
-        <Heading size="4" mb="2" style={{ cursor: "pointer" }}>
+      <NextLink href={detailHref} className={styles.link}>
+        <Heading size="4" mb="2" className={styles.clickable}>
           Cuvinte de bază
         </Heading>
       </NextLink>
@@ -272,14 +234,14 @@ function PhrasesCard({
       <Flex direction="column" gap="2" mb="3">
         {PHRASES.map((p) => (
           <Flex key={p.sl} align="baseline" gap="2" wrap="wrap">
-            <Text size="3" weight="bold" style={{ minWidth: 140 }}>
+            <Text size="3" weight="bold" className={styles.minw140}>
               {p.sl}
             </Text>
             <Text size="2" color="gray">
               {p.ro}
             </Text>
             {p.ipa && (
-              <Text size="1" color="gray" style={{ fontStyle: "italic" }}>
+              <Text size="1" color="gray" className={styles.ipa}>
                 {p.ipa}
               </Text>
             )}
@@ -405,7 +367,7 @@ export default function SloveniaImagesPage() {
   const totalCount = ALL_IMAGE_ITEMS.length + 2;
 
   return (
-    <Container size="3" py="8" className="cw-container">
+    <Section className="cw-container">
       <Flex align="center" gap="2" mb="4">
         <RadixLink asChild color="gray" size="2">
           <NextLink href={`/coursework/${slug}/slovenia`}>
@@ -416,9 +378,9 @@ export default function SloveniaImagesPage() {
         </RadixLink>
       </Flex>
 
-      <Heading size="8" mb="2">
+      <DSHeading as="h1" size="xl">
         Galerie imagini — Slovenia
-      </Heading>
+      </DSHeading>
       <Text color="gray" size="3" mb="2" as="p">
         Imagini de referință de înaltă calitate pentru standul Slovenia: steag,
         simboluri și limbă.
@@ -452,14 +414,7 @@ export default function SloveniaImagesPage() {
       <Heading size="5" mb="3" mt="2">
         Steag și stemă
       </Heading>
-      <Box
-        mb="6"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "var(--space-4)",
-        }}
-      >
+      <Box mb="6" className={styles.grid}>
         {FLAG_IMAGES.map((item) => (
           <GalleryCard
             key={item.src}
@@ -489,14 +444,7 @@ export default function SloveniaImagesPage() {
         Cele mai recunoscute simboluri ale Sloveniei. Alegeți 1–2 ca element
         central al standului (recomandare: dragonul + Triglav).
       </Text>
-      <Box
-        mb="6"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "var(--space-4)",
-        }}
-      >
+      <Box mb="6" className={styles.grid}>
         {SYMBOLS.map((item) => (
           <GalleryCard
             key={item.src}
@@ -521,14 +469,7 @@ export default function SloveniaImagesPage() {
         ž (lipsesc q, w, x, y; apar în plus č, š, ž).
       </Text>
 
-      <Box
-        mb="5"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "var(--space-4)",
-        }}
-      >
+      <Box mb="5" className={styles.grid}>
         <PhrasesCard
           selected={selected.has(PHRASES_KEY)}
           onToggle={() => toggleOne(PHRASES_KEY)}
@@ -543,26 +484,12 @@ export default function SloveniaImagesPage() {
         Format JPG / PNG, servite de pe upload.wikimedia.org.
       </Text>
 
-      <Box style={{ height: 120 }} />
+      <Box className={styles.spacer} />
 
-      <Box
-        style={{
-          position: "sticky",
-          bottom: 0,
-          marginTop: "var(--space-6)",
-          marginLeft: "calc(-1 * var(--container-padding-x, 0px))",
-          marginRight: "calc(-1 * var(--container-padding-x, 0px))",
-          background: "rgba(255,255,255,0.96)",
-          backdropFilter: "saturate(140%) blur(8px)",
-          borderTop: "1px solid var(--gray-5)",
-          boxShadow: "0 -4px 16px rgba(0,0,0,0.06)",
-          padding: "12px 16px",
-          zIndex: 5,
-        }}
-      >
+      <Box className={styles.stickyBar}>
         <Flex align="center" gap="3" wrap="wrap" justify="between">
           <Flex align="center" gap="3" wrap="wrap">
-            <Text as="label" size="2" weight="medium" style={{ cursor: "pointer", userSelect: "none" }}>
+            <Text as="label" size="2" weight="medium" className={styles.labelClick}>
               <Flex align="center" gap="2">
                 <Checkbox
                   checked={allSelected ? true : selected.size > 0 ? "indeterminate" : false}
@@ -621,6 +548,6 @@ export default function SloveniaImagesPage() {
           </Flex>
         </Flex>
       </Box>
-    </Container>
+    </Section>
   );
 }

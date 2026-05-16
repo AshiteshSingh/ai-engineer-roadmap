@@ -1,0 +1,5 @@
+/* Co-located styles for app/page.tsx (home).
+   Replaces ad-hoc inline style objects — no global CSS. */
+.flushBottom {
+  padding-bottom: 0;
+}

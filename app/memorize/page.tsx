@@ -1,16 +1,12 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import {
-  Heading,
-  Text,
-  Box,
-  Flex,
-  Skeleton,
-  Badge,
-} from "@radix-ui/themes";
+import type { CSSProperties } from "react";
+import { Text, Flex, Skeleton, Badge } from "@radix-ui/themes";
 import Link from "next/link";
+import { Section, Heading } from "@/components/ui";
 import "@/components/memorize/css-memorize.css";
+import styles from "./page.module.css";
 
 interface CategorySummary {
   slug: string;
@@ -37,14 +33,14 @@ function MemorizeLandingInner() {
 
   if (loading) {
     return (
-      <Box px={{ initial: "3", md: "5" }} py="5" style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <Skeleton height="40px" mb="6" style={{ maxWidth: 300 }} />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+      <Section>
+        <Skeleton height="40px" mb="6" className={styles.skelTitle} />
+        <div className={styles.grid}>
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} height="140px" />
           ))}
         </div>
-      </Box>
+      </Section>
     );
   }
 
@@ -52,10 +48,12 @@ function MemorizeLandingInner() {
   const totalMastered = categories.reduce((s, c) => s + c.mastered, 0);
 
   return (
-    <Box px={{ initial: "3", md: "5" }} py="5" style={{ maxWidth: 1000, margin: "0 auto" }}>
+    <Section>
       <Flex direction="column" gap="2" mb="5">
-        <Heading size="7">Memorize</Heading>
-        <Text size="3" color="gray">
+        <Heading as="h1" size="xl">
+          Memorize
+        </Heading>
+        <Text size="3" className={styles.sub}>
           Active recall practice across {categories.length} skill areas
           {totalConcepts > 0 && (
             <> &middot; {totalMastered} / {totalConcepts} concepts mastered</>
@@ -64,35 +62,30 @@ function MemorizeLandingInner() {
       </Flex>
 
       {categories.length === 0 ? (
-        <Box p="6" style={{ textAlign: "center", background: "var(--gray-2)", borderRadius: "var(--radius-3)" }}>
+        <div className={styles.empty}>
           <Text size="3" color="gray">
             No concepts extracted yet. Run the seed script to populate.
           </Text>
-        </Box>
+        </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+        <div className={styles.grid}>
           {categories.map((cat) => {
             const pct = cat.totalConcepts > 0 ? Math.round(cat.overallMastery * 100) : 0;
             return (
               <Link
                 key={cat.slug}
                 href={`/memorize/${cat.slug}`}
-                style={{ textDecoration: "none", color: "inherit" }}
+                className={styles.cardLink}
               >
-                <div
-                  className="memorize-cat-card"
-                  style={{ minHeight: 130, position: "relative", overflow: "hidden" }}
-                >
+                <div className={`memorize-cat-card ${styles.card}`}>
                   <div
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      height: 3,
-                      width: `${pct}%`,
-                      background: cat.gradient[0],
-                      transition: "width 0.3s",
-                    }}
+                    className={styles.progress}
+                    style={
+                      {
+                        "--pct": `${pct}%`,
+                        "--bar": cat.gradient[0],
+                      } as CSSProperties
+                    }
                   />
                   <span className="memorize-cat-icon">{cat.icon}</span>
                   <div className="memorize-cat-name">{cat.name}</div>
@@ -114,7 +107,7 @@ function MemorizeLandingInner() {
           })}
         </div>
       )}
-    </Box>
+    </Section>
   );
 }
 
@@ -122,10 +115,10 @@ export default function MemorizeLandingPage() {
   return (
     <Suspense
       fallback={
-        <Box px={{ initial: "3", md: "5" }} py="5" style={{ maxWidth: 1000, margin: "0 auto" }}>
-          <Skeleton height="40px" mb="6" style={{ maxWidth: 300 }} />
+        <Section>
+          <Skeleton height="40px" mb="6" className={styles.skelTitle} />
           <Skeleton height="400px" />
-        </Box>
+        </Section>
       }
     >
       <MemorizeLandingInner />

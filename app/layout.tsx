@@ -13,7 +13,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "AI Engineering — From Zero to AI Engineer",
+  title: "AI Engineering",
   description: "A structured learning path for junior engineers to master AI engineering: evals, RAG, agents, fine-tuning, prompting & production AI systems",
 };
 

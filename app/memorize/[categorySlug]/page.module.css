@@ -1,0 +1,29 @@
+/* Co-located styles for app/memorize/[categorySlug]/page.tsx.
+   Replaces ad-hoc inline style objects with DS tokens — no global CSS.
+   Full-height app-shell layout: not a centered Section page. */
+.screen {
+  height: 100vh;
+}
+.screenCol {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ds-text);
+  text-decoration: none;
+}
+.empty {
+  text-align: center;
+  background: var(--ds-surface-sub);
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--ds-radius);
+  padding: var(--space-6);
+}
+.skelTitle {
+  max-width: 300px;
+}

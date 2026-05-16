@@ -83,6 +83,9 @@ fn gather_existing_articles(content_dir: &Path, current_slug: &str) -> String {
     let mut stems: Vec<String> = Vec::new();
     if let Ok(rd) = std::fs::read_dir(content_dir) {
         for e in rd.flatten() {
+            if !e.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                continue;
+            }
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) == Some("md") {
                 if let Some(stem) = p.file_stem().and_then(|x| x.to_str()) {
@@ -105,6 +108,9 @@ fn pick_style_sample(content_dir: &Path, current_slug: &str) -> String {
     let mut best: Option<(u64, PathBuf)> = None;
     if let Ok(rd) = std::fs::read_dir(content_dir) {
         for e in rd.flatten() {
+            if !e.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                continue;
+            }
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) != Some("md") {
                 continue;
@@ -144,6 +150,15 @@ fn extract_content(resp: deepseek::ChatResponse) -> Result<String> {
     Ok(content)
 }
 
+/// Retry policy for `ask()`: transient transport / 5xx are retryable;
+/// 4xx and unknown errors are not. Mirrors deepseek-loop's own heuristic.
+fn is_retryable_error(msg: &str) -> bool {
+    msg.contains("API error (5")
+        || msg.contains("HTTP error")
+        || msg.contains("connection")
+        || msg.contains("timed out")
+}
+
 async fn ask(
     client: &DeepSeekClient<ReqwestClient>,
     model: &DeepSeekModel,
@@ -160,13 +175,20 @@ async fn ask(
             tokio::time::sleep(std::time::Duration::from_secs(d)).await;
         }
         match client.chat(&req).await {
-            Ok(resp) => return extract_content(resp),
+            Ok(resp) => match extract_content(resp) {
+                Ok(c) => return Ok(c),
+                Err(e) => {
+                    // empty / no-choice completion — usually transient; retry
+                    // within the existing backoff budget, then fail clearly.
+                    if attempt == delays.len() - 1 {
+                        return Err(e);
+                    }
+                    last = Some(e.to_string());
+                }
+            },
             Err(e) => {
                 let msg = e.to_string();
-                let retryable = msg.contains("API error (5")
-                    || msg.contains("HTTP error")
-                    || msg.contains("connection")
-                    || msg.contains("timed out");
+                let retryable = is_retryable_error(&msg);
                 if !retryable || attempt == delays.len() - 1 {
                     return Err(anyhow::anyhow!("DeepSeek call failed: {msg}"));
                 }
@@ -343,6 +365,17 @@ mod tests {
     use crate::generate::quality::check_quality;
 
     #[test]
+    fn is_retryable_error_policy() {
+        assert!(is_retryable_error("API error (500): boom"));
+        assert!(is_retryable_error("API error (503): unavailable"));
+        assert!(is_retryable_error("HTTP error: connection reset"));
+        assert!(is_retryable_error("operation timed out"));
+        assert!(!is_retryable_error("API error (400): bad request"));
+        assert!(!is_retryable_error("API error (401): unauthorized"));
+        assert!(!is_retryable_error("totally unknown failure"));
+    }
+
+    #[test]
     fn extract_content_rejects_empty_and_no_choices() {
         use deepseek::{assistant_msg, ChatResponse, Choice};
         let mk = |c: &str| ChatResponse {
@@ -408,6 +441,18 @@ mod tests {
         assert!(ensure_writable_dir(&missing, false).is_err());
         // skipped entirely when no_write
         assert!(ensure_writable_dir(&missing, true).is_ok());
+    }
+
+    #[test]
+    fn inputs_skip_non_file_md_entries() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(d.path().join("real-one.md"), "hello".repeat(50)).unwrap();
+        std::fs::create_dir(d.path().join("weird.md")).unwrap();
+        let ga = gather_existing_articles(d.path(), "cur");
+        assert!(ga.contains("- [Real One](/real-one)"));
+        assert!(!ga.contains("weird"));
+        let ss = pick_style_sample(d.path(), "cur");
+        assert!(ss.starts_with("hello"));
     }
 
     #[test]

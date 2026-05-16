@@ -1,0 +1,19 @@
+/* Co-located styles for app/nexttech/senior-genai-engineer/page.tsx.
+   No global CSS. `deep-dive-content` global kept; teal accent intentional. */
+.backLink {
+  color: var(--ds-text);
+  text-decoration: none;
+}
+.headerCard {
+  border-left: 4px solid var(--teal-9);
+}
+.applyLink {
+  color: var(--teal-11);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.prose {
+  line-height: 1.8;
+}

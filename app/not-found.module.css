@@ -1,0 +1,5 @@
+/* Co-located styles for app/not-found.tsx — no global CSS.
+   Pre-existing not-found / hero-cta / cat globals left as-is. */
+.cta {
+  margin-bottom: 32px;
+}

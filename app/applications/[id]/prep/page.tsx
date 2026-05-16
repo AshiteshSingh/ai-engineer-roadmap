@@ -19,6 +19,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AppData } from "@/components/app-detail/types";
 import { MermaidFlow } from "@/components/mermaid-flow";
+import { Section, Heading as DSHeading } from "@/components/ui";
+import styles from "./page.module.css";
 
 const remarkPlugins = [remarkGfm];
 
@@ -199,7 +201,7 @@ const CodePanel = memo(function CodePanel({ lang, code }: { lang: string; code: 
         <div className="code-block-dots" aria-hidden="true"><span /><span /><span /></div>
         <span className="code-block-lang">{langLabel(lang)}</span>
       </div>
-      <pre style={{ margin: 0, padding: 16, overflowX: "auto", fontSize: "var(--font-size-1)", fontFamily: "var(--font-mono, monospace)", lineHeight: 1.7, backgroundColor: "var(--gray-2)" }}>
+      <pre className={styles.codePre}>
         <code>{code}</code>
       </pre>
     </div>
@@ -559,7 +561,7 @@ function PrepPageInner() {
               <div className="code-block-dots" aria-hidden="true"><span /><span /><span /></div>
               {lang && <span className="code-block-lang">{langLabel(lang)}</span>}
             </div>
-            <pre style={{ margin: 0, padding: 16, overflowX: "auto", fontSize: "var(--font-size-1)", fontFamily: "var(--font-mono, monospace)", lineHeight: 1.7, backgroundColor: "var(--gray-2)" }}>
+            <pre className={styles.codePre}>
               {children}
             </pre>
           </div>
@@ -583,16 +585,16 @@ function PrepPageInner() {
 
   if (loading) {
     return (
-      <Box px={{ initial: "4", md: "8" }} py="8">
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 300 }} />
+      <Section>
+        <Skeleton height="32px" mb="6" className={styles.skel} />
         <Skeleton height="600px" />
-      </Box>
+      </Section>
     );
   }
 
   if (error || !app) {
     return (
-      <Box px={{ initial: "4", md: "8" }} py="8">
+      <Section>
         <Card>
           <Flex direction="column" align="center" gap="4" p="6">
             <Heading size="5">{error ? "Error" : "Not Found"}</Heading>
@@ -602,7 +604,7 @@ function PrepPageInner() {
             </Button>
           </Flex>
         </Card>
-      </Box>
+      </Section>
     );
   }
 
@@ -612,7 +614,7 @@ function PrepPageInner() {
       <Flex align="center" gap="3" mb="5">
         <Link
           href={`/applications/${app.slug}`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--gray-11)", textDecoration: "none" }}
+          className={styles.backLink}
         >
           <ArrowLeftIcon />
           <Text size="2">{app.company}</Text>
@@ -624,7 +626,7 @@ function PrepPageInner() {
       {/* Page header */}
       <Flex justify="between" align="start" mb="6" wrap="wrap" gap="3">
         <Box>
-          <Heading size="7" mb="2">Study Plan</Heading>
+          <DSHeading as="h1" size="xl">Study Plan</DSHeading>
           <Flex align="center" gap="2">
             <Badge color="violet" variant="soft" size="2">Interview Prep</Badge>
             <Text size="2" color="gray">{app.company} &middot; {app.position}</Text>
@@ -677,10 +679,10 @@ function PrepPageInner() {
 export default function PrepPage() {
   return (
     <Suspense fallback={
-      <Box px={{ initial: "4", md: "8" }} py="8">
-        <Skeleton height="32px" mb="6" style={{ maxWidth: 300 }} />
+      <Section>
+        <Skeleton height="32px" mb="6" className={styles.skel} />
         <Skeleton height="600px" />
-      </Box>
+      </Section>
     }>
       <PrepPageInner />
     </Suspense>

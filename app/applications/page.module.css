@@ -1,0 +1,61 @@
+/* Co-located styles for app/applications/page.tsx.
+   Static inline objects → DS tokens; per-column dynamic colors stay
+   inline via CSS custom properties. No global CSS. */
+.backLink {
+  color: var(--ds-text-faint);
+  text-decoration: none;
+  font-size: var(--text-xs, 13px);
+}
+.chip {
+  border-radius: var(--ds-radius);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  opacity: var(--chip-op, 1);
+}
+.sep {
+  opacity: 0.4;
+}
+.rowLink {
+  text-decoration: none;
+  color: inherit;
+}
+.row {
+  background: var(--ds-surface);
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+.rowDivided {
+  border-top: 1px solid var(--ds-border);
+}
+.rowMain {
+  flex: 1;
+  min-width: 0;
+}
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.secHeader {
+  cursor: pointer;
+  user-select: none;
+}
+.chevron {
+  color: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+.list {
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  overflow: hidden;
+  margin-left: 6px;
+}
+.emptySlot {
+  border: 1px dashed var(--ds-border);
+  border-radius: var(--ds-radius);
+  background: var(--ds-bg);
+}
+.emptyCard {
+  text-align: center;
+}

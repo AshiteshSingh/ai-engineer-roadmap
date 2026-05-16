@@ -13,6 +13,7 @@ import {
 } from "@radix-ui/themes";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { signIn } from "@/lib/auth-client";
+import styles from "./page.module.css";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("nicolai.vadim@gmail.com");
@@ -48,8 +49,8 @@ export default function LoginPage() {
   }
 
   return (
-    <Flex align="center" justify="center" style={{ minHeight: "100vh" }}>
-      <Card size="4" style={{ width: 400 }}>
+    <Flex align="center" justify="center" className={styles.screen}>
+      <Card size="4" className={styles.card}>
         <form onSubmit={handleSubmit}>
           <Flex direction="column" gap="4">
             <Heading size="6" align="center">

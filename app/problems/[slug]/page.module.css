@@ -1,0 +1,10 @@
+/* Co-located styles for app/problems/[slug]/page.tsx — no global CSS.
+   Teal sign-in accent kept (route accent). */
+.backLink {
+  color: var(--ds-text);
+  text-decoration: none;
+  font-size: var(--text-sm, 14px);
+}
+.signin {
+  color: var(--teal-11);
+}
