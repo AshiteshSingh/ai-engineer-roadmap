@@ -33,30 +33,16 @@ body {
   color: var(--gray-12);
 }
 
+/* Universal keyboard-focus fallback (token-routed; byte-identical to
+   the prior `2px solid var(--accent-9)`). Element/role-scoped rings and
+   the skip-link are owned by globals.css HP-TEAM-9 — single source of
+   truth; the legacy duplicates that lived here are removed. */
 :focus-visible {
-  outline: 2px solid var(--accent-9);
-  outline-offset: 2px;
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
 }
 :focus:not(:focus-visible) {
   outline: none;
-}
-
-/* ---------- skip-to-content ---------- */
-.skip-link {
-  position: absolute;
-  top: -100%;
-  left: 16px;
-  z-index: 10000;
-  padding: 8px 16px;
-  background: var(--accent-9);
-  color: var(--gray-1);
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-}
-.skip-link:focus {
-  top: 8px;
 }
 
 /* ---------- audio-player cross-component state ---------- */

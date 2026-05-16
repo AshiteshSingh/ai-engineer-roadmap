@@ -6080,11 +6080,7 @@
   color: var(--ds-ink);
 }
 .ftr-headline-accent {
-  background: linear-gradient(
-    90deg,
-    var(--ds-accent),
-    var(--ds-accent-text)
-  );
+  background: var(--ds-accent-gradient-sheen);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -6461,8 +6457,8 @@
 .skip-link:focus,
 .skip-link:focus-visible {
   transform: translateY(0);
-  outline: 2px solid var(--ds-on-accent);
-  outline-offset: 2px;
+  outline: var(--ds-focus-ring-width) solid var(--ds-on-accent);
+  outline-offset: var(--ds-focus-ring-offset);
 }
 
 /* Global keyboard focus fallback. Scoped to :focus-visible so it never
@@ -6477,8 +6473,8 @@ textarea:focus-visible,
 [tabindex]:focus-visible,
 [role="link"]:focus-visible,
 [role="button"]:focus-visible {
-  outline: 2px solid var(--ds-accent);
-  outline-offset: 2px;
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
   border-radius: var(--ds-radius-sm);
 }
 
@@ -6538,6 +6534,7 @@ textarea:focus-visible,
 .ftr-eyebrow {
   font-size: var(--text-2xs);
   font-weight: 700;
+  line-height: var(--ds-leading-snug);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ds-accent-text);
