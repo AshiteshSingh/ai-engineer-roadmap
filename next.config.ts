@@ -7,6 +7,20 @@ const nextConfig: NextConfig = {
     "/*": ["./data/content/**", "./data/audio/**"],
     "/langgraph/lead-gen": ["./data/langgraph-lead-gen.script.md"],
   },
+  // The tracing root is the monorepo, where a background loop continuously
+  // rebuilds the Rust crates' multi-GB `target/` dir. Never trace any Rust
+  // crate/target into the serverless functions — the web app reads only the
+  // pre-exported JSON under data/ at runtime. Without this, file tracing
+  // races the loop and blows past the 2 GB serverless function limit.
+  outputFileTracingExcludes: {
+    "*": [
+      "**/crates/**",
+      "**/target/**",
+      "**/*.rlib",
+      "**/*.rmeta",
+      "**/*.d",
+    ],
+  },
   async redirects() {
     return [
       {
