@@ -22,7 +22,8 @@ A self-contained, **zero-global-CSS** hub for a single roadmap phase:
 the category gradient from `meta.gradient` onto a wrapper as `--cat-from` /
 `--cat-to` (inline, data-driven — no `.cat-*` class). Each `app/<route>/page.tsx`
 is a thin wrapper: `generateMetadata` via `phaseHubMetadata(slug)`
-(`lib/phase-hubs.ts`) + `<PhaseHub slug=… />`.
+(`lib/phase-hub-metadata.ts`, server-only) + `<PhaseHub slug=… />`. The
+client-safe route map lives separately in `lib/phase-hubs.ts`.
 
 ## Adding a phase
 

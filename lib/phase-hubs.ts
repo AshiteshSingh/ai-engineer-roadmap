@@ -1,4 +1,7 @@
-import type { Metadata } from "next";
+// Client-safe: PURE CONSTANTS ONLY. This module is imported by the client
+// CategoryModalTrigger, so it must NOT import anything that reaches
+// lib/data / server-only modules (fs, etc.). The data-deriving metadata
+// helper lives in lib/phase-hub-metadata.ts (server-only).
 
 /**
  * Registry of roadmap phases that have a dedicated hub page, mapping the
@@ -12,35 +15,20 @@ export const PHASE_HUB_ROUTES: Record<string, string> = {
   "phase-5-evals": "/evals",
 };
 
+export interface PhaseHubMeta {
+  title: string;
+  description: string;
+}
+
 /**
- * Per-slug metadata overrides. Used to preserve bespoke SEO copy for pages
- * that shipped with hand-written titles/descriptions (e.g. /evals) so the
- * generic, data-derived default below does not regress them.
+ * Per-slug metadata overrides. Preserves bespoke SEO copy for pages that
+ * shipped with hand-written titles/descriptions (e.g. /evals) so the
+ * generic, data-derived default does not regress them.
  */
-const METADATA_OVERRIDES: Record<string, Metadata> = {
+export const PHASE_HUB_METADATA_OVERRIDES: Record<string, PhaseHubMeta> = {
   "phase-5-evals": {
     title: "Evals, Safety & Observability — AI Engineering",
     description:
       "Measure what matters and ship safely: evaluation fundamentals, LLM-as-judge, benchmarks, red-teaming, guardrails, online evaluation and observability.",
   },
 };
-
-/**
- * Build <head> metadata for a phase hub route. Returns the per-slug override
- * when one exists; otherwise derives `{ title, description }` from the
- * phase's category name + description in the content data.
- */
-export async function phaseHubMetadata(slug: string): Promise<Metadata> {
-  const override = METADATA_OVERRIDES[slug];
-  if (override) return override;
-
-  const { getGroupedLessons } = await import("@/lib/data");
-  const groups = await getGroupedLessons();
-  const group = groups.find((g) => g.meta.slug === slug);
-  if (!group) return {};
-
-  return {
-    title: `${group.category} — AI Engineering`,
-    description: group.meta.description,
-  };
-}

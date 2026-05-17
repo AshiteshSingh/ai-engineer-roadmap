@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PhaseHub } from "@/components/phase-hub/PhaseHub";
-import { phaseHubMetadata } from "@/lib/phase-hubs";
+import { phaseHubMetadata } from "@/lib/phase-hub-metadata";
 
 const SLUG = "phase-5-evals";
 
