@@ -1,8 +1,9 @@
-[2026-05-16T14:37:10Z] push FAILED (auto-commit hook)
-To github.com:v9ai/ai-engineer-roadmap.git
- ! [rejected]        main -> main (non-fast-forward)
-error: failed to push some refs to 'github.com:v9ai/ai-engineer-roadmap.git'
-hint: Updates were rejected because the tip of your current branch is behind
-hint: its remote counterpart. If you want to integrate the remote changes,
-hint: use 'git pull' before pushing again.
-hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+[2026-05-17T16:02:34Z] push FAILED (auto-commit hook)
+fatal: The current branch feat/rag-listen-buttons has no upstream branch.
+To push the current branch and set the remote as upstream, use
+
+    git push --set-upstream origin feat/rag-listen-buttons
+
+To have this happen automatically for branches without a tracking
+upstream, see 'push.autoSetupRemote' in 'git help config'.
+

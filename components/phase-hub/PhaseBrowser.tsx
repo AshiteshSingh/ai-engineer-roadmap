@@ -6,8 +6,13 @@
 import * as React from "react";
 import { PhaseControls } from "@/components/phase-hub/PhaseControls";
 import { LessonGrid } from "@/components/phase-hub/LessonGrid";
+import { HubAudioProvider } from "@/components/phase-hub/HubAudio";
 import { DEFAULT_PHASE_FILTER_STATE } from "@/components/phase-hub/types";
-import type { Lesson, PhaseFilterState } from "@/components/phase-hub/types";
+import type {
+  Lesson,
+  PhaseFilterState,
+  AudioMeta,
+} from "@/components/phase-hub/types";
 import {
   computeFacets,
   computeProgressBySlug,
@@ -18,11 +23,20 @@ import styles from "./PhaseBrowser.module.css";
 export interface PhaseBrowserProps {
   lessons: Lesson[];
   heading?: string;
+  /** Defined ⇒ audio feature on (wrap in player provider, render tiles). */
+  audioBySlug?: Record<string, AudioMeta>;
+  gradient?: [string, string];
+  icon?: string;
+  category?: string;
 }
 
 export function PhaseBrowser({
   lessons,
   heading = "Lessons in this phase",
+  audioBySlug,
+  gradient,
+  icon,
+  category,
 }: PhaseBrowserProps) {
   const [state, setState] = React.useState<PhaseFilterState>(
     DEFAULT_PHASE_FILTER_STATE,
@@ -38,7 +52,7 @@ export function PhaseBrowser({
     [lessons, state],
   );
 
-  return (
+  const inner = (
     <div className={styles.layout}>
       <PhaseControls
         state={state}
@@ -51,8 +65,18 @@ export function PhaseBrowser({
         lessons={filtered}
         progressBySlug={progressBySlug}
         heading={heading}
+        audioBySlug={audioBySlug}
       />
     </div>
+  );
+
+  // No provider element when audio is off → other hubs stay byte-identical.
+  if (!audioBySlug) return inner;
+
+  return (
+    <HubAudioProvider gradient={gradient} icon={icon} category={category}>
+      {inner}
+    </HubAudioProvider>
   );
 }
 

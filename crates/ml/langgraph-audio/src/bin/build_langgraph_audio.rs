@@ -420,6 +420,7 @@ struct SourceRef {
 /// in the process environment.
 fn load_env() {
     let candidates = [
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../../../.env"),
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../../.env"),
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../.env.local"),
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.env.local"),

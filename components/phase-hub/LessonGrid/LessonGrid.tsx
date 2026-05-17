@@ -9,7 +9,7 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 
 export const LessonGrid = React.forwardRef<HTMLElement, LessonGridProps>(
   function LessonGrid(
-    { lessons, progressBySlug, heading, className },
+    { lessons, progressBySlug, audioBySlug, heading, className },
     ref
   ) {
     return (
@@ -25,6 +25,11 @@ export const LessonGrid = React.forwardRef<HTMLElement, LessonGridProps>(
                 key={lesson.slug}
                 lesson={lesson}
                 progressPercent={progressBySlug?.[lesson.slug]}
+                audio={
+                  audioBySlug
+                    ? audioBySlug[lesson.slug] ?? null
+                    : undefined
+                }
               />
             ))}
           </div>

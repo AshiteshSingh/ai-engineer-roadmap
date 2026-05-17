@@ -12,5 +12,5 @@ export async function generateMetadata(): Promise<Metadata> {
 // reusable <PhaseHub> (design-system components, zero global CSS,
 // interactive search / filter / sort).
 export default function RagHubPage() {
-  return <PhaseHub slug={SLUG} />;
+  return <PhaseHub slug={SLUG} audio />;
 }

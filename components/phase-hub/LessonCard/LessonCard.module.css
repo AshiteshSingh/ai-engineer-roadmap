@@ -1,4 +1,5 @@
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -31,7 +32,25 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-.card:focus-visible {
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Stretched link: the whole card is clickable, while the listen tile
+   (.listenRow, z-index:1) stays independently interactive above it. */
+.cardLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--ds-radius-lg, 12px);
+}
+
+.cardLink:focus-visible::after {
   outline: 2px solid var(--ds-accent-border);
   outline-offset: 2px;
 }
@@ -123,11 +142,128 @@
   );
 }
 
+/* ---- Audible-style "Listen" row ---- */
+
+.listenRow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.coverTile {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--ds-radius-md, 10px);
+  cursor: pointer;
+  color: var(--gray-1);
+  background: linear-gradient(
+    135deg,
+    var(--cat-from, var(--accent-9)),
+    var(--cat-to, var(--accent-11))
+  );
+  box-shadow: 0 4px 12px
+    color-mix(in srgb, var(--cat-from, var(--accent-9)) 30%, transparent);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.coverTile:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 18px
+    color-mix(in srgb, var(--cat-from, var(--accent-9)) 40%, transparent);
+}
+
+.coverTile:focus-visible {
+  outline: 2px solid var(--ds-accent-border);
+  outline-offset: 2px;
+}
+
+.coverTileActive {
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--cat-from, var(--accent-9)) 35%, transparent);
+}
+
+.coverTileDisabled,
+.coverTile:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  opacity: 0.45;
+  background: var(--ds-surface-sub);
+  color: var(--gray-9);
+  box-shadow: none;
+}
+
+.coverTileDisabled:hover,
+.coverTile:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.listenLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-11);
+}
+
+/* Now-playing equalizer (read-only indicator). */
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+}
+
+.eq i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: eqbar 0.9s ease-in-out infinite;
+}
+
+.eq i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.eq i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes eqbar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card {
     transition: none;
   }
   .card:hover {
     transform: none;
+  }
+  .coverTile {
+    transition: none;
+  }
+  .coverTile:hover {
+    transform: none;
+  }
+  .eq i {
+    animation: none;
+    transform: scaleY(0.6);
   }
 }

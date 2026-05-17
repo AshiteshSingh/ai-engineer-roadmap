@@ -3,8 +3,10 @@
 // (PhaseHero / LessonCard / LessonGrid / PhaseControls). Every team imports
 // from "@/components/phase-hub/types" + "@/components/ui" only.
 import type { Lesson, CategoryMeta } from "@/lib/data";
+import type { AudioMeta } from "@/lib/audio";
 
 export type { Lesson, CategoryMeta } from "@/lib/data";
+export type { AudioMeta } from "@/lib/audio";
 
 /** Difficulty union, re-stated locally so teams don't reach into lib internals. */
 export type Difficulty = "beginner" | "intermediate" | "advanced";
@@ -81,6 +83,10 @@ export interface PhaseHeroProps {
 export interface LessonCardProps {
   lesson: Lesson;
   progressPercent?: number;
+  /** Narration tri-state. `undefined` = audio feature off for this hub
+   *  (render NO listen tile — keeps /evals byte-identical). `null` = feature
+   *  on but no narration on the CDN ("coming soon" tile). Object = playable. */
+  audio?: AudioMeta | null;
   className?: string;
 }
 
@@ -91,6 +97,10 @@ export interface LessonGridProps {
   lessons: Lesson[];
   /** Map slug -> progress percent (0-100). Optional. */
   progressBySlug?: Record<string, number>;
+  /** Map slug -> playable narration. Presence of this object (even empty)
+   *  is the audio-feature flag: defined ⇒ render listen tiles ("coming soon"
+   *  for slugs absent from the map); undefined ⇒ no tiles at all. */
+  audioBySlug?: Record<string, AudioMeta>;
   /** Section label above the grid (e.g. "Lessons in this phase"). */
   heading?: string;
   className?: string;
