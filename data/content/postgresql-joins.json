@@ -1,6 +1,6 @@
 {
   "slug": "postgresql-joins",
-  "number": 88,
+  "number": 94,
   "title": "PostgreSQL JOINs: Inner, Outer, Cross, Self, Lateral & Performance",
   "category": "Appendix · Engineering & Communication",
   "wordCount": 2548,

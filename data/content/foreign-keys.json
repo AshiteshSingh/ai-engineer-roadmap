@@ -1,6 +1,6 @@
 {
   "slug": "foreign-keys",
-  "number": 89,
+  "number": 95,
   "title": "Foreign Keys: Referential Integrity, Cascades & Migration Patterns",
   "category": "Appendix · Engineering & Communication",
   "wordCount": 3757,

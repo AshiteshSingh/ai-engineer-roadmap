@@ -1,6 +1,6 @@
 {
   "slug": "context-window-management",
-  "number": 41,
+  "number": 38,
   "title": "Context Window Management: Token Budgets, Prioritization & Overflow Strategies",
   "category": "Phase 4 · Agents, Memory & Orchestration",
   "wordCount": 8304,

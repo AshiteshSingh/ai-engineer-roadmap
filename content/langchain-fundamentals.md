@@ -1,0 +1,209 @@
+# LangChain Fundamentals: Runnables, LCEL & Composable Chains on the Edge
+
+LangChain is a composition framework for language-model applications. Its core abstraction is the **Runnable**: a uniform interface that every component — prompts, models, parsers, retrievers, and arbitrary functions — implements, so they snap together like pipe segments. Once you understand the Runnable contract you understand most of LangChain, because chains, agents, and retrievers are all just Runnables wired into larger Runnables. This lesson builds that mental model and grounds it on Cloudflare Workers, where a chain runs inside a request handler with Workers AI and DeepSeek reachable over `fetch`. For the graph-structured successor to linear chains, see [LangGraph](/langgraph); for grounding chains in your own data, see [LangChain Tools & Retrievers](/langchain-tools-retrievers); for the function-calling primitive chains depend on, see [Tool Use & Function Calling](/function-calling).
+
+## Mental Model
+
+### What problem does it solve?
+
+Calling a model is one HTTP request. A *product* is rarely one request: it formats a prompt from variables, calls a model, validates the output against a schema, retries on malformed JSON, fans out to several models, and merges results. Hand-written, this becomes a tangle of `await`, `try/except`, and string interpolation that is hard to test and impossible to stream. LangChain's answer is to make every step a Runnable with the same five methods — `invoke`, `batch`, `stream`, plus their async twins `ainvoke`, `abatch`, `astream` — so composition, batching, streaming, and cancellation are solved once at the framework level rather than re-implemented per step.
+
+### The assembly-line analogy
+
+Think of a Runnable as a station on an assembly line. Each station accepts a part, does one transformation, and passes the result downstream. Because every station has identical input and output sockets, you can reorder them, run several in parallel, or swap one out without rewiring the line. The LangChain Expression Language (LCEL) is the conveyor belt: the `|` operator literally connects one station's output socket to the next station's input socket. Streaming works because the belt moves continuously — partial output flows forward the moment it exists instead of waiting for the whole batch.
+
+### Hello-world in ~10 lines
+
+A prompt, a model bound to Cloudflare Workers AI, and an output parser, composed with LCEL:
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import ChatOpenAI
+
+model = ChatOpenAI(
+    model="@cf/meta/llama-3.1-8b-instruct",
+    base_url="https://gateway.ai.cloudflare.com/v1/ACCT/app/workers-ai/v1",
+    api_key="CF_TOKEN",
+)
+prompt = ChatPromptTemplate.from_template("Summarize for a CTO: {doc}")
+chain = prompt | model | StrOutputParser()
+
+print(chain.invoke({"doc": "..."}))
+```
+
+The three components are independent Runnables; `prompt | model | StrOutputParser()` produces a fourth Runnable — a `RunnableSequence` — that itself satisfies the same interface. The diagram below traces what `invoke` actually does with that composed object.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "in", "label": "{doc: str}", "shape": "stadium"},
+    {"id": "prompt", "label": "ChatPromptTemplate.format", "shape": "rect"},
+    {"id": "pv", "label": "PromptValue (messages)", "shape": "rect"},
+    {"id": "model", "label": "ChatOpenAI.invoke → Workers AI", "shape": "rect"},
+    {"id": "msg", "label": "AIMessage", "shape": "rect"},
+    {"id": "parse", "label": "StrOutputParser", "shape": "rect"},
+    {"id": "out", "label": "str", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "in", "target": "prompt"},
+    {"source": "prompt", "target": "pv", "label": "fills template vars"},
+    {"source": "pv", "target": "model"},
+    {"source": "model", "target": "msg", "label": "HTTP to gateway"},
+    {"source": "msg", "target": "parse"},
+    {"source": "parse", "target": "out", "label": "extracts .content"}
+  ]
+}
+```
+
+## Core Concepts
+
+### The Runnable interface
+
+A Runnable is any object exposing `invoke(input, config)` and its batch/stream/async variants. Inputs and outputs are typed but loosely coupled — a step declares what it accepts and emits, and LCEL checks adjacency at composition time. This single contract is why a retriever, a prompt, and a lambda are interchangeable in a pipeline. It is also why every chain you build is observable and cancellable for free: the framework threads a `RunnableConfig` (callbacks, tags, `max_concurrency`, a cancellation signal) through every nested step.
+
+### LCEL and the pipe operator
+
+`a | b` is sugar for `RunnableSequence(a, b)`. The result is associative: `(a | b) | c` and `a | (b | c)` build the same flat sequence. Dictionaries become `RunnableParallel`: `{"x": chain_a, "y": chain_b}` runs both branches concurrently and returns a dict. Plain functions are lifted into `RunnableLambda` automatically when they appear in a pipe. These three constructors — sequence, parallel, lambda — plus `RunnablePassthrough` (identity, optionally with `.assign()` to add keys) express almost every topology short of cycles, and cycles are exactly where you graduate to [LangGraph](/langgraph).
+
+### Configuration, binding, and structured output
+
+`runnable.bind(stop=["\n"])` returns a new Runnable with arguments pre-applied — commonly used to attach tools or force a response format. `model.with_structured_output(Schema)` binds a JSON schema and a parser so the chain emits a validated object instead of a string, the foundation for reliable [Structured Output](/structured-output). `runnable.with_retry()` and `.with_fallbacks([cheaper_model])` wrap a step in resilience without touching its body.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "r", "label": "Runnable (base contract)", "shape": "rect"},
+    {"id": "seq", "label": "RunnableSequence  a|b|c", "shape": "rect"},
+    {"id": "par", "label": "RunnableParallel  {k: r}", "shape": "rect"},
+    {"id": "lam", "label": "RunnableLambda  fn", "shape": "rect"},
+    {"id": "pass", "label": "RunnablePassthrough(.assign)", "shape": "rect"},
+    {"id": "bind", "label": ".bind / .with_retry / .with_fallbacks", "shape": "diamond"}
+  ],
+  "edges": [
+    {"source": "r", "target": "seq", "label": "compose"},
+    {"source": "r", "target": "par", "label": "fan-out"},
+    {"source": "r", "target": "lam", "label": "wrap fn"},
+    {"source": "r", "target": "pass", "label": "identity"},
+    {"source": "seq", "target": "bind", "label": "decorate any node"},
+    {"source": "par", "target": "bind"},
+    {"source": "lam", "target": "bind"}
+  ]
+}
+```
+
+## How It Works
+
+### Composition resolves to a flat plan
+
+When you build `prompt | model | parser`, LCEL does not nest closures. It flattens the operands into an ordered list inside a single `RunnableSequence`. `invoke` then walks that list, passing each step's output to the next and merging the shared `RunnableConfig` so callbacks fire with correct parent/child run IDs. Because the plan is data, the framework can render it as a graph for tracing and can short-circuit on cancellation between steps.
+
+### Parallel branches and the `.assign` pattern
+
+`RunnableParallel` schedules its branches with `asyncio.gather` (bounded by `max_concurrency` from config). A frequent shape is enrichment: `RunnablePassthrough.assign(context=retriever)` keeps the original input and adds a `context` key from a retrieval branch, the canonical first half of a [RAG](/rag) chain.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "q", "label": "{question}", "shape": "stadium"},
+    {"id": "pass", "label": "Passthrough (keeps question)", "shape": "rect"},
+    {"id": "ret", "label": "retriever branch", "shape": "rect"},
+    {"id": "join", "label": "{question, context}", "shape": "diamond"},
+    {"id": "prompt", "label": "RAG prompt", "shape": "rect"},
+    {"id": "model", "label": "model | parser", "shape": "rect"},
+    {"id": "ans", "label": "answer", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "q", "target": "pass"},
+    {"source": "q", "target": "ret", "label": "parallel"},
+    {"source": "pass", "target": "join"},
+    {"source": "ret", "target": "join", "label": ".assign(context=)"},
+    {"source": "join", "target": "prompt"},
+    {"source": "prompt", "target": "model"},
+    {"source": "model", "target": "ans"}
+  ]
+}
+```
+
+## Runtime Internals
+
+### Streaming and the async event loop on Workers
+
+`stream` works only if every step can stream. The model yields token chunks; a `StrOutputParser` is *transform-aware* and forwards each chunk; a step that needs the whole input (a JSON parser) buffers and emits once. On Cloudflare Workers the handler returns a `ReadableStream`, and `astream` (the async variant) is mandatory because Workers has no threads — all concurrency is the event loop. `astream_events` exposes a structured event feed (`on_chat_model_stream`, `on_retriever_end`) that you bridge to Server-Sent Events, covered in [LangGraph Streaming & Observability](/langgraph-streaming-observability).
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "req", "label": "Workers fetch() handler", "shape": "stadium"},
+    {"id": "astream", "label": "chain.astream(input)", "shape": "rect"},
+    {"id": "model", "label": "model: token chunks", "shape": "rect"},
+    {"id": "parser", "label": "transform parser (passthrough)", "shape": "rect"},
+    {"id": "sse", "label": "ReadableStream → SSE", "shape": "rect"},
+    {"id": "client", "label": "browser", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "req", "target": "astream"},
+    {"source": "astream", "target": "model"},
+    {"source": "model", "target": "parser", "label": "chunk by chunk"},
+    {"source": "parser", "target": "sse", "label": "yield delta"},
+    {"source": "sse", "target": "client", "label": "text/event-stream"}
+  ]
+}
+```
+
+### Caching and cost control
+
+Wrapping a model with an LLM cache keyed on the prompt makes identical calls free; on Workers, Cloudflare KV or the AI Gateway's built-in cache is the natural backend. This is the LangChain-level lever that complements [Prompt Caching](/prompt-caching) and feeds [Cost Optimization](/cost-optimization).
+
+## Patterns
+
+**Pattern 1 — Prompt | Model | Parser.** The atomic chain; everything else is elaboration.
+**Pattern 2 — Enrichment with `.assign`.** Add retrieved context or computed fields while preserving the original input dict.
+**Pattern 3 — Map-reduce with `RunnableParallel`.** Fan a document to N summarizers, then a reduce step merges them.
+**Pattern 4 — Resilient model.** `primary.with_fallbacks([cheap, local])` so a provider outage degrades instead of failing.
+**Pattern 5 — Router.** A classifier Runnable picks a branch via `RunnableBranch`, the LCEL precursor to a graph supervisor in [LangGraph Multi-Agent Topologies](/langgraph-multi-agent).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "in", "label": "input", "shape": "stadium"},
+    {"id": "cls", "label": "classifier Runnable", "shape": "rect"},
+    {"id": "branch", "label": "RunnableBranch", "shape": "diamond"},
+    {"id": "a", "label": "billing chain", "shape": "rect"},
+    {"id": "b", "label": "tech-support chain", "shape": "rect"},
+    {"id": "c", "label": "default chain", "shape": "rect"},
+    {"id": "out", "label": "response", "shape": "stadium"}
+  ],
+  "edges": [
+    {"source": "in", "target": "cls"},
+    {"source": "cls", "target": "branch", "label": "label"},
+    {"source": "branch", "target": "a", "label": "== billing"},
+    {"source": "branch", "target": "b", "label": "== tech"},
+    {"source": "branch", "target": "c", "label": "else"},
+    {"source": "a", "target": "out"},
+    {"source": "b", "target": "out"},
+    {"source": "c", "target": "out"}
+  ]
+}
+```
+
+## Common Pitfalls
+
+**Blocking I/O in a lambda.** A synchronous `requests.get` inside a `RunnableLambda` stalls the Workers event loop; use `httpx.AsyncClient` and the async path. **Breaking the stream.** Inserting a non-transform step (full-buffer JSON parser) mid-chain silently disables token streaming downstream — keep parsing at the edges. **Losing config.** Hand-rolled lambdas that ignore the passed `config` drop callbacks and cancellation, making traces incomplete. **Schema drift.** `with_structured_output` is only as reliable as the model; pair it with `.with_retry()` and validation. **Over-paralleling.** Unbounded `RunnableParallel` against a rate-limited gateway causes 429s; set `max_concurrency` in config.
+
+## Comparison
+
+Versus a hand-written `async` pipeline, LCEL trades a little indirection for uniform streaming, batching, retries, fallbacks, and tracing across every step. Versus [LangGraph](/langgraph), LCEL is strictly acyclic: it cannot loop, branch back, or pause for human input, which is precisely the boundary at which you switch frameworks. Versus raw provider SDKs, LangChain abstracts the wire format so the same chain runs against Workers AI, DeepSeek, or a local model by swapping the model object — the rest of the pipeline is untouched.
+
+## Cross-References
+
+- [LangGraph: Stateful Multi-Agent Graphs](/langgraph) — the cyclic successor to acyclic LCEL
+- [LangChain Tools & Retrievers](/langchain-tools-retrievers) — grounding chains in data
+- [Tool Use & Function Calling](/function-calling) — the primitive behind tool-bound models
+- [Structured Output](/structured-output) — `with_structured_output` in depth
+- [Prompt Caching](/prompt-caching) and [Cost Optimization](/cost-optimization) — making chains cheap on the edge

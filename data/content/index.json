@@ -31,28 +31,37 @@
       "name": "Phase 4 · Agents, Memory & Orchestration",
       "slug": "phase-4-agents",
       "icon": "🤖",
-      "description": "Build agents that reason and act — LangGraph with checkpointed state and long-term vector memory",
+      "description": "Build agents that reason and act — tool-use loops, multi-agent coordination, and context & memory engineering",
       "gradientFrom": "var(--amber-9)",
       "gradientTo": "var(--amber-11)",
       "sortOrder": 3
     },
     {
-      "name": "Phase 5 · Evals, Safety & Observability",
+      "name": "Phase 5 · LangChain & LangGraph",
+      "slug": "phase-5-langchain",
+      "icon": "⛓",
+      "description": "Build production agent graphs with LangChain and LangGraph — LCEL chains, stateful graphs, D1-checkpointed memory, human-in-the-loop, and tracing",
+      "gradientFrom": "var(--teal-9)",
+      "gradientTo": "var(--teal-11)",
+      "sortOrder": 4
+    },
+    {
+      "name": "Phase 6 · Evals, Safety & Observability",
       "slug": "phase-5-evals",
       "icon": "🛡",
       "description": "Prove it works and ships safely — evals, red-teaming, guardrails, and gateway-level observability",
       "gradientFrom": "var(--crimson-9)",
       "gradientTo": "var(--crimson-11)",
-      "sortOrder": 4
+      "sortOrder": 5
     },
     {
-      "name": "Phase 6 · Ship to Production",
+      "name": "Phase 7 · Ship to Production",
       "slug": "phase-6-ship",
       "icon": "🚀",
       "description": "Take it to production — deploy, scale, cost-control, and CI/CD",
       "gradientFrom": "var(--jade-9)",
       "gradientTo": "var(--jade-11)",
-      "sortOrder": 5
+      "sortOrder": 6
     },
     {
       "name": "Appendix · Fine-tuning & Training",
@@ -61,7 +70,7 @@
       "description": "Optional track — customize models with LoRA, RLHF and dataset curation when prompting is not enough",
       "gradientFrom": "var(--slate-9)",
       "gradientTo": "var(--slate-11)",
-      "sortOrder": 6
+      "sortOrder": 7
     },
     {
       "name": "Appendix · Other Clouds & Platforms",
@@ -70,7 +79,7 @@
       "description": "Optional track — GCP, Docker and Kubernetes for portability and comparison off the primary path",
       "gradientFrom": "var(--sky-9)",
       "gradientTo": "var(--sky-11)",
-      "sortOrder": 7
+      "sortOrder": 8
     },
     {
       "name": "Appendix · Engineering & Communication",
@@ -79,7 +88,7 @@
       "description": "Optional track — software-engineering foundations (SOLID, ACID, SQL, CI/CD) plus LlamaIndex and communication",
       "gradientFrom": "var(--slate-9)",
       "gradientTo": "var(--slate-11)",
-      "sortOrder": 8
+      "sortOrder": 9
     }
   ],
   "lessons": [
@@ -277,7 +286,7 @@
     },
     {
       "slug": "agent-architectures",
-      "number": 30,
+      "number": 28,
       "title": "Agent Architectures: ReAct, Plan-and-Execute & Cognitive Frameworks",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 5858,
@@ -285,7 +294,7 @@
     },
     {
       "slug": "multi-agent-systems",
-      "number": 31,
+      "number": 29,
       "title": "Multi-Agent Systems: Orchestration, Delegation & Communication",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 5113,
@@ -293,7 +302,7 @@
     },
     {
       "slug": "agent-memory",
-      "number": 32,
+      "number": 30,
       "title": "Agent Memory: Short-term, Long-term & Episodic Memory Systems",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 5743,
@@ -301,7 +310,7 @@
     },
     {
       "slug": "agent-orchestration",
-      "number": 33,
+      "number": 31,
       "title": "Agent Orchestration: Routing, Handoffs & Supervisor Patterns",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 8277,
@@ -309,7 +318,7 @@
     },
     {
       "slug": "agent-harnesses",
-      "number": 34,
+      "number": 32,
       "title": "Agent Harnesses: Event Loops, Permission Models & Tool Sandboxing",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 9784,
@@ -317,7 +326,7 @@
     },
     {
       "slug": "agent-sdks",
-      "number": 35,
+      "number": 33,
       "title": "Agent SDKs: Claude, OpenAI, Vercel AI SDK & Framework Comparison",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 9032,
@@ -325,7 +334,7 @@
     },
     {
       "slug": "code-agents",
-      "number": 36,
+      "number": 34,
       "title": "Code Generation Agents: Sandboxing, Iteration & Self-Repair",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 5784,
@@ -333,23 +342,15 @@
     },
     {
       "slug": "agent-debugging",
-      "number": 37,
+      "number": 35,
       "title": "Agent Debugging & Observability: Tracing, Replay & Root Cause Analysis",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 9291,
       "readingTimeMin": 46
     },
     {
-      "slug": "langgraph",
-      "number": 38,
-      "title": "LangGraph: Stateful Multi-Agent Graphs for Production AI",
-      "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 3641,
-      "readingTimeMin": 18
-    },
-    {
       "slug": "memory",
-      "number": 39,
+      "number": 36,
       "title": "Memory: Persistence as an Agentic Pattern",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 942,
@@ -357,7 +358,7 @@
     },
     {
       "slug": "context-engineering",
-      "number": 40,
+      "number": 37,
       "title": "Context Engineering: Designing What LLMs See",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 4208,
@@ -365,7 +366,7 @@
     },
     {
       "slug": "context-window-management",
-      "number": 41,
+      "number": 38,
       "title": "Context Window Management: Token Budgets, Prioritization & Overflow Strategies",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 8304,
@@ -373,7 +374,7 @@
     },
     {
       "slug": "memory-architectures",
-      "number": 42,
+      "number": 39,
       "title": "Memory Architectures for LLM Systems: Working, Episodic & Semantic Memory",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 8466,
@@ -381,7 +382,7 @@
     },
     {
       "slug": "dynamic-context-assembly",
-      "number": 43,
+      "number": 40,
       "title": "Dynamic Context Assembly: Runtime Composition for LLM Applications",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 8560,
@@ -389,247 +390,319 @@
     },
     {
       "slug": "context-compression",
-      "number": 44,
+      "number": 41,
       "title": "Context Compression: Fitting More Signal into Fewer Tokens",
       "category": "Phase 4 · Agents, Memory & Orchestration",
       "wordCount": 8618,
       "readingTimeMin": 43
     },
     {
-      "slug": "eval-fundamentals",
+      "slug": "langchain-fundamentals",
+      "number": 42,
+      "title": "LangChain Fundamentals: Runnables, LCEL & Composable Chains on the Edge",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 1751,
+      "readingTimeMin": 9
+    },
+    {
+      "slug": "langchain-tools-retrievers",
+      "number": 43,
+      "title": "LangChain Tools & Retrievers: Grounding Chains in Your Own Data",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 1562,
+      "readingTimeMin": 8
+    },
+    {
+      "slug": "langgraph",
+      "number": 44,
+      "title": "LangGraph: Stateful Multi-Agent Graphs for Production AI",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 3641,
+      "readingTimeMin": 18
+    },
+    {
+      "slug": "langgraph-human-in-the-loop",
       "number": 45,
+      "title": "LangGraph Human-in-the-Loop: Interrupts, Approval Gates & Time Travel",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 1686,
+      "readingTimeMin": 8
+    },
+    {
+      "slug": "langgraph-multi-agent",
+      "number": 46,
+      "title": "LangGraph Multi-Agent Topologies: Supervisor, Swarm & Hierarchical Teams",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 1614,
+      "readingTimeMin": 8
+    },
+    {
+      "slug": "langgraph-d1-checkpointing",
+      "number": 47,
+      "title": "LangGraph Checkpointing on Cloudflare D1: Durable State & Resumable Graphs",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 1638,
+      "readingTimeMin": 8
+    },
+    {
+      "slug": "langmem-vectorize-memory",
+      "number": 48,
+      "title": "Long-Term Agent Memory with LangMem & Cloudflare Vectorize",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 1552,
+      "readingTimeMin": 8
+    },
+    {
+      "slug": "langgraph-streaming-observability",
+      "number": 49,
+      "title": "Streaming & Observability for LangGraph: SSE, Stream Modes & LangSmith Tracing",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 1511,
+      "readingTimeMin": 8
+    },
+    {
+      "slug": "langgraph-deployment",
+      "number": 50,
+      "title": "Deploying LangGraph in Production: Platform, Self-Host & the Cloudflare Edge",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 1743,
+      "readingTimeMin": 9
+    },
+    {
+      "slug": "langgraph-red-teaming",
+      "number": 51,
+      "title": "Red-Teaming LLM Applications with LangGraph: Graph-Based Adversarial Pipelines",
+      "category": "Phase 5 · LangChain & LangGraph",
+      "wordCount": 6221,
+      "readingTimeMin": 31
+    },
+    {
+      "slug": "eval-fundamentals",
+      "number": 52,
       "title": "LLM Evaluation Fundamentals: Metrics, Datasets & Methodology",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 6886,
       "readingTimeMin": 34
     },
     {
       "slug": "benchmark-design",
-      "number": 46,
+      "number": 53,
       "title": "Benchmark Design: Contamination, Saturation & Domain-Specific Evals",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 4893,
       "readingTimeMin": 24
     },
     {
       "slug": "llm-as-judge",
-      "number": 47,
+      "number": 54,
       "title": "LLM-as-Judge: Automated Evaluation, Calibration & Bias",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 7742,
       "readingTimeMin": 39
     },
     {
       "slug": "human-evaluation",
-      "number": 48,
+      "number": 55,
       "title": "Human Evaluation: Annotation Design, Inter-Rater Reliability & Scale",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 5179,
       "readingTimeMin": 26
     },
     {
       "slug": "eval-frameworks-comparison",
-      "number": 49,
+      "number": 56,
       "title": "Eval Frameworks Comparison: DeepEval, Promptfoo, RAGAS, Braintrust, LangSmith & More",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 3110,
       "readingTimeMin": 16
     },
     {
       "slug": "deepeval-synthesizer",
-      "number": 50,
+      "number": 57,
       "title": "DeepEval Synthesizer: Synthetic Golden Generation for LLM Evaluation",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 4997,
       "readingTimeMin": 25
     },
     {
       "slug": "agent-evaluation",
-      "number": 51,
+      "number": 58,
       "title": "Agent Evaluation: Reliability, Tool Use Accuracy & Trajectory Analysis",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 6647,
       "readingTimeMin": 33
     },
     {
       "slug": "red-teaming",
-      "number": 52,
+      "number": 59,
       "title": "Red Teaming & Adversarial Testing: Automated & Manual Approaches",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 5782,
       "readingTimeMin": 29
     },
     {
-      "slug": "langgraph-red-teaming",
-      "number": 53,
-      "title": "Red-Teaming LLM Applications with LangGraph: Graph-Based Adversarial Pipelines",
-      "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 6221,
-      "readingTimeMin": 31
-    },
-    {
       "slug": "guardrails-filtering",
-      "number": 54,
+      "number": 60,
       "title": "Guardrails & Content Filtering: Input/Output Safety Layers",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 5635,
       "readingTimeMin": 28
     },
     {
       "slug": "hallucination-mitigation",
-      "number": 55,
+      "number": 61,
       "title": "Hallucination Detection & Mitigation: Grounding & Verification",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 5661,
       "readingTimeMin": 28
     },
     {
       "slug": "constitutional-ai",
-      "number": 56,
+      "number": 62,
       "title": "Constitutional AI & RLHF for Safety",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 5612,
       "readingTimeMin": 28
     },
     {
       "slug": "bias-fairness",
-      "number": 57,
+      "number": 63,
       "title": "Bias, Fairness & Responsible AI in Production",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 4916,
       "readingTimeMin": 25
     },
     {
       "slug": "ai-governance",
-      "number": 58,
+      "number": 64,
       "title": "AI Governance: Compliance, Auditing & Risk Management",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 6242,
       "readingTimeMin": 31
     },
     {
       "slug": "interpretability",
-      "number": 59,
+      "number": 65,
       "title": "Interpretability & Explainability: Mechanistic & Feature-Level Analysis",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 5997,
       "readingTimeMin": 30
     },
     {
       "slug": "observability",
-      "number": 60,
+      "number": 66,
       "title": "Observability: Tracing, Logging & LLM Monitoring",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 5900,
       "readingTimeMin": 30
     },
     {
       "slug": "online-evaluation",
-      "number": 61,
+      "number": 67,
       "title": "Online Evaluation: Production Sampling, Drift Detection & Feedback Loops",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 4004,
       "readingTimeMin": 20
     },
     {
       "slug": "ai-gateway",
-      "number": 62,
+      "number": 68,
       "title": "AI Gateways: Rate Limiting, Fallbacks & Multi-Provider Routing",
-      "category": "Phase 5 · Evals, Safety & Observability",
+      "category": "Phase 6 · Evals, Safety & Observability",
       "wordCount": 6087,
       "readingTimeMin": 30
     },
     {
       "slug": "edge-deployment",
-      "number": 63,
+      "number": 69,
       "title": "Edge Deployment: On-Device Models, ONNX & WebLLM",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 6181,
       "readingTimeMin": 31
     },
     {
       "slug": "cost-optimization",
-      "number": 64,
+      "number": 70,
       "title": "Cost Optimization: Token Economics, Caching & Model Selection",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 5863,
       "readingTimeMin": 29
     },
     {
       "slug": "scaling-load-balancing",
-      "number": 65,
+      "number": 71,
       "title": "Scaling & Load Balancing: GPU Clusters, Model Parallelism & Routing",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 4693,
       "readingTimeMin": 23
     },
     {
       "slug": "llm-serving",
-      "number": 66,
+      "number": 72,
       "title": "LLM Serving: API Design, Batching & Streaming",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 5338,
       "readingTimeMin": 27
     },
     {
       "slug": "production-patterns",
-      "number": 67,
+      "number": 73,
       "title": "Production AI Patterns: Workflows, Pipelines & Architecture",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 6108,
       "readingTimeMin": 31
     },
     {
       "slug": "ci-cd-ai",
-      "number": 68,
+      "number": 74,
       "title": "CI/CD for AI: Regression Testing, Monitoring & Continuous Eval",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 6218,
       "readingTimeMin": 31
     },
     {
       "slug": "search-recommendations",
-      "number": 69,
+      "number": 75,
       "title": "Search & Recommendations with LLMs",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 6199,
       "readingTimeMin": 31
     },
     {
       "slug": "conversational-ai",
-      "number": 70,
+      "number": 76,
       "title": "Conversational AI: Chatbot Design, Dialogue Management & UX",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 6273,
       "readingTimeMin": 31
     },
     {
       "slug": "vision-language-models",
-      "number": 71,
+      "number": 77,
       "title": "Vision-Language Models: Architecture, Training & Applications",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 5542,
       "readingTimeMin": 28
     },
     {
       "slug": "audio-speech-ai",
-      "number": 72,
+      "number": 78,
       "title": "Audio & Speech AI: ASR, TTS & Voice Agents",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 5157,
       "readingTimeMin": 26
     },
     {
       "slug": "ai-for-code",
-      "number": 73,
+      "number": 79,
       "title": "AI for Code: Copilots, Code Review & Program Synthesis",
-      "category": "Phase 6 · Ship to Production",
+      "category": "Phase 7 · Ship to Production",
       "wordCount": 5994,
       "readingTimeMin": 30
     },
     {
       "slug": "fine-tuning-fundamentals",
-      "number": 74,
+      "number": 80,
       "title": "Fine-tuning Fundamentals: Full, Freeze & Transfer Learning",
       "category": "Appendix · Fine-tuning & Training",
       "wordCount": 5500,
@@ -637,7 +710,7 @@
     },
     {
       "slug": "lora-adapters",
-      "number": 75,
+      "number": 81,
       "title": "LoRA, QLoRA & Adapter Methods: Parameter-Efficient Fine-tuning",
       "category": "Appendix · Fine-tuning & Training",
       "wordCount": 5274,
@@ -645,7 +718,7 @@
     },
     {
       "slug": "rlhf-preference",
-      "number": 76,
+      "number": 82,
       "title": "RLHF & Preference Optimization: DPO, ORPO & PPO",
       "category": "Appendix · Fine-tuning & Training",
       "wordCount": 4933,
@@ -653,7 +726,7 @@
     },
     {
       "slug": "dataset-curation",
-      "number": 77,
+      "number": 83,
       "title": "Dataset Curation: Synthetic Data, Quality Filtering & Annotation",
       "category": "Appendix · Fine-tuning & Training",
       "wordCount": 5587,
@@ -661,7 +734,7 @@
     },
     {
       "slug": "continual-learning",
-      "number": 78,
+      "number": 84,
       "title": "Continual Learning: Catastrophic Forgetting & Knowledge Retention",
       "category": "Appendix · Fine-tuning & Training",
       "wordCount": 5862,
@@ -669,7 +742,7 @@
     },
     {
       "slug": "distillation-compression",
-      "number": 79,
+      "number": 85,
       "title": "Distillation & Model Compression: Pruning, Quantization & Student Models",
       "category": "Appendix · Fine-tuning & Training",
       "wordCount": 5924,
@@ -677,7 +750,7 @@
     },
     {
       "slug": "gcp",
-      "number": 80,
+      "number": 86,
       "title": "Google Cloud Platform",
       "category": "Appendix · Other Clouds & Platforms",
       "wordCount": 2254,
@@ -685,7 +758,7 @@
     },
     {
       "slug": "docker",
-      "number": 81,
+      "number": 87,
       "title": "Docker",
       "category": "Appendix · Other Clouds & Platforms",
       "wordCount": 2214,
@@ -693,7 +766,7 @@
     },
     {
       "slug": "kubernetes",
-      "number": 82,
+      "number": 88,
       "title": "Kubernetes",
       "category": "Appendix · Other Clouds & Platforms",
       "wordCount": 2272,
@@ -701,7 +774,7 @@
     },
     {
       "slug": "microservices",
-      "number": 83,
+      "number": 89,
       "title": "Microservices",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 2131,
@@ -709,7 +782,7 @@
     },
     {
       "slug": "ci-cd",
-      "number": 84,
+      "number": 90,
       "title": "CI/CD",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 2009,
@@ -717,7 +790,7 @@
     },
     {
       "slug": "nodejs",
-      "number": 85,
+      "number": 91,
       "title": "Node.js",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 2374,
@@ -725,7 +798,7 @@
     },
     {
       "slug": "solid-principles",
-      "number": 86,
+      "number": 92,
       "title": "SOLID Principles",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 2225,
@@ -733,7 +806,7 @@
     },
     {
       "slug": "acid-properties",
-      "number": 87,
+      "number": 93,
       "title": "ACID Properties",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 2013,
@@ -741,7 +814,7 @@
     },
     {
       "slug": "postgresql-joins",
-      "number": 88,
+      "number": 94,
       "title": "PostgreSQL JOINs: Inner, Outer, Cross, Self, Lateral & Performance",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 2548,
@@ -749,7 +822,7 @@
     },
     {
       "slug": "foreign-keys",
-      "number": 89,
+      "number": 95,
       "title": "Foreign Keys: Referential Integrity, Cascades & Migration Patterns",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 3757,
@@ -757,7 +830,7 @@
     },
     {
       "slug": "llamaindex",
-      "number": 90,
+      "number": 96,
       "title": "LlamaIndex",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 3223,
@@ -765,12 +838,12 @@
     },
     {
       "slug": "public-speaking",
-      "number": 91,
+      "number": 97,
       "title": "Public Speaking: Structure, Delivery, and Audience Engagement",
       "category": "Appendix · Engineering & Communication",
       "wordCount": 2010,
       "readingTimeMin": 10
     }
   ],
-  "totalWordCount": 455800
+  "totalWordCount": 468857
 }

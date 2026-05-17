@@ -37,7 +37,7 @@ export interface GroupedLessons {
 }
 
 // Ordered list of slugs — position (1-indexed) defines the lesson number.
-// This order IS the audiobook spine: phases 1-6 play continuously; the
+// This order IS the audiobook spine: phases 1-7 play continuously; the
 // Appendix is reachable but excluded from the continuous-play flow.
 // `*` slugs are new Cloudflare-specific pilot chapters.
 const LESSON_SLUGS = [
@@ -71,9 +71,7 @@ const LESSON_SLUGS = [
   "rag",
   "advanced-rag",
   "rag-evaluation",
-  // Phase 4 · Agents, Memory & Orchestration (28-44)
-  "langgraph-d1-checkpointing", // *
-  "langmem-vectorize-memory", // *
+  // Phase 4 · Agents, Memory & Orchestration (28-41)
   "agent-architectures",
   "multi-agent-systems",
   "agent-memory",
@@ -82,14 +80,24 @@ const LESSON_SLUGS = [
   "agent-sdks",
   "code-agents",
   "agent-debugging",
-  "langgraph",
   "memory",
   "context-engineering",
   "context-window-management",
   "memory-architectures",
   "dynamic-context-assembly",
   "context-compression",
-  // Phase 5 · Evals, Safety & Observability (45-62)
+  // Phase 5 · LangChain & LangGraph (42-51)
+  "langchain-fundamentals",
+  "langchain-tools-retrievers",
+  "langgraph",
+  "langgraph-human-in-the-loop",
+  "langgraph-multi-agent",
+  "langgraph-d1-checkpointing",
+  "langmem-vectorize-memory",
+  "langgraph-streaming-observability",
+  "langgraph-deployment",
+  "langgraph-red-teaming",
+  // Phase 6 · Evals, Safety & Observability (52-68)
   "eval-fundamentals",
   "benchmark-design",
   "llm-as-judge",
@@ -98,7 +106,6 @@ const LESSON_SLUGS = [
   "deepeval-synthesizer",
   "agent-evaluation",
   "red-teaming",
-  "langgraph-red-teaming",
   "guardrails-filtering",
   "hallucination-mitigation",
   "constitutional-ai",
@@ -108,7 +115,7 @@ const LESSON_SLUGS = [
   "observability",
   "online-evaluation",
   "ai-gateway",
-  // Phase 6 · Ship to Production (63-73)
+  // Phase 7 · Ship to Production (69-79)
   "edge-deployment",
   "cost-optimization",
   "scaling-load-balancing",
@@ -120,18 +127,18 @@ const LESSON_SLUGS = [
   "vision-language-models",
   "audio-speech-ai",
   "ai-for-code",
-  // Appendix · Fine-tuning & Training (74-79) — optional track
+  // Appendix · Fine-tuning & Training (80-85) — optional track
   "fine-tuning-fundamentals",
   "lora-adapters",
   "rlhf-preference",
   "dataset-curation",
   "continual-learning",
   "distillation-compression",
-  // Appendix · Other Clouds & Platforms (80-82)
+  // Appendix · Other Clouds & Platforms (86-88)
   "gcp",
   "docker",
   "kubernetes",
-  // Appendix · Engineering & Communication (83-91)
+  // Appendix · Engineering & Communication (89-97)
   "microservices",
   "ci-cd",
   "nodejs",
@@ -148,22 +155,23 @@ export const LESSON_NUMBER: Record<string, number> = Object.fromEntries(
 );
 
 export const CATEGORIES: [number, number, string][] = [
-  // Phases 1-6 form the continuous-play roadmap spine
+  // Phases 1-7 form the continuous-play roadmap spine
   [1, 9, "Phase 1 · Foundations & Model Inference"],
   [10, 18, "Phase 2 · Prompting & Structured Output"],
   [19, 27, "Phase 3 · Embeddings & RAG"],
-  [28, 44, "Phase 4 · Agents, Memory & Orchestration"],
-  [45, 62, "Phase 5 · Evals, Safety & Observability"],
-  [63, 73, "Phase 6 · Ship to Production"],
+  [28, 41, "Phase 4 · Agents, Memory & Orchestration"],
+  [42, 51, "Phase 5 · LangChain & LangGraph"],
+  [52, 68, "Phase 6 · Evals, Safety & Observability"],
+  [69, 79, "Phase 7 · Ship to Production"],
   // Appendix · reachable, excluded from the flow spine
-  [74, 79, "Appendix · Fine-tuning & Training"],
-  [80, 82, "Appendix · Other Clouds & Platforms"],
-  [83, 91, "Appendix · Engineering & Communication"],
+  [80, 85, "Appendix · Fine-tuning & Training"],
+  [86, 88, "Appendix · Other Clouds & Platforms"],
+  [89, 97, "Appendix · Engineering & Communication"],
 ];
 
 // The cut-off lesson number for the continuous-play spine. Lessons numbered
 // above this belong to the Appendix and are excluded from getFlowOrder().
-export const FLOW_MAX_NUMBER = 73;
+export const FLOW_MAX_NUMBER = 79;
 
 // Descriptions: parallel "outcome — concrete substrate" form, jargon-free.
 // Outcomes: falsifiable "you can now build/ship X" capability statements,
@@ -206,15 +214,27 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
   "Phase 4 · Agents, Memory & Orchestration": {
     slug: "phase-4-agents",
     icon: "🤖",
-    description: "Build agents that reason and act — LangGraph with checkpointed state and long-term vector memory",
+    description: "Build agents that reason and act — tool-use loops, multi-agent coordination, and context & memory engineering",
     gradient: ["var(--amber-9)", "var(--amber-11)"],
     outcomes: [
-      "Build a tool-using agent loop with persistent memory",
-      "Checkpoint and resume graphs; orchestrate long-running work with queues and workflows",
+      "Build a tool-using agent loop with short- and long-term memory",
+      "Coordinate multiple agents and engineer the context window under token limits",
       "Ship a Multi-Source Research Agent reusing Phase 2 tool calls and Phase 3 retrieval (Portfolio L2)",
     ],
   },
-  "Phase 5 · Evals, Safety & Observability": {
+  "Phase 5 · LangChain & LangGraph": {
+    slug: "phase-5-langchain",
+    icon: "⛓",
+    description: "Build production agent graphs with LangChain and LangGraph — LCEL chains, stateful graphs, D1-checkpointed memory, human-in-the-loop, and tracing",
+    gradient: ["var(--teal-9)", "var(--teal-11)"],
+    outcomes: [
+      "Compose LangChain runnables/LCEL chains with tools and retrievers",
+      "Model an app as a LangGraph StateGraph with D1 checkpointing and resume",
+      "Add human-in-the-loop interrupts and stream/trace a graph end to end",
+      "Ship a deployed multi-agent LangGraph service on the edge (Portfolio L2)",
+    ],
+  },
+  "Phase 6 · Evals, Safety & Observability": {
     slug: "phase-5-evals",
     icon: "🛡",
     description: "Prove it works and ships safely — evals, red-teaming, guardrails, and gateway-level observability",
@@ -222,10 +242,10 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
     outcomes: [
       "Build an eval suite (benchmarks + LLM-as-judge) that gates a model change",
       "Add guardrails and mitigate hallucination and bias",
-      "Ship an eval + red-team + observability harness over your Phase 4 agent (Portfolio L3)",
+      "Ship an eval + red-team + observability harness over your Phase 4–5 agent (Portfolio L3)",
     ],
   },
-  "Phase 6 · Ship to Production": {
+  "Phase 7 · Ship to Production": {
     slug: "phase-6-ship",
     icon: "🚀",
     description: "Take it to production — deploy, scale, cost-control, and CI/CD",
@@ -337,7 +357,7 @@ export function isAppendixSlug(slug: string): boolean {
   return APPENDIX_SLUGS.has(slug);
 }
 
-// The audiobook spine: phases 1-6 in order, Appendix excluded. This is the
+// The audiobook spine: phases 1-7 in order, Appendix excluded. This is the
 // sequence the persistent player auto-advances through.
 export function getFlowOrder(): Lesson[] {
   return getAllLessons().filter((l) => !APPENDIX_SLUGS.has(l.slug));

@@ -1,6 +1,6 @@
 {
   "slug": "distillation-compression",
-  "number": 79,
+  "number": 85,
   "title": "Distillation & Model Compression: Pruning, Quantization & Student Models",
   "category": "Appendix · Fine-tuning & Training",
   "wordCount": 5924,
