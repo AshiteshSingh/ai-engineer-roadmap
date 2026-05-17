@@ -1,6 +1,6 @@
 {
   "slug": "langgraph-streaming-observability",
-  "number": 49,
+  "number": 50,
   "title": "Streaming & Observability for LangGraph: SSE, Stream Modes & LangSmith Tracing",
   "category": "Phase 5 · LangChain & LangGraph",
   "wordCount": 1511,

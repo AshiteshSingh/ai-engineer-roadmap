@@ -7,7 +7,7 @@
 //! the dedicated SQLite course store instead of Neon Postgres. The exporter
 //! (`export-content`) turns that into `courses.json` for the Next.js frontend.
 //!
-//!   cd crates/ml && cargo run -p knowledge-ml-langgraph-server --release \
+//!   cd crates/ml && cargo run -p knowledge-ml-server --release \
 //!     --bin seed-topic-courses -- \
 //!     --slug public-speaking --topic-name "Public Speaking" \
 //!     --search-url "https://www.udemy.com/courses/search/?q=public+speaking&sort=most-reviewed" \
@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use clap::Parser;
-use knowledge_ml_langgraph_server::{courses, graphs::fetch_courses, llm};
+use knowledge_ml_server::{courses, graphs::fetch_courses, llm};
 use serde_json::{json, Value};
 use tracing_subscriber::EnvFilter;
 

@@ -1,6 +1,6 @@
 {
   "slug": "langgraph-red-teaming",
-  "number": 51,
+  "number": 52,
   "title": "Red-Teaming LLM Applications with LangGraph: Graph-Based Adversarial Pipelines",
   "category": "Phase 5 · LangChain & LangGraph",
   "wordCount": 6221,

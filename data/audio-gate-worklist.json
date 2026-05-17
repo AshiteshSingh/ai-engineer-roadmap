@@ -1,0 +1,604 @@
+{
+  "generated_at_unix": 1779044688,
+  "thresholds": {
+    "min_chapters": 3,
+    "min_words_per_chapter": 40,
+    "min_total_words": 400,
+    "max_title_words": 5,
+    "max_title_chars": 72,
+    "sentence_cv_min": 0.3
+  },
+  "summary": {
+    "total": 8,
+    "pass": 6,
+    "fail": 2
+  },
+  "lessons": [
+    {
+      "slug": "advanced-rag",
+      "title": "Advanced RAG: Agentic, Graph-Based & Multi-Hop Retrieval — Audio Guide",
+      "ok": true,
+      "failures": [],
+      "warnings": [
+        {
+          "chapter": 0,
+          "rule": "sentence-variety",
+          "detail": "monotone cadence (cv 0.23 < 0.30)"
+        },
+        {
+          "chapter": 0,
+          "rule": "acronym-first-use",
+          "detail": "`RAG` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`IPO` not expanded on first use"
+        },
+        {
+          "chapter": 2,
+          "rule": "acronym-first-use",
+          "detail": "`LLM` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`GDP` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`RAPTOR` not expanded on first use"
+        },
+        {
+          "chapter": 7,
+          "rule": "acronym-first-use",
+          "detail": "`GPT` not expanded on first use"
+        },
+        {
+          "chapter": 9,
+          "rule": "acronym-first-use",
+          "detail": "`LOFT` not expanded on first use"
+        },
+        {
+          "chapter": 10,
+          "rule": "acronym-first-use",
+          "detail": "`RAFT` not expanded on first use"
+        },
+        {
+          "chapter": 10,
+          "rule": "acronym-first-use",
+          "detail": "`QA` not expanded on first use"
+        }
+      ],
+      "metrics": {
+        "chapters": 14,
+        "total_words": 3875,
+        "total_duration_secs": 1543,
+        "mean_words_per_chapter": 276,
+        "sentence_len_cv": 0.44065768649841497
+      }
+    },
+    {
+      "slug": "chunking-strategies",
+      "title": "Chunking Strategies: Splitting, Overlap & Semantic Boundaries — Audio Guide",
+      "ok": true,
+      "failures": [],
+      "warnings": [
+        {
+          "chapter": 8,
+          "rule": "sentence-variety",
+          "detail": "monotone cadence (cv 0.28 < 0.30)"
+        },
+        {
+          "chapter": 10,
+          "rule": "acronym-first-use",
+          "detail": "`APAC` not expanded on first use"
+        },
+        {
+          "chapter": 11,
+          "rule": "acronym-first-use",
+          "detail": "`IPO` not expanded on first use"
+        }
+      ],
+      "metrics": {
+        "chapters": 16,
+        "total_words": 3717,
+        "total_duration_secs": 1481,
+        "mean_words_per_chapter": 232,
+        "sentence_len_cv": 0.4882681083678809
+      }
+    },
+    {
+      "slug": "embedding-models",
+      "title": "Embedding Models: Representations, Similarity & Fine-tuning — Audio Guide",
+      "ok": true,
+      "failures": [],
+      "warnings": [
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`TF` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`IDF` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`BERT` not expanded on first use"
+        },
+        {
+          "chapter": 2,
+          "rule": "acronym-first-use",
+          "detail": "`BGE` not expanded on first use"
+        },
+        {
+          "chapter": 2,
+          "rule": "acronym-first-use",
+          "detail": "`BAAI` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`MTEB` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`MS` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`MARCO` not expanded on first use"
+        },
+        {
+          "chapter": 6,
+          "rule": "acronym-first-use",
+          "detail": "`GTE` not expanded on first use"
+        },
+        {
+          "chapter": 6,
+          "rule": "number-spelling",
+          "detail": "digit 7 under twenty (spell it out)"
+        },
+        {
+          "chapter": 6,
+          "rule": "number-spelling",
+          "detail": "digit 2 under twenty (spell it out)"
+        },
+        {
+          "chapter": 8,
+          "rule": "acronym-first-use",
+          "detail": "`SPLADE` not expanded on first use"
+        },
+        {
+          "chapter": 9,
+          "rule": "acronym-first-use",
+          "detail": "`CLIP` not expanded on first use"
+        }
+      ],
+      "metrics": {
+        "chapters": 13,
+        "total_words": 2486,
+        "total_duration_secs": 990,
+        "mean_words_per_chapter": 191,
+        "sentence_len_cv": 0.4606886645573413
+      }
+    },
+    {
+      "slug": "embeddings",
+      "title": "Embeddings — Audio Guide",
+      "ok": false,
+      "failures": [
+        {
+          "chapter": 5,
+          "rule": "title-too-long",
+          "detail": "title 7 words (max 5): \"How It Connects to This Role's Stack\""
+        }
+      ],
+      "warnings": [
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`RAG` not expanded on first use"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`SHA` not expanded on first use"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`TTL` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`BERT` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`CBOW` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`TF` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`NDCG` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`LLM` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`NN` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`CI` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`CD` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`POST` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`GET` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "number-spelling",
+          "detail": "digit 3 under twenty (spell it out)"
+        },
+        {
+          "chapter": 6,
+          "rule": "acronym-first-use",
+          "detail": "`CLS` not expanded on first use"
+        },
+        {
+          "chapter": 6,
+          "rule": "acronym-first-use",
+          "detail": "`ANN` not expanded on first use"
+        },
+        {
+          "chapter": 6,
+          "rule": "acronym-first-use",
+          "detail": "`IVF` not expanded on first use"
+        }
+      ],
+      "metrics": {
+        "chapters": 8,
+        "total_words": 2480,
+        "total_duration_secs": 989,
+        "mean_words_per_chapter": 310,
+        "sentence_len_cv": 0.4904286812199745
+      }
+    },
+    {
+      "slug": "rag-evaluation",
+      "title": "RAG Evaluation: Faithfulness, Relevance & Failure Modes — Audio Guide",
+      "ok": true,
+      "failures": [],
+      "warnings": [
+        {
+          "chapter": 0,
+          "rule": "acronym-first-use",
+          "detail": "`RAG` not expanded on first use"
+        },
+        {
+          "chapter": 0,
+          "rule": "acronym-first-use",
+          "detail": "`LLM` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`BLEU` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`ROUGE` not expanded on first use"
+        },
+        {
+          "chapter": 2,
+          "rule": "acronym-first-use",
+          "detail": "`RAGAS` not expanded on first use"
+        },
+        {
+          "chapter": 8,
+          "rule": "acronym-first-use",
+          "detail": "`BERT` not expanded on first use"
+        },
+        {
+          "chapter": 9,
+          "rule": "acronym-first-use",
+          "detail": "`GPT` not expanded on first use"
+        }
+      ],
+      "metrics": {
+        "chapters": 13,
+        "total_words": 4677,
+        "total_duration_secs": 1865,
+        "mean_words_per_chapter": 359,
+        "sentence_len_cv": 0.528053421622978
+      }
+    },
+    {
+      "slug": "rag",
+      "title": "RAG: Retrieval-Augmented Generation as an Agentic Pattern — Audio Guide",
+      "ok": false,
+      "failures": [
+        {
+          "chapter": 0,
+          "rule": "title-too-long",
+          "detail": "title 6 words (max 5): \"Why this is an agentic pattern\""
+        },
+        {
+          "chapter": 2,
+          "rule": "title-too-long",
+          "detail": "title 8 words (max 5): \"When to add it and when not to\""
+        }
+      ],
+      "warnings": [
+        {
+          "chapter": 2,
+          "rule": "sentence-variety",
+          "detail": "monotone cadence (cv 0.28 < 0.30)"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`RPM` not expanded on first use"
+        }
+      ],
+      "metrics": {
+        "chapters": 4,
+        "total_words": 631,
+        "total_duration_secs": 250,
+        "mean_words_per_chapter": 157,
+        "sentence_len_cv": 0.3991931051937639
+      }
+    },
+    {
+      "slug": "retrieval-strategies",
+      "title": "Retrieval Strategies: Hybrid Search, Reranking & HyDE — Audio Guide",
+      "ok": true,
+      "failures": [],
+      "warnings": [
+        {
+          "chapter": 0,
+          "rule": "acronym-first-use",
+          "detail": "`RAG` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`CUDA` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`DPR` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`BGE` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`GTE` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`BEIR` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`TREC` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`COVID` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`MS` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`MARCO` not expanded on first use"
+        },
+        {
+          "chapter": 2,
+          "rule": "acronym-first-use",
+          "detail": "`SPLADE` not expanded on first use"
+        },
+        {
+          "chapter": 2,
+          "rule": "acronym-first-use",
+          "detail": "`FLOPS` not expanded on first use"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`RRF` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`PLAID` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "acronym-first-use",
+          "detail": "`LLM` not expanded on first use"
+        },
+        {
+          "chapter": 7,
+          "rule": "acronym-first-use",
+          "detail": "`ISREL` not expanded on first use"
+        },
+        {
+          "chapter": 7,
+          "rule": "acronym-first-use",
+          "detail": "`ISSUP` not expanded on first use"
+        },
+        {
+          "chapter": 8,
+          "rule": "acronym-first-use",
+          "detail": "`DROP` not expanded on first use"
+        },
+        {
+          "chapter": 8,
+          "rule": "acronym-first-use",
+          "detail": "`DELETE` not expanded on first use"
+        },
+        {
+          "chapter": 8,
+          "rule": "acronym-first-use",
+          "detail": "`UPDATE` not expanded on first use"
+        },
+        {
+          "chapter": 8,
+          "rule": "acronym-first-use",
+          "detail": "`QA` not expanded on first use"
+        },
+        {
+          "chapter": 8,
+          "rule": "acronym-first-use",
+          "detail": "`TAPAS` not expanded on first use"
+        }
+      ],
+      "metrics": {
+        "chapters": 12,
+        "total_words": 3841,
+        "total_duration_secs": 1533,
+        "mean_words_per_chapter": 320,
+        "sentence_len_cv": 0.5543786035307939
+      }
+    },
+    {
+      "slug": "vector-databases",
+      "title": "Vector Databases: Indexing, ANN Search & Production Patterns — Audio Guide",
+      "ok": true,
+      "failures": [],
+      "warnings": [
+        {
+          "chapter": 0,
+          "rule": "sentence-variety",
+          "detail": "monotone cadence (cv 0.22 < 0.30)"
+        },
+        {
+          "chapter": 0,
+          "rule": "acronym-first-use",
+          "detail": "`IVF` not expanded on first use"
+        },
+        {
+          "chapter": 0,
+          "rule": "acronym-first-use",
+          "detail": "`RAG` not expanded on first use"
+        },
+        {
+          "chapter": 2,
+          "rule": "acronym-first-use",
+          "detail": "`PQ` not expanded on first use"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`NVIDIA` not expanded on first use"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`RAPIDS` not expanded on first use"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`MVCC` not expanded on first use"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`ANN` not expanded on first use"
+        },
+        {
+          "chapter": 3,
+          "rule": "acronym-first-use",
+          "detail": "`ACID` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`ETL` not expanded on first use"
+        },
+        {
+          "chapter": 4,
+          "rule": "acronym-first-use",
+          "detail": "`JVM` not expanded on first use"
+        },
+        {
+          "chapter": 5,
+          "rule": "sentence-variety",
+          "detail": "monotone cadence (cv 0.28 < 0.30)"
+        },
+        {
+          "chapter": 7,
+          "rule": "sentence-variety",
+          "detail": "monotone cadence (cv 0.24 < 0.30)"
+        },
+        {
+          "chapter": 8,
+          "rule": "acronym-first-use",
+          "detail": "`IOPS` not expanded on first use"
+        },
+        {
+          "chapter": 11,
+          "rule": "sentence-variety",
+          "detail": "monotone cadence (cv 0.25 < 0.30)"
+        }
+      ],
+      "metrics": {
+        "chapters": 12,
+        "total_words": 3549,
+        "total_duration_secs": 1414,
+        "mean_words_per_chapter": 295,
+        "sentence_len_cv": 0.4396122748695394
+      }
+    }
+  ],
+  "worklist": [
+    "rag",
+    "embeddings"
+  ]
+}

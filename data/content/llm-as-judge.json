@@ -1,6 +1,6 @@
 {
   "slug": "llm-as-judge",
-  "number": 54,
+  "number": 55,
   "title": "LLM-as-Judge: Automated Evaluation, Calibration & Bias",
   "category": "Phase 6 · Evals, Safety & Observability",
   "wordCount": 7742,

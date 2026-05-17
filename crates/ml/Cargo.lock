@@ -445,6 +445,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "audio-guide"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "candle",
+ "candle-core",
+ "candle-nn",
+ "candle-transformers",
+ "clap",
+ "deepseek-loop",
+ "dotenvy",
+ "hf-hub",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokenizers",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3344,7 +3369,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "knowledge-ml-langgraph-server"
+name = "knowledge-ml-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3921,31 +3946,6 @@ dependencies = [
  "tokio",
  "url",
  "uuid",
-]
-
-[[package]]
-name = "langgraph-audio"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "candle",
- "candle-core",
- "candle-nn",
- "candle-transformers",
- "clap",
- "deepseek-loop",
- "dotenvy",
- "hf-hub",
- "once_cell",
- "regex",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokenizers",
- "tokio",
- "toml",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

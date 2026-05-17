@@ -1,6 +1,6 @@
 {
   "slug": "scaling-load-balancing",
-  "number": 71,
+  "number": 72,
   "title": "Scaling & Load Balancing: GPU Clusters, Model Parallelism & Routing",
   "category": "Phase 7 · Ship to Production",
   "wordCount": 4693,

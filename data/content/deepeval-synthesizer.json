@@ -1,6 +1,6 @@
 {
   "slug": "deepeval-synthesizer",
-  "number": 57,
+  "number": 58,
   "title": "DeepEval Synthesizer: Synthetic Golden Generation for LLM Evaluation",
   "category": "Phase 6 · Evals, Safety & Observability",
   "wordCount": 4997,

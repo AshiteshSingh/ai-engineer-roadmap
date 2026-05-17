@@ -1,9 +1,9 @@
 //! Local Rust LangGraph backend — drop-in for the Python FastAPI service.
 //!
-//!   cd crates/ml && cargo run -p knowledge-ml-langgraph-server \
-//!       --release --bin langgraph-server
+//!   cd crates/ml && cargo run -p knowledge-ml-server \
+//!       --release --bin knowledge-server
 //!
-//! Env: LANGGRAPH_AUTH_TOKEN, DEEPSEEK_API_KEY / LLM_* , EMBED_URL,
+//! Env: BACKEND_AUTH_TOKEN, DEEPSEEK_API_KEY / LLM_* , EMBED_URL,
 //! KNOWLEDGE_DB, LANCEDB_PATH, PORT (default 7860).
 
 use std::sync::Arc;
@@ -19,7 +19,7 @@ use deepseek::{DeepSeekClient, ReqwestClient};
 use serde_json::json;
 use tracing_subscriber::EnvFilter;
 
-use knowledge_ml_langgraph_server::{
+use knowledge_ml_server::{
     build_chat_messages, graphs, llm, parse_chat_input, retrieval::Retriever, ChatInput,
     RunRequest,
 };
@@ -69,7 +69,7 @@ impl IntoResponse for AppError {
 // ── Handlers ──────────────────────────────────────────────────────────────
 
 async fn health() -> Json<serde_json::Value> {
-    Json(json!({ "status": "ok", "service": "knowledge-ml-langgraph-server" }))
+    Json(json!({ "status": "ok", "service": "knowledge-ml-server" }))
 }
 
 fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), AppError> {
@@ -160,10 +160,10 @@ async fn main() -> anyhow::Result<()> {
     let lancedb_path = env_or("LANCEDB_PATH", "../../data/lancedb");
     let embed_url = env_or("EMBED_URL", "http://localhost:9999");
     let port = env_or("PORT", "7860");
-    let auth_token = std::env::var("LANGGRAPH_AUTH_TOKEN").ok().filter(|t| !t.is_empty());
+    let auth_token = std::env::var("BACKEND_AUTH_TOKEN").ok().filter(|t| !t.is_empty());
 
     if auth_token.is_none() {
-        tracing::warn!("LANGGRAPH_AUTH_TOKEN unset — /runs/wait is unauthenticated");
+        tracing::warn!("BACKEND_AUTH_TOKEN unset — /runs/wait is unauthenticated");
     }
     tracing::info!(
         "llm: model={} base={} temp={}",
@@ -191,7 +191,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .map_err(|e| anyhow::anyhow!("bind {addr}: {e}"))?;
-    tracing::info!("langgraph-server listening on {addr} (db={db_path}, lancedb={lancedb_path})");
+    tracing::info!("knowledge-server listening on {addr} (db={db_path}, lancedb={lancedb_path})");
     axum::serve(listener, app).await?;
     Ok(())
 }

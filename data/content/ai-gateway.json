@@ -1,6 +1,6 @@
 {
   "slug": "ai-gateway",
-  "number": 68,
+  "number": 69,
   "title": "AI Gateways: Rate Limiting, Fallbacks & Multi-Provider Routing",
   "category": "Phase 6 · Evals, Safety & Observability",
   "wordCount": 6087,

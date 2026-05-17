@@ -1,6 +1,6 @@
 {
   "slug": "langgraph-d1-checkpointing",
-  "number": 47,
+  "number": 48,
   "title": "LangGraph Checkpointing on Cloudflare D1: Durable State & Resumable Graphs",
   "category": "Phase 5 · LangChain & LangGraph",
   "wordCount": 1638,

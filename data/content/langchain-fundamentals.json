@@ -1,6 +1,6 @@
 {
   "slug": "langchain-fundamentals",
-  "number": 42,
+  "number": 43,
   "title": "LangChain Fundamentals: Runnables, LCEL & Composable Chains on the Edge",
   "category": "Phase 5 · LangChain & LangGraph",
   "wordCount": 1751,

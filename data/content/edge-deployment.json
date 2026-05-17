@@ -1,6 +1,6 @@
 {
   "slug": "edge-deployment",
-  "number": 69,
+  "number": 70,
   "title": "Edge Deployment: On-Device Models, ONNX & WebLLM",
   "category": "Phase 7 · Ship to Production",
   "wordCount": 6181,

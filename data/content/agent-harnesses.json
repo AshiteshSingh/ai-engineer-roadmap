@@ -1,6 +1,6 @@
 {
   "slug": "agent-harnesses",
-  "number": 32,
+  "number": 33,
   "title": "Agent Harnesses: Event Loops, Permission Models & Tool Sandboxing",
   "category": "Phase 4 · Agents, Memory & Orchestration",
   "wordCount": 9784,

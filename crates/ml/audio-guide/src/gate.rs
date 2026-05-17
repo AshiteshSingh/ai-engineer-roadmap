@@ -2,7 +2,7 @@
 //!
 //! Turns the English rules in [`crate::prompts::SYSTEM_PROMPT`] into machine
 //! checks over a generated [`AudioMeta`]. Pure (no I/O): callers either fail
-//! fast in `build-langgraph-audio` (bail before `save_json`) or scan the
+//! fast in `build-audio-guide` (bail before `save_json`) or scan the
 //! on-disk corpus via the `audio-gate` bin. Mirrors the tier/issue/worklist
 //! shape of `crates/ml/core/src/bin/content_gate.rs`.
 //!
@@ -395,12 +395,23 @@ mod tests {
         }
     }
 
-    /// ~45 words of clean, varied prose so chapters clear MIN_WORDS_PER_CHAPTER.
+    /// ~150 words of clean, varied prose: clears MIN_WORDS_PER_CHAPTER and,
+    /// over three chapters, MIN_TOTAL_WORDS. No backticks, pipes, digits,
+    /// acronyms, markdown, or closing/visual phrases.
     const CLEAN: &str = "You start with a plan. The plan is short. \
         Then you build the thing carefully, weighing every option against the \
-        constraints you actually care about. It works. You ship it, and then \
-        you watch how real traffic behaves before deciding what to tune next \
-        in the following iteration of the system you just deployed today.";
+        constraints you actually care about, because the wrong default here \
+        is expensive to undo later. It works. You ship it, and then you watch \
+        how real traffic behaves before deciding what to tune next. Latency \
+        matters, but so does the cost of every call you make on the hot path. \
+        When the numbers drift, you do not panic. You form a hypothesis, you \
+        change one thing, and you measure again with the same workload as \
+        before. Most of the time the bottleneck is not where you guessed. The \
+        fix is usually smaller than the investigation that found it. Good \
+        systems are mostly boring on purpose, and the boring parts are what \
+        let you sleep at night. You keep the interface narrow so the next \
+        person can reason about it without reading every single line you \
+        wrote down for them.";
 
     #[test]
     fn clean_guide_passes_with_no_failures() {

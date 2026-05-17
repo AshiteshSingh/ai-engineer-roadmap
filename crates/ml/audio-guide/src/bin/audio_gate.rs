@@ -5,7 +5,7 @@
 //!   --slug <s> [--json] gate one file; exit 0 ok / 1 fail / 2 not found
 //!
 //! Run from `crates/ml` (npm `audio:gate:scan` / `audio:gate:check`):
-//!   cargo run -q -p langgraph-audio --release --bin audio-gate -- --all
+//!   cargo run -q -p audio-guide --release --bin audio-gate -- --all
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -13,8 +13,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use clap::Parser;
 use serde::Serialize;
 
-use langgraph_audio::audio_meta::AudioMeta;
-use langgraph_audio::gate::{self, AudioGateReport};
+use audio_guide::audio_meta::AudioMeta;
+use audio_guide::gate::{self, AudioGateReport};
 
 #[derive(Parser)]
 #[command(name = "audio-gate", about = "Quality/audio-experience gate for AudioMeta JSON")]
@@ -140,13 +140,13 @@ fn main() -> anyhow::Result<()> {
                     slug: slug.clone(),
                     title: String::new(),
                     ok: false,
-                    failures: vec![langgraph_audio::gate::AudioViolation {
+                    failures: vec![audio_guide::gate::AudioViolation {
                         chapter: None,
                         rule: "unparseable",
                         detail: e.to_string(),
                     }],
                     warnings: vec![],
-                    metrics: langgraph_audio::gate::AudioMetrics {
+                    metrics: audio_guide::gate::AudioMetrics {
                         chapters: 0,
                         total_words: 0,
                         total_duration_secs: 0,

@@ -1,6 +1,6 @@
 {
   "slug": "langmem-vectorize-memory",
-  "number": 48,
+  "number": 49,
   "title": "Long-Term Agent Memory with LangMem & Cloudflare Vectorize",
   "category": "Phase 5 · LangChain & LangGraph",
   "wordCount": 1552,

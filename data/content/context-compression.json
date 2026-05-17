@@ -1,6 +1,6 @@
 {
   "slug": "context-compression",
-  "number": 41,
+  "number": 42,
   "title": "Context Compression: Fitting More Signal into Fewer Tokens",
   "category": "Phase 4 · Agents, Memory & Orchestration",
   "wordCount": 8618,

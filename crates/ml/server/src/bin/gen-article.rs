@@ -1,7 +1,7 @@
 //! Pure-Rust knowledge-base article generator — port of
 //! `backend/scripts/generate_article.py`.
 //!
-//!   cd crates/ml && cargo run -p knowledge-ml-langgraph-server \
+//!   cd crates/ml && cargo run -p knowledge-ml-server \
 //!       --release --bin gen-article -- --slug postgresql-joins \
 //!       --topic "PostgreSQL JOINs" [--category "Software Engineering"] \
 //!       [--related "indexing,query-optimization"] [--no-write]
@@ -14,7 +14,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use knowledge_ml_langgraph_server::{graphs::article, llm};
+use knowledge_ml_server::{graphs::article, llm};
 use serde_json::json;
 use tracing_subscriber::EnvFilter;
 

@@ -6,7 +6,7 @@
 //! a fixed set of navigation-only H2s are dropped; code/diagrams/tables/inline
 //! formatting are stripped so the script reads cleanly to a TTS voice.
 //!
-//!   cd crates/ml && cargo run -p langgraph-audio --release \
+//!   cd crates/ml && cargo run -p audio-guide --release \
 //!       --bin build-audio-meta -- \
 //!       --slug langgraph --title "LangGraph — Audio Guide" \
 //!       --input ../../content/langgraph.md --output ../../data/langgraph-audio.json
@@ -14,7 +14,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use langgraph_audio::{
+use audio_guide::{
     audio_meta::{AudioChapter, AudioMeta},
     markdown, wpm,
 };

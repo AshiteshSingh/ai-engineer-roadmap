@@ -1,5 +1,5 @@
 [package]
-name = "langgraph-audio"
+name = "audio-guide"
 version = "0.1.0"
 edition = "2021"
 description = "Candle-based audio-optimized LangGraph knowledge artifact — generates an AudioMeta-compatible narration script with semantic chapter splits"
@@ -21,8 +21,8 @@ cuda = [
 ]
 
 [[bin]]
-name = "build-langgraph-audio"
-path = "src/bin/build_langgraph_audio.rs"
+name = "build-audio-guide"
+path = "src/bin/build_audio_guide.rs"
 
 # Deterministic markdown → AudioMeta JSON. 1:1 port of the retired
 # backend/scripts/build_audio_meta.py — no LLM, reuses the tested

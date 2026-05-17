@@ -1,6 +1,6 @@
 {
   "slug": "llm-serving",
-  "number": 72,
+  "number": 73,
   "title": "LLM Serving: API Design, Batching & Streaming",
   "category": "Phase 7 · Ship to Production",
   "wordCount": 5338,

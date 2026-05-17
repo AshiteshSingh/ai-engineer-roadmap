@@ -1,6 +1,6 @@
 {
   "slug": "langgraph-deployment",
-  "number": 50,
+  "number": 51,
   "title": "Deploying LangGraph in Production: Platform, Self-Host & the Cloudflare Edge",
   "category": "Phase 5 · LangChain & LangGraph",
   "wordCount": 1743,

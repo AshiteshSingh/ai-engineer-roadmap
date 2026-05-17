@@ -5,7 +5,7 @@
 //! the three reasoner experts + aggregator, 0.3 for the six soft experts),
 //! then a deterministic aggregator. The final object merges the input course
 //! fields + 10 expert scores + aggregator fields (LangGraph `ainvoke` shape),
-//! matching `CourseReviewResult` in `src/lib/langgraph-client.ts`.
+//! matching `CourseReviewResult` in `src/lib/backend-client.ts`.
 
 use deepseek::{DeepSeekClient, HttpClient};
 use futures::future::join_all;

@@ -1,6 +1,6 @@
 {
   "slug": "langgraph-human-in-the-loop",
-  "number": 45,
+  "number": 46,
   "title": "LangGraph Human-in-the-Loop: Interrupts, Approval Gates & Time Travel",
   "category": "Phase 5 · LangChain & LangGraph",
   "wordCount": 1686,

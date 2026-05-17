@@ -58,24 +58,7 @@ results = table.search(np.array([0.15, 0.25, 0.35])).limit(1).to_pandas()
 print(results["text"].iloc[0])  # "hello world"
 ```
 
-```xyflow
-{
-  "direction": "LR",
-  "nodes": [
-    { "id": "connect", "label": "lancedb.connect()", "shape": "circle" },
-    { "id": "create", "label": "create_table()", "shape": "rect" },
-    { "id": "data", "label": "Data:\nvector + text", "shape": "rect" },
-    { "id": "search", "label": "search(query_vector)", "shape": "rect" },
-    { "id": "result", "label": "to_pandas()\n→ nearest neighbor", "shape": "circle" }
-  ],
-  "edges": [
-    { "source": "connect", "target": "create" },
-    { "source": "data", "target": "create" },
-    { "source": "create", "target": "search" },
-    { "source": "search", "target": "result" }
-  ]
-}
-```
+The flow is linear and lazy. `connect()` opens (or creates) the dataset directory on disk; `create_table()` infers an Arrow schema from the first batch and writes the initial immutable version; `search()` builds a query plan that brute-force scans when no index exists yet. Nothing touches memory until `to_pandas()` materializes the requested rows — every step before it is a deferred plan, which is why opening a multi-gigabyte table is instant.
 
 ## Core Concepts
 
@@ -97,22 +80,7 @@ schema = pa.schema([
 table = db.create_table("documents", schema=schema)
 ```
 
-```xyflow
-{
-  "direction": "TD",
-  "nodes": [
-    { "id": "schema", "label": "Schema:\nvector, text, source, timestamp", "shape": "circle" },
-    { "id": "table", "label": "LanceDB\nTable", "shape": "rect" },
-    { "id": "rows", "label": "Rows\n(append-only)", "shape": "rect" },
-    { "id": "versions", "label": "Versions\n(immutable snapshots)", "shape": "rect" }
-  ],
-  "edges": [
-    { "source": "schema", "target": "table" },
-    { "source": "rows", "target": "table" },
-    { "source": "table", "target": "versions" }
-  ]
-}
-```
+Schemas are explicit Arrow types: a fixed-size `list_(float32, 384)` for the embedding column plus ordinary scalar columns for metadata. Once created, a table is append-only — every `add()` writes a new immutable version rather than mutating rows in place. That single design choice is what makes rollback, time-travel queries, and lock-free concurrent reads cheap instead of bolt-on features.
 
 ### Index
 
@@ -245,24 +213,7 @@ table = db.create_table("docs", [
 ])
 ```
 
-```xyflow
-{
-  "direction": "TD",
-  "nodes": [
-    { "id": "raw", "label": "Raw Text\nDocument", "shape": "circle" },
-    { "id": "embed", "label": "Embedding\nModel (BGE)", "shape": "rect" },
-    { "id": "metadata", "label": "Metadata:\nsource, timestamp", "shape": "circle" },
-    { "id": "table", "label": "LanceDB\nTable", "shape": "rect" },
-    { "id": "arrow", "label": "Arrow Columnar\nFormat", "shape": "rect" }
-  ],
-  "edges": [
-    { "source": "raw", "target": "embed" },
-    { "source": "embed", "target": "table" },
-    { "source": "metadata", "target": "table" },
-    { "source": "table", "target": "arrow" }
-  ]
-}
-```
+Ingestion is a three-step funnel: the embedding model turns each raw document into a float32 vector, the vector and its metadata are appended as a single row, and Lance persists them together in the columnar Arrow layout. Because the vector and its metadata live in the same physical row group, a later filtered query never has to re-join across a separate vector store and a separate SQL database — the join was paid once, at write time.
 
 ### Query Execution Pipeline
 
@@ -290,28 +241,7 @@ results["rerank_score"] = scores
 results = results.sort_values("rerank_score", ascending=False).head(5)
 ```
 
-```xyflow
-{
-  "direction": "LR",
-  "nodes": [
-    { "id": "query", "label": "Query:\n'edge computing'", "shape": "circle" },
-    { "id": "embed-q", "label": "Embed\nQuery", "shape": "rect" },
-    { "id": "filter", "label": "Filter:\nsource='docs'", "shape": "rect" },
-    { "id": "ann", "label": "ANN Search\n(top-20)", "shape": "rect" },
-    { "id": "exact", "label": "Exact Rerank\n(cosine)", "shape": "rect" },
-    { "id": "reranker", "label": "Cross-Encoder\nRerank", "shape": "rect" },
-    { "id": "topk", "label": "Top-5\nResults", "shape": "circle" }
-  ],
-  "edges": [
-    { "source": "query", "target": "embed-q" },
-    { "source": "embed-q", "target": "ann" },
-    { "source": "filter", "target": "ann" },
-    { "source": "ann", "target": "exact" },
-    { "source": "exact", "target": "reranker" },
-    { "source": "reranker", "target": "topk" }
-  ]
-}
-```
+The pipeline embeds the query with the *same* model used at ingestion (a mismatch here silently destroys recall), applies the metadata `WHERE` filter, runs ANN to get an over-fetched candidate set — here top-20 for a final top-5 — then optionally reorders with a cross-encoder. Over-fetching before the rerank is the lever that buys back the recall approximate search gives up: the cheap ANN stage casts a wide net, the expensive cross-encoder only scores the 20 survivors.
 
 ### Index Building Process
 
@@ -335,26 +265,7 @@ table.create_index(
 )
 ```
 
-```xyflow
-{
-  "direction": "TD",
-  "nodes": [
-    { "id": "vectors", "label": "All\nVectors", "shape": "circle" },
-    { "id": "kmeans", "label": "K-Means Clustering\n(IVF)", "shape": "rect" },
-    { "id": "pq", "label": "Product Quantization\n(PQ)", "shape": "rect" },
-    { "id": "graph", "label": "HNSW Graph\nConstruction", "shape": "rect" },
-    { "id": "index", "label": "Built\nIndex", "shape": "circle" }
-  ],
-  "edges": [
-    { "source": "vectors", "target": "kmeans" },
-    { "source": "vectors", "target": "pq" },
-    { "source": "vectors", "target": "graph" },
-    { "source": "kmeans", "target": "index" },
-    { "source": "pq", "target": "index" },
-    { "source": "graph", "target": "index" }
-  ]
-}
-```
+Index construction is offline work done once and reused by every subsequent query. For IVF-PQ, k-means carves the vector space into `num_partitions` cells and PQ compresses each vector's residual (vector minus its cell centroid) into `num_sub_vectors` codes — that compression is why IVF-PQ holds millions of vectors in a fraction of the raw memory. HNSW, chosen instead when recall matters more than footprint, wires a navigable multi-layer graph. All three knobs trade build time and memory for query latency.
 
 ## Runtime Internals
 
@@ -411,29 +322,7 @@ Filter push-down → ANN search → exact distance computation → top-K selecti
 # 5. Sort by distance, return top-K
 ```
 
-```xyflow
-{
-  "direction": "LR",
-  "nodes": [
-    { "id": "query", "label": "Query\n+ Filter", "shape": "circle" },
-    { "id": "parse", "label": "Parse\nWHERE clause", "shape": "rect" },
-    { "id": "pushdown", "label": "Push filter\nto scanner", "shape": "rect" },
-    { "id": "scan", "label": "Scan\nmatching rows", "shape": "rect" },
-    { "id": "ann", "label": "ANN on\nfiltered vectors", "shape": "rect" },
-    { "id": "exact", "label": "Exact distance\nrerank", "shape": "rect" },
-    { "id": "topk", "label": "Top-K\nResults", "shape": "circle" }
-  ],
-  "edges": [
-    { "source": "query", "target": "parse" },
-    { "source": "parse", "target": "pushdown" },
-    { "source": "parse", "target": "scan" },
-    { "source": "pushdown", "target": "ann" },
-    { "source": "scan", "target": "ann" },
-    { "source": "ann", "target": "exact" },
-    { "source": "exact", "target": "topk" }
-  ]
-}
-```
+A query is compiled before it runs. The `WHERE` clause is parsed into filter predicates; those predicates are pushed *into* the Lance scanner so only matching rows' vector columns are read off disk; ANN runs over that already-reduced set; and exact distances are recomputed on the survivors before top-K selection. Filter push-down is the difference between scanning a million vectors and scanning the ten thousand that could possibly match — the selectivity of your metadata filter, not the table size, sets query cost.
 
 ## Patterns
 
@@ -508,24 +397,7 @@ v2_results = table.search(query).version(2).to_pandas()
 table.restore(1)
 ```
 
-```xyflow
-{
-  "direction": "TD",
-  "nodes": [
-    { "id": "v1", "label": "Version 1:\ninitial", "shape": "rect" },
-    { "id": "v2", "label": "Version 2:\nupdated", "shape": "rect" },
-    { "id": "ab", "label": "A/B Test:\nquery both", "shape": "diamond" },
-    { "id": "rollback", "label": "Rollback\nto V1", "shape": "diamond" }
-  ],
-  "edges": [
-    { "source": "v1", "target": "v2" },
-    { "source": "v1", "target": "ab" },
-    { "source": "v2", "target": "ab" },
-    { "source": "ab", "target": "rollback" },
-    { "source": "rollback", "target": "v1", "label": "rollback" }
-  ]
-}
-```
+Because every write is an immutable version, A/B testing a re-embedding or a re-chunking run is just querying two version numbers of the *same* table — no parallel copy, no separate index to keep in sync. Promoting or reverting a dataset is a metadata pointer move (`restore`), so a bad embedding migration is recoverable in milliseconds instead of a full re-ingest.
 
 ### Pattern 3: Hybrid Search (Vector + Metadata)
 
@@ -544,24 +416,7 @@ results = (
 )
 ```
 
-```xyflow
-{
-  "direction": "TD",
-  "nodes": [
-    { "id": "query", "label": "Query\nVector", "shape": "circle" },
-    { "id": "filters", "label": "Filters:\ntimestamp, source, length", "shape": "circle" },
-    { "id": "pushdown", "label": "Filter\nPush-Down", "shape": "rect" },
-    { "id": "ann", "label": "ANN on\nfiltered set", "shape": "rect" },
-    { "id": "results", "label": "Filtered\nTop-K", "shape": "circle" }
-  ],
-  "edges": [
-    { "source": "query", "target": "pushdown" },
-    { "source": "filters", "target": "pushdown" },
-    { "source": "pushdown", "target": "ann" },
-    { "source": "ann", "target": "results" }
-  ]
-}
-```
+Stacking `where()` clauses composes them with AND, and every predicate is pushed down together, so the ANN search only ever sees rows that already satisfy *all* of them. This is strictly stronger than post-filtering a vector result: post-filtering can hand back fewer than `limit` rows when the filter is selective, whereas push-down guarantees the top-K is drawn from the qualifying set.
 
 ### Pattern 4: RAG Pipeline with LanceDB
 

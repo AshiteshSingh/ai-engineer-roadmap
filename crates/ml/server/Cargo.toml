@@ -1,21 +1,21 @@
 [package]
-name = "knowledge-ml-langgraph-server"
+name = "knowledge-ml-server"
 version = "0.1.0"
 edition = "2021"
 description = "Local Rust replacement for the Python FastAPI LangGraph backend — SQLite + LanceDB RAG chat over the /runs/wait contract"
 license = "MIT"
 
 [lib]
-name = "knowledge_ml_langgraph_server"
+name = "knowledge_ml_server"
 path = "src/lib.rs"
 
 [[bin]]
-name = "langgraph-server"
-path = "src/bin/langgraph-server.rs"
+name = "knowledge-server"
+path = "src/bin/knowledge-server.rs"
 
 [[bin]]
-name = "langgraph-index"
-path = "src/bin/langgraph-index.rs"
+name = "knowledge-index"
+path = "src/bin/knowledge-index.rs"
 
 # Port of backend/scripts/generate_article.py — runs the in-process
 # article_generate graph and writes content/<slug>.md.

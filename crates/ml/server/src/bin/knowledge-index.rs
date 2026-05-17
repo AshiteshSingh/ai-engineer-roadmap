@@ -1,7 +1,7 @@
 //! Build the LanceDB section index from `data/knowledge.db`.
 //!
-//!   cd crates/ml && cargo run -p knowledge-ml-langgraph-server \
-//!       --release --bin langgraph-index
+//!   cd crates/ml && cargo run -p knowledge-ml-server \
+//!       --release --bin knowledge-index
 //!
 //! Requires the candle embed server running (default http://localhost:9999):
 //!   cd crates/candle && cargo run --release --bin embed-server --features server
@@ -9,15 +9,15 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use knowledge_ml_langgraph_server::retrieval::{embed_batch, load_all_sections};
-use knowledge_ml_langgraph_server::store::SectionStore;
+use knowledge_ml_server::retrieval::{embed_batch, load_all_sections};
+use knowledge_ml_server::store::SectionStore;
 use tracing_subscriber::EnvFilter;
 
 /// Max chars of section text sent to the embed server.
 const EMBED_TEXT_CHARS: usize = 1800;
 
 #[derive(Parser)]
-#[command(name = "langgraph-index")]
+#[command(name = "knowledge-index")]
 struct Args {
     /// Canonical SQLite content store.
     #[arg(long, default_value = "../../data/knowledge.db")]

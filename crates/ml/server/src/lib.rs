@@ -1,7 +1,7 @@
 //! Local Rust replacement for the Python FastAPI LangGraph backend — now a
 //! full drop-in, not just `chat`.
 //!
-//! Honors the exact wire contract that `src/lib/langgraph-client.ts` calls:
+//! Honors the exact wire contract that `src/lib/backend-client.ts` calls:
 //! `POST /runs/wait` with `{ assistant_id, input, thread_id? }`. All six
 //! graphs the Python service exposes are implemented:
 //!

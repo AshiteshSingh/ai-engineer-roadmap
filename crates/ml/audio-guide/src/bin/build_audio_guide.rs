@@ -15,10 +15,10 @@
 //!    calls for chapters already on disk.
 //!
 //! Run from `apps/knowledge/`:
-//!     pnpm ml:langgraph-audio
+//!     pnpm ml:audio-guide
 //!
 //! Or directly from `apps/knowledge/ml/`:
-//!     cargo run -p langgraph-audio --release --bin build-langgraph-audio
+//!     cargo run -p audio-guide --release --bin build-audio-guide
 //!
 //! Required env: `DEEPSEEK_API_KEY` (looked up via dotenvy from the workspace
 //! root `.env`; falls back to the current process environment).
@@ -29,14 +29,14 @@ use clap::Parser;
 use serde::Deserialize;
 use tracing_subscriber::EnvFilter;
 
-use langgraph_audio::{
+use audio_guide::{
     audio_meta::{AudioChapter, AudioMeta},
     markdown, prompts, wpm,
 };
 
 #[derive(Parser)]
 #[command(
-    name = "build-langgraph-audio",
+    name = "build-audio-guide",
     about = "Generate an AudioMeta JSON for a knowledge article via DeepSeek v4"
 )]
 struct Args {
@@ -137,7 +137,7 @@ async fn main() -> anyhow::Result<()> {
     // failure bails BEFORE save_json so a non-conforming AudioMeta is never
     // written (and `ml:rag-audio`'s `|| exit 1` aborts the batch). Escape
     // hatch: --no-gate.
-    let gate_report = langgraph_audio::gate::gate_audio(&meta);
+    let gate_report = audio_guide::gate::gate_audio(&meta);
     for w in &gate_report.warnings {
         tracing::warn!(
             "audio-gate warn [{}]{}: {}",
