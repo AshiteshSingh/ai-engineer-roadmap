@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import { Pill, Button } from "@/components/ui";
-import { DIFFICULTY_LABEL, SORT_OPTIONS } from "@/components/evals/types";
+import { DIFFICULTY_LABEL, SORT_OPTIONS } from "@/components/phase-hub/types";
 import type {
-  EvalsControlsProps,
+  PhaseControlsProps,
   Difficulty,
   SortKey,
-} from "@/components/evals/types";
-import styles from "./EvalsControls.module.css";
+} from "@/components/phase-hub/types";
+import styles from "./PhaseControls.module.css";
 
 /** Tiny inline class joiner (cannot import components/ui/cx here). */
 function cx(...parts: Array<string | false | null | undefined>): string {
@@ -21,12 +21,12 @@ const DIFFICULTIES: readonly Difficulty[] = [
   "advanced",
 ];
 
-const SEARCH_INPUT_ID = "evals-controls-search";
+const SEARCH_INPUT_ID = "phase-controls-search";
 
-export const EvalsControls = React.forwardRef<
+export const PhaseControls = React.forwardRef<
   HTMLDivElement,
-  EvalsControlsProps
->(function EvalsControls(
+  PhaseControlsProps
+>(function PhaseControls(
   { state, facets, matchCount, onChange, onReset, className },
   ref,
 ) {
@@ -111,4 +111,4 @@ export const EvalsControls = React.forwardRef<
   );
 });
 
-EvalsControls.displayName = "EvalsControls";
+PhaseControls.displayName = "PhaseControls";

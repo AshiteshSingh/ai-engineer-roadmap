@@ -1,31 +1,31 @@
 "use client";
 
 // Stateful client container: owns the filter state, derives facets /
-// filtered+sorted lessons / progress, and wires the controlled EvalsControls
-// to the presentational LessonGrid. The only stateful piece of /evals/v2.
+// filtered+sorted lessons / progress, and wires the controlled PhaseControls
+// to the presentational LessonGrid. The only stateful piece of a phase hub.
 import * as React from "react";
-import { EvalsControls } from "@/components/evals/EvalsControls";
-import { LessonGrid } from "@/components/evals/LessonGrid";
-import { DEFAULT_EVALS_FILTER_STATE } from "@/components/evals/types";
-import type { Lesson, EvalsFilterState } from "@/components/evals/types";
+import { PhaseControls } from "@/components/phase-hub/PhaseControls";
+import { LessonGrid } from "@/components/phase-hub/LessonGrid";
+import { DEFAULT_PHASE_FILTER_STATE } from "@/components/phase-hub/types";
+import type { Lesson, PhaseFilterState } from "@/components/phase-hub/types";
 import {
   computeFacets,
   computeProgressBySlug,
   filterAndSortLessons,
-} from "@/components/evals/filter";
-import styles from "./EvalsBrowser.module.css";
+} from "@/components/phase-hub/filter";
+import styles from "./PhaseBrowser.module.css";
 
-export interface EvalsBrowserProps {
+export interface PhaseBrowserProps {
   lessons: Lesson[];
   heading?: string;
 }
 
-export function EvalsBrowser({
+export function PhaseBrowser({
   lessons,
   heading = "Lessons in this phase",
-}: EvalsBrowserProps) {
-  const [state, setState] = React.useState<EvalsFilterState>(
-    DEFAULT_EVALS_FILTER_STATE,
+}: PhaseBrowserProps) {
+  const [state, setState] = React.useState<PhaseFilterState>(
+    DEFAULT_PHASE_FILTER_STATE,
   );
 
   const facets = React.useMemo(() => computeFacets(lessons), [lessons]);
@@ -40,12 +40,12 @@ export function EvalsBrowser({
 
   return (
     <div className={styles.layout}>
-      <EvalsControls
+      <PhaseControls
         state={state}
         facets={facets}
         matchCount={filtered.length}
         onChange={setState}
-        onReset={() => setState(DEFAULT_EVALS_FILTER_STATE)}
+        onReset={() => setState(DEFAULT_PHASE_FILTER_STATE)}
       />
       <LessonGrid
         lessons={filtered}
@@ -56,4 +56,4 @@ export function EvalsBrowser({
   );
 }
 
-EvalsBrowser.displayName = "EvalsBrowser";
+PhaseBrowser.displayName = "PhaseBrowser";

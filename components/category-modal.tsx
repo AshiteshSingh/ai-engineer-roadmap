@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { Dialog } from "@radix-ui/themes";
 import type { GroupedLessons } from "@/lib/articles";
+import { PHASE_HUB_ROUTES } from "@/lib/phase-hubs";
 import styles from "./category-modal.module.css";
 
 interface CategoryModalApi {
@@ -182,6 +183,19 @@ export function CategoryModalTrigger({
   // routes) — fall back to native /#cat-<slug> navigation, the original
   // cross-page behavior.
   const ctx = useContext(Ctx);
+
+  // Phases with a dedicated hub page: the card is a plain navigation link,
+  // no modal interception. Works with or without a provider, so the shared
+  // Footer on non-home routes links correctly too.
+  const hubRoute = PHASE_HUB_ROUTES[slug];
+  if (hubRoute) {
+    return (
+      <Link href={hubRoute} className={className}>
+        {children}
+      </Link>
+    );
+  }
+
   const href = `/#cat-${slug}`;
 
   const handleClick = (e: React.MouseEvent) => {

@@ -1,5 +1,5 @@
 import React from "react";
-import type { LessonGridProps } from "@/components/evals/types";
+import type { LessonGridProps } from "@/components/phase-hub/types";
 import { LessonCard } from "../LessonCard";
 import styles from "./LessonGrid.module.css";
 

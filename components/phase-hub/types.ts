@@ -1,7 +1,7 @@
-// SHARED CONTRACTS for the /evals/v2 redesign.
+// SHARED CONTRACTS for the reusable phase-hub suite (powers /evals, /rag, …).
 // Single-writer: integrator only. Read-only for the presentational teams
-// (EvalsHero / LessonCard / LessonGrid / EvalsControls). Every team imports
-// from "@/components/evals/types" + "@/components/ui" only.
+// (PhaseHero / LessonCard / LessonGrid / PhaseControls). Every team imports
+// from "@/components/phase-hub/types" + "@/components/ui" only.
 import type { Lesson, CategoryMeta } from "@/lib/data";
 
 export type { Lesson, CategoryMeta } from "@/lib/data";
@@ -18,8 +18,8 @@ export type SortKey =
   | "reading-desc"
   | "difficulty-asc";
 
-/** The full client filter/sort state. Owned by EvalsBrowser (integrator). */
-export interface EvalsFilterState {
+/** The full client filter/sort state. Owned by PhaseBrowser (integrator). */
+export interface PhaseFilterState {
   /** Free-text query matched against title + excerpt (case-insensitive). */
   query: string;
   /** Empty array = "all difficulties". */
@@ -29,7 +29,7 @@ export interface EvalsFilterState {
 }
 
 /** Derived facet data for rendering control affordances (counts, etc.). */
-export interface EvalsFacets {
+export interface PhaseFacets {
   total: number;
   /** Count of lessons per difficulty across the UNFILTERED set. */
   countsByDifficulty: Record<Difficulty, number>;
@@ -37,8 +37,8 @@ export interface EvalsFacets {
   totalMinutes: number;
 }
 
-/** Default initial state (re-used by EvalsBrowser; safe for teams to read). */
-export const DEFAULT_EVALS_FILTER_STATE: EvalsFilterState = {
+/** Default initial state (re-used by PhaseBrowser; safe for teams to read). */
+export const DEFAULT_PHASE_FILTER_STATE: PhaseFilterState = {
   query: "",
   difficulties: [],
   sort: "number-asc",
@@ -63,8 +63,8 @@ export const SORT_OPTIONS: ReadonlyArray<{ value: SortKey; label: string }> = [
 
 /* ---------- Component prop contracts (one per team) ---------- */
 
-/** TEAM 1 — EvalsHero (presentational, server-safe; NO "use client"). */
-export interface EvalsHeroProps {
+/** TEAM 1 — PhaseHero (presentational, server-safe; NO "use client"). */
+export interface PhaseHeroProps {
   /** Display title (the human category name). */
   category: string;
   meta: CategoryMeta;
@@ -96,20 +96,20 @@ export interface LessonGridProps {
   className?: string;
 }
 
-/** TEAM 3 — EvalsControls ("use client", CONTROLLED, owns NO state).
+/** TEAM 3 — PhaseControls ("use client", CONTROLLED, owns NO state).
  *  Renders search box, difficulty toggles, sort select, result count.
  *  Emits the FULL next state via onChange. */
-export interface EvalsControlsProps {
-  /** Current state (owned by parent EvalsBrowser). */
-  state: EvalsFilterState;
+export interface PhaseControlsProps {
+  /** Current state (owned by parent PhaseBrowser). */
+  state: PhaseFilterState;
   /** Facets for counts/affordances (unfiltered totals). */
-  facets: EvalsFacets;
+  facets: PhaseFacets;
   /** Number of lessons currently matching (filtered count) — for the
    *  "Showing N of M" line. Parent computes this. */
   matchCount: number;
-  /** Emits the complete next EvalsFilterState. */
-  onChange: (next: EvalsFilterState) => void;
-  /** Resets to DEFAULT_EVALS_FILTER_STATE. Parent supplies handler. */
+  /** Emits the complete next PhaseFilterState. */
+  onChange: (next: PhaseFilterState) => void;
+  /** Resets to DEFAULT_PHASE_FILTER_STATE. Parent supplies handler. */
   onReset: () => void;
   className?: string;
 }

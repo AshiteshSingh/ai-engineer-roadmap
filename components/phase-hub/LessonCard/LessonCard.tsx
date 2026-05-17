@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { DIFFICULTY_LABEL } from "@/components/evals/types";
-import type { LessonCardProps } from "@/components/evals/types";
+import { DIFFICULTY_LABEL } from "@/components/phase-hub/types";
+import type { LessonCardProps } from "@/components/phase-hub/types";
 import styles from "./LessonCard.module.css";
 
 function cx(...parts: Array<string | false | null | undefined>): string {

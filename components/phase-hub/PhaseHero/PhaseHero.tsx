@@ -1,7 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import type { EvalsHeroProps } from "@/components/evals/types";
-import styles from "./EvalsHero.module.css";
+import type { PhaseHeroProps } from "@/components/phase-hub/types";
+import styles from "./PhaseHero.module.css";
 
 /** Local, dependency-free class joiner (mirrors components/ui/cx). */
 function cx(...a: (string | false | null | undefined)[]): string {
@@ -9,13 +9,13 @@ function cx(...a: (string | false | null | undefined)[]): string {
 }
 
 /**
- * EvalsHero — presentational, server-safe hero/banner for the evals category page.
+ * PhaseHero — presentational, server-safe hero/banner for a phase hub page.
  *
  * Renders a breadcrumb, title, optional excerpt, optional learning outcomes,
  * and a row of metadata badges. No client interactivity.
  */
-export const EvalsHero = React.forwardRef<HTMLElement, EvalsHeroProps>(
-  function EvalsHero(
+export const PhaseHero = React.forwardRef<HTMLElement, PhaseHeroProps>(
+  function PhaseHero(
     {
       category,
       meta,
@@ -89,4 +89,4 @@ export const EvalsHero = React.forwardRef<HTMLElement, EvalsHeroProps>(
   },
 );
 
-EvalsHero.displayName = "EvalsHero";
+PhaseHero.displayName = "PhaseHero";

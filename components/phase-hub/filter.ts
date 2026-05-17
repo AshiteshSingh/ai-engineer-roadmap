@@ -1,11 +1,11 @@
-// Pure, dependency-free filter/sort/derive helpers for the evals browser.
+// Pure, dependency-free filter/sort/derive helpers for the phase browser.
 // No React, no DOM — safe to unit-test and to call from client or server.
 import type {
   Lesson,
   Difficulty,
-  EvalsFilterState,
-  EvalsFacets,
-} from "@/components/evals/types";
+  PhaseFilterState,
+  PhaseFacets,
+} from "@/components/phase-hub/types";
 
 const DIFFICULTY_RANK: Record<Difficulty, number> = {
   beginner: 0,
@@ -14,7 +14,7 @@ const DIFFICULTY_RANK: Record<Difficulty, number> = {
 };
 
 /** Unfiltered facets: per-difficulty counts + total reading minutes. */
-export function computeFacets(lessons: Lesson[]): EvalsFacets {
+export function computeFacets(lessons: Lesson[]): PhaseFacets {
   const countsByDifficulty: Record<Difficulty, number> = {
     beginner: 0,
     intermediate: 0,
@@ -31,7 +31,7 @@ export function computeFacets(lessons: Lesson[]): EvalsFacets {
 /** Apply the query + difficulty filters, then the chosen sort. Pure. */
 export function filterAndSortLessons(
   lessons: Lesson[],
-  state: EvalsFilterState,
+  state: PhaseFilterState,
 ): Lesson[] {
   const q = state.query.trim().toLowerCase();
   const filtered = lessons.filter((l) => {
