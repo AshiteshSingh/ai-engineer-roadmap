@@ -137,7 +137,14 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
       </div>
 
       <PageAnalytics lessonSlug={slug} />
-      {audioMeta && <AudioPlayer meta={audioMeta} />}
+      {audioMeta && (
+        <AudioPlayer
+          meta={audioMeta}
+          gradient={meta.gradient}
+          icon={meta.icon}
+          category={lesson.category}
+        />
+      )}
       <ScrollToTop />
     </div>
   );

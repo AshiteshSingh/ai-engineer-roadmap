@@ -6,12 +6,14 @@ import { cx } from "@/components/ui";
 import styles from "./audio-player.module.css";
 
 function formatTime(secs: number): string {
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
+  const s0 = Math.max(0, Math.floor(secs));
+  const m = Math.floor(s0 / 60);
+  const s = s0 % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+const SKIP = 30;
 
 const STORAGE_KEY = "knowledge_last_played";
 
@@ -59,7 +61,17 @@ function persistState(state: LastPlayedState) {
   putRemoteState(state);
 }
 
-export function AudioPlayer({ meta }: { meta: AudioMeta }) {
+export function AudioPlayer({
+  meta,
+  gradient,
+  icon,
+  category,
+}: {
+  meta: AudioMeta;
+  gradient?: [string, string];
+  icon?: string;
+  category?: string;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -68,7 +80,7 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
   const [showChapters, setShowChapters] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Find current chapter via binary search
+  // Find current chapter via reverse scan
   const currentChapterIndex = (() => {
     const chapters = meta.chapters;
     let idx = 0;
@@ -82,6 +94,10 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
   })();
 
   const currentChapter = meta.chapters[currentChapterIndex];
+  const totalSecs = duration || meta.duration_secs;
+  const remaining = Math.max(0, totalSecs - currentTime);
+  const hasPrevChapter = currentChapterIndex > 0;
+  const hasNextChapter = currentChapterIndex < meta.chapters.length - 1;
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -214,8 +230,30 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
   const skip = useCallback((delta: number) => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + delta));
-  }, []);
+    audio.currentTime = Math.max(
+      0,
+      Math.min(audio.duration || meta.duration_secs, audio.currentTime + delta),
+    );
+  }, [meta.duration_secs]);
+
+  const goToChapter = useCallback(
+    (dir: -1 | 1) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      let idx = 0;
+      for (let i = meta.chapters.length - 1; i >= 0; i--) {
+        if (audio.currentTime >= meta.chapters[i].start_secs) {
+          idx = i;
+          break;
+        }
+      }
+      const ch = meta.chapters[idx + dir];
+      if (!ch) return;
+      seek(ch.start_secs);
+      if (!isPlaying) audio.play().catch(() => {});
+    },
+    [meta.chapters, seek, isPlaying],
+  );
 
   const cycleSpeed = useCallback(() => {
     const audio = audioRef.current;
@@ -232,14 +270,106 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
     });
   }, [playbackRate, meta.slug]);
 
-  const seekToChapter = useCallback((chapter: AudioChapter) => {
-    seek(chapter.start_secs);
-    setShowChapters(false);
-    const audio = audioRef.current;
-    if (audio && !isPlaying) audio.play();
-  }, [seek, isPlaying]);
+  const seekToChapter = useCallback(
+    (chapter: AudioChapter) => {
+      seek(chapter.start_secs);
+      setShowChapters(false);
+      const audio = audioRef.current;
+      if (audio && !isPlaying) audio.play();
+    },
+    [seek, isPlaying],
+  );
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  // Media Session — lock-screen / headphone / car controls.
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    try {
+      ms.metadata = new MediaMetadata({
+        title: meta.title,
+        artist: category ?? "AI Engineer Roadmap",
+        album: "AI Engineer Roadmap",
+      });
+    } catch {}
+
+    const at = () => audioRef.current;
+    const chapterAt = (t: number) => {
+      let idx = 0;
+      for (let i = meta.chapters.length - 1; i >= 0; i--) {
+        if (t >= meta.chapters[i].start_secs) {
+          idx = i;
+          break;
+        }
+      }
+      return idx;
+    };
+    const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
+      ["play", () => at()?.play().catch(() => {})],
+      ["pause", () => at()?.pause()],
+      [
+        "seekbackward",
+        () => {
+          const a = at();
+          if (a) a.currentTime = Math.max(0, a.currentTime - SKIP);
+        },
+      ],
+      [
+        "seekforward",
+        () => {
+          const a = at();
+          if (a)
+            a.currentTime = Math.min(
+              a.duration || meta.duration_secs,
+              a.currentTime + SKIP,
+            );
+        },
+      ],
+      [
+        "seekto",
+        (d) => {
+          const a = at();
+          if (a && typeof d.seekTime === "number") a.currentTime = d.seekTime;
+        },
+      ],
+      [
+        "previoustrack",
+        () => {
+          const a = at();
+          if (!a) return;
+          const ch = meta.chapters[chapterAt(a.currentTime) - 1];
+          if (ch) a.currentTime = ch.start_secs;
+        },
+      ],
+      [
+        "nexttrack",
+        () => {
+          const a = at();
+          if (!a) return;
+          const ch = meta.chapters[chapterAt(a.currentTime) + 1];
+          if (ch) a.currentTime = ch.start_secs;
+        },
+      ],
+    ];
+    for (const [action, fn] of handlers) {
+      try {
+        ms.setActionHandler(action, fn);
+      } catch {}
+    }
+    return () => {
+      for (const [action] of handlers) {
+        try {
+          ms.setActionHandler(action, null);
+        } catch {}
+      }
+    };
+  }, [meta.slug, meta.title, meta.chapters, meta.duration_secs, category]);
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+  }, [isPlaying]);
+
+  const progress = totalSecs > 0 ? (currentTime / totalSecs) * 100 : 0;
 
   return (
     <>
@@ -247,19 +377,31 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
 
       {/* Chapter list overlay */}
       {showChapters && (
-        <div className={styles.audioChaptersBackdrop} onClick={() => setShowChapters(false)}>
-          <div className={styles.audioChaptersPanel} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={styles.audioChaptersBackdrop}
+          onClick={() => setShowChapters(false)}
+        >
+          <div
+            className={styles.audioChaptersPanel}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className={styles.audioChaptersHandle} />
             <div className={styles.audioChaptersTitle}>Chapters</div>
             {meta.chapters.map((ch) => (
               <button
                 key={ch.index}
-                className={cx(styles.audioChapterItem, ch.index === currentChapterIndex && styles.audioChapterItemActive)}
+                className={cx(
+                  styles.audioChapterItem,
+                  ch.index === currentChapterIndex &&
+                    styles.audioChapterItemActive,
+                )}
                 onClick={() => seekToChapter(ch)}
               >
                 <span className={styles.audioChapterIdx}>{ch.index + 1}</span>
                 <span className={styles.audioChapterName}>{ch.title}</span>
-                <span className={styles.audioChapterTime}>{formatTime(ch.start_secs)}</span>
+                <span className={styles.audioChapterTime}>
+                  {formatTime(ch.start_secs)}
+                </span>
               </button>
             ))}
           </div>
@@ -267,64 +409,173 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
       )}
 
       {/* Player bar */}
-      <div className={styles.audioPlayer}>
+      <div
+        className={styles.audioPlayer}
+        style={
+          {
+            ["--cat-from" as string]: gradient?.[0] ?? "var(--ds-accent)",
+            ["--cat-to" as string]: gradient?.[1] ?? "var(--cyan-9)",
+          } as React.CSSProperties
+        }
+      >
+        {/* Row 1 — full-width progress */}
+        <div className={styles.audioSeekWrap}>
+          <input
+            type="range"
+            className={styles.audioSeek}
+            min={0}
+            max={totalSecs}
+            step={0.1}
+            value={currentTime}
+            onChange={(e) => seek(Number(e.target.value))}
+            style={{ "--progress": `${progress}%` } as React.CSSProperties}
+            aria-label="Seek"
+            role="slider"
+          />
+        </div>
+
+        {/* Row 2 — cover · info · transport · speed · chapters */}
         <div className={styles.audioPlayerInner}>
-          {/* Play/Pause */}
-          <button className={cx(styles.audioBtn, styles.audioBtnPlay)} onClick={togglePlay} aria-label={isPlaying ? "Pause" : "Play"} aria-pressed={isPlaying}>
-            {isPlaying ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5.14v14.72a1 1 0 001.5.86l11-7.36a1 1 0 000-1.72l-11-7.36A1 1 0 008 5.14z" />
-              </svg>
-            )}
-          </button>
+          <div className={styles.audioCover} aria-hidden="true">
+            {icon ?? "♪"}
+          </div>
 
-          {/* Skip back 15s */}
-          <button className={styles.audioBtn} onClick={() => skip(-15)} aria-label="Back 15 seconds">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M1 4v6h6" />
-              <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
-            </svg>
-          </button>
-
-          {/* Skip forward 15s */}
-          <button className={styles.audioBtn} onClick={() => skip(15)} aria-label="Forward 15 seconds">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M23 4v6h-6" />
-              <path d="M20.49 15a9 9 0 11-2.13-9.36L23 10" />
-            </svg>
-          </button>
-
-          {/* Info */}
           <div className={styles.audioInfo}>
-            <div className={styles.audioInfoChapter}>{currentChapter?.title}</div>
+            <div className={styles.audioInfoChapter}>
+              {currentChapter?.title ?? meta.title}
+            </div>
             <div className={styles.audioInfoTime}>
-              {formatTime(currentTime)} / {formatTime(duration || meta.duration_secs)}
+              {formatTime(currentTime)} &middot; -{formatTime(remaining)}
             </div>
           </div>
 
-          {/* Seek bar */}
-          <div className={styles.audioSeekWrap}>
-            <input
-              type="range"
-              className={styles.audioSeek}
-              min={0}
-              max={duration || meta.duration_secs}
-              step={0.1}
-              value={currentTime}
-              onChange={(e) => seek(Number(e.target.value))}
-              style={{ "--progress": `${progress}%` } as React.CSSProperties}
-              aria-label="Seek"
-              role="slider"
-            />
+          <div className={styles.audioTransport}>
+            {/* Previous chapter */}
+            <button
+              className={styles.audioBtn}
+              onClick={() => goToChapter(-1)}
+              disabled={!hasPrevChapter}
+              aria-label="Previous chapter"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="5" width="2.4" height="14" rx="1" />
+                <path d="M19 5v14L9 12z" />
+              </svg>
+            </button>
+
+            {/* Back 30s */}
+            <button
+              className={styles.audioBtn}
+              onClick={() => skip(-SKIP)}
+              aria-label="Back 30 seconds"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M1 4v6h6" />
+                <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                <text
+                  x="12.5"
+                  y="16"
+                  fill="currentColor"
+                  stroke="none"
+                  fontSize="8"
+                  fontWeight="700"
+                  textAnchor="middle"
+                >
+                  30
+                </text>
+              </svg>
+            </button>
+
+            {/* Play / Pause */}
+            <button
+              className={cx(styles.audioBtn, styles.audioBtnPlay)}
+              onClick={togglePlay}
+              aria-label={isPlaying ? "Pause" : "Play"}
+              aria-pressed={isPlaying}
+            >
+              {isPlaying ? (
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              ) : (
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M8 5.14v14.72a1 1 0 001.5.86l11-7.36a1 1 0 000-1.72l-11-7.36A1 1 0 008 5.14z" />
+                </svg>
+              )}
+            </button>
+
+            {/* Forward 30s */}
+            <button
+              className={styles.audioBtn}
+              onClick={() => skip(SKIP)}
+              aria-label="Forward 30 seconds"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M23 4v6h-6" />
+                <path d="M20.49 15a9 9 0 11-2.13-9.36L23 10" />
+                <text
+                  x="11.5"
+                  y="16"
+                  fill="currentColor"
+                  stroke="none"
+                  fontSize="8"
+                  fontWeight="700"
+                  textAnchor="middle"
+                >
+                  30
+                </text>
+              </svg>
+            </button>
+
+            {/* Next chapter */}
+            <button
+              className={styles.audioBtn}
+              onClick={() => goToChapter(1)}
+              disabled={!hasNextChapter}
+              aria-label="Next chapter"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M5 5v14l10-7z" />
+                <rect x="15.6" y="5" width="2.4" height="14" rx="1" />
+              </svg>
+            </button>
           </div>
 
           {/* Speed */}
-          <button className={cx(styles.audioBtn, styles.audioBtnSpeed)} onClick={cycleSpeed} aria-label={`Playback speed: ${playbackRate}x`}>
+          <button
+            className={cx(styles.audioBtn, styles.audioBtnSpeed)}
+            onClick={cycleSpeed}
+            aria-label={`Playback speed: ${playbackRate}x`}
+          >
             {playbackRate}x
           </button>
 
@@ -333,8 +584,17 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
             className={styles.audioBtn}
             onClick={() => setShowChapters(!showChapters)}
             aria-label="Show chapters"
+            aria-expanded={showChapters}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
               <line x1="8" y1="6" x2="21" y2="6" />
               <line x1="8" y1="12" x2="21" y2="12" />
               <line x1="8" y1="18" x2="21" y2="18" />
@@ -343,7 +603,6 @@ export function AudioPlayer({ meta }: { meta: AudioMeta }) {
               <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
           </button>
-
         </div>
       </div>
     </>
