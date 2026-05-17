@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Lesson, GroupedLessons } from "@/lib/articles";
+import { useCategoryModal } from "@/components/category-modal";
 
 /** Fill incomplete last row: if 1 leftover → full-width, if 2 → last spans 2.
  *  The base .cat-card classes are owned by HP-TEAM-6; identity gradient comes
@@ -61,6 +62,7 @@ interface Props {
 }
 
 export function CategoryGrid({ groups }: Props) {
+  const { open } = useCategoryModal();
   const [activeSlug, setActiveSlug] = useState<string>("");
 
   useEffect(() => {
@@ -95,11 +97,7 @@ export function CategoryGrid({ groups }: Props) {
                 type="button"
                 className={`cat-nav-pill cat-${g.meta.slug}${isActive ? " cat-nav-pill--active" : ""}`}
                 aria-pressed={isActive}
-                onClick={() => {
-                  document
-                    .getElementById(`cat-${g.meta.slug}`)
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
+                onClick={() => open(g.meta.slug)}
               >
                 <span className="cat-nav-dot" aria-hidden="true" />
                 <span className="cat-nav-icon" aria-hidden="true">{g.meta.icon}</span>

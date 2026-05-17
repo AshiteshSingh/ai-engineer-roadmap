@@ -1,0 +1,211 @@
+/* Co-located styles for components/category-modal.tsx — no global CSS.
+ * Token-driven (app/styles/tokens.css); does NOT reuse the global
+ * cat-card-* block (owned by HP-TEAM-6, tuned for the bento grid). */
+
+.content {
+  /* Per-category accent; set inline from group.meta.gradient on .body.
+   * Indigo defaults so it degrades gracefully. */
+  --cat-from: var(--indigo-9);
+  --cat-to: var(--indigo-11);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-2xl);
+  line-height: 1;
+  border-radius: var(--ds-radius-md);
+  border: var(--ds-hairline-subtle);
+  background: color-mix(in srgb, var(--cat-from) 14%, transparent);
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  line-height: var(--ds-leading-tight);
+  color: var(--ds-ink);
+}
+
+.stats {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ds-text-muted);
+}
+
+.desc {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: var(--ds-leading-body);
+  color: var(--ds-text);
+}
+
+.outcomes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.outcomes li {
+  position: relative;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--ds-leading-snug);
+  color: var(--ds-text);
+}
+
+.outcomes li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--cat-from);
+}
+
+.listWrap {
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: var(--ds-hairline-subtle);
+  border-bottom: var(--ds-hairline-subtle);
+  margin: 0 calc(-1 * var(--space-2));
+  padding: var(--space-2);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rowNum {
+  flex-shrink: 0;
+  width: 2ch;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--ds-text-faint);
+}
+
+.rowLink {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--ds-radius);
+  color: var(--ds-text);
+  text-decoration: none;
+  transition: var(--ds-transition-colors);
+}
+
+.rowLink:hover,
+.rowLink:focus-visible {
+  background: var(--ds-surface-hover);
+  color: var(--ds-ink);
+  outline: none;
+}
+
+.rowTitle {
+  font-size: var(--text-sm);
+  line-height: var(--ds-leading-snug);
+}
+
+.rowMeta {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--ds-text-muted);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.secondary {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  border-radius: var(--ds-radius);
+  border: var(--ds-hairline);
+  background: transparent;
+  color: var(--ds-text);
+  cursor: pointer;
+  transition: var(--ds-transition-colors);
+}
+
+.secondary:hover {
+  background: var(--ds-surface-hover);
+  color: var(--ds-ink);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border-radius: var(--ds-radius);
+  background: var(--ds-accent-gradient);
+  color: var(--ds-on-accent);
+  text-decoration: none;
+  transition: var(--ds-transition-elevate);
+}
+
+.cta:hover {
+  box-shadow: var(--ds-shadow-2);
+  transform: translateY(-1px);
+}
+
+.cta:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowLink,
+  .secondary,
+  .cta {
+    transition: none;
+  }
+  .cta:hover {
+    transform: none;
+  }
+}

@@ -1,4 +1,5 @@
 import type { GroupedLessons } from "@/lib/articles";
+import { CategoryModalTrigger } from "@/components/category-modal";
 
 interface Props {
   groups: GroupedLessons[];
@@ -53,7 +54,11 @@ export function LearningPath({ groups }: Props) {
                 </span>
               </div>
 
-              <a href={`#cat-${g.meta.slug}`} className="lp-card">
+              <CategoryModalTrigger
+                as="a"
+                slug={g.meta.slug}
+                className="lp-card"
+              >
                 <div className="lp-card-top">
                   <span className="lp-icon" aria-hidden="true">
                     {g.meta.icon}
@@ -101,7 +106,7 @@ export function LearningPath({ groups }: Props) {
                     </span>
                   </span>
                 </div>
-              </a>
+              </CategoryModalTrigger>
             </li>
           );
         })}

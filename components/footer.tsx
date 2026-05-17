@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { CATEGORIES, CATEGORY_META } from "@/lib/articles";
 import { cx } from "@/components/ui";
+import { CategoryModalTrigger } from "@/components/category-modal";
 import styles from "./footer.module.css";
 
 export function Footer({ wordCount }: { wordCount?: number }) {
@@ -31,8 +31,9 @@ export function Footer({ wordCount }: { wordCount?: number }) {
             <span className="ftr-headline-accent">one lesson at a time.</span>
           </h2>
         </div>
-        <Link
-          href="/#cat-phase-1-models"
+        <CategoryModalTrigger
+          as="a"
+          slug="phase-1-models"
           className={cx("ftr-cta-btn", styles.cta)}
         >
           <span>Start the path</span>
@@ -46,7 +47,7 @@ export function Footer({ wordCount }: { wordCount?: number }) {
               strokeLinejoin="round"
             />
           </svg>
-        </Link>
+        </CategoryModalTrigger>
       </div>
 
       {/* ── Stat strip ───────────────────────────────────────── */}
@@ -81,8 +82,9 @@ export function Footer({ wordCount }: { wordCount?: number }) {
               if (!meta) return null;
               return (
                 <li key={name}>
-                  <Link
-                    href={`/#cat-${meta.slug}`}
+                  <CategoryModalTrigger
+                    as="a"
+                    slug={meta.slug}
                     className={cx(`ftr-nav-link cat-${meta.slug}`, styles.navLink)}
                   >
                     <span className="ftr-nav-dot" aria-hidden="true" />
@@ -90,7 +92,7 @@ export function Footer({ wordCount }: { wordCount?: number }) {
                       {meta.icon}
                     </span>
                     <span className="ftr-nav-label">{name}</span>
-                  </Link>
+                  </CategoryModalTrigger>
                 </li>
               );
             })}

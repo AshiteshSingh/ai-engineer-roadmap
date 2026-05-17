@@ -4,6 +4,7 @@ import { LearningPath } from "@/components/learning-path";
 import { Search } from "@/components/search";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import { CategoryModalProvider } from "@/components/category-modal";
 
 export default async function HomePage() {
   const groups = await getGroupedLessons();
@@ -15,6 +16,7 @@ export default async function HomePage() {
       <a href="#lessons" className="skip-link">Skip to lessons</a>
       <Topbar lessonCount={total} />
 
+      <CategoryModalProvider groups={groups}>
       <main id="content">
       <ScrollReveal>
         <LearningPath groups={groups} />
@@ -27,6 +29,7 @@ export default async function HomePage() {
       </main>
 
       <Footer wordCount={wordCount} />
+      </CategoryModalProvider>
     </div>
   );
 }
