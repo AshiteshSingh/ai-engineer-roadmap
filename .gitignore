@@ -13,7 +13,7 @@ data/courses.db
 data/courses.db-wal
 data/courses.db-shm
 
-# Per-chapter DeepSeek caches written by apps/knowledge/ml/langgraph-audio.
+# Per-chapter DeepSeek caches written by crates/ml/audio-guide.
 # Kept off git because they're easy to regenerate from the outline TOML and
 # can be many MB; the concatenated `<slug>.script.md` and `<slug>.json` next
 # to them ARE tracked so they ship to Vercel.

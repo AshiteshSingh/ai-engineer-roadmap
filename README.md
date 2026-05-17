@@ -64,9 +64,9 @@ That's the full read-only app — search, audio, knowledge graph, and analytics 
 | **Database** | Neon PostgreSQL + pgvector, Drizzle ORM |
 | **UI** | Radix UI Themes |
 | **AI / LLM** | OpenAI · DeepSeek |
-| **AI backend** | Rust `axum` LangGraph service (`crates/ml/langgraph-server`) — 6 graphs (`chat`, `app_prep`, `memorize_generate`, `article_generate`, `course_review`, `fetch_courses`); `chat` does SQLite + LanceDB RAG, the rest are stateless LLM orchestration |
+| **AI backend** | Rust `axum` LangGraph service (`crates/ml/server`) — 6 graphs (`chat`, `app_prep`, `memorize_generate`, `article_generate`, `course_review`, `fetch_courses`); `chat` does SQLite + LanceDB RAG, the rest are stateless LLM orchestration |
 | **Storage** | SQLite (`data/knowledge.db` content, `data/courses.db` courses) + LanceDB (vectors) · Cloudflare R2 (audio) · D1 (per-user playback state) |
-| **Deployment** | Vercel (frontend) + the Rust `langgraph-server` binary (backend) |
+| **Deployment** | Vercel (frontend) + the Rust `knowledge-server` binary (backend) |
 
 ## 🏗 Architecture
 
@@ -76,14 +76,14 @@ graph TD
     Next --> Adapter["data.ts adapter"]
     Adapter -->|"DATA_SOURCE=db"| DB[("Neon Postgres<br/>+ pgvector + checkpoints")]
     Adapter -->|"DATA_SOURCE=fs"| FS["content/*.md"]
-    Next -->|"LANGGRAPH_URL + bearer"| Rust["Rust langgraph-server :7860<br/>6 LangGraph graphs"]
+    Next -->|"BACKEND_URL + bearer"| Rust["Rust knowledge-server :7860<br/>6 LangGraph graphs"]
     Rust --> DeepSeek["DeepSeek API"]
     Rust --> SQLite[("SQLite + LanceDB<br/>knowledge.db · courses.db")]
     Next --> R2["Cloudflare R2<br/>audio files"]
     Next --> D1["Cloudflare D1<br/>audio progress"]
 ```
 
-**Request paths:** lesson pages read through `data.ts` (DB or filesystem) and pull related lessons via pgvector cosine similarity. Chat does FTS + vector retrieval in Next.js, then POSTs snippets + history to the Rust `langgraph-server`, which merges them with its own SQLite + LanceDB retrieval and calls DeepSeek (stateless — history is supplied by the caller).
+**Request paths:** lesson pages read through `data.ts` (DB or filesystem) and pull related lessons via pgvector cosine similarity. Chat does FTS + vector retrieval in Next.js, then POSTs snippets + history to the Rust `knowledge-server`, which merges them with its own SQLite + LanceDB retrieval and calls DeepSeek (stateless — history is supplied by the caller).
 
 ## 🔀 LangGraph Pipelines
 
@@ -98,10 +98,10 @@ app/                  Next.js App Router (lessons, AWS hub, applications, course
 components/           React components (search, audio-player, toc, …)
 content/              Markdown lesson files
 src/db/               Neon client + Drizzle schema (22 tables)
-src/lib/              langgraph-client (typed POST /runs/wait)
+src/lib/              backend-client (typed POST /runs/wait)
 lib/                  data.ts adapter, db queries, r2.ts, d1.ts, server actions
-crates/ml/            Rust workspace — langgraph-server (6 graphs, gen-article,
-                      seed-topic-courses), core (seed/export), langgraph-audio
+crates/ml/            Rust workspace — knowledge-server (6 graphs, gen-article,
+                      seed-topic-courses), core (seed/export), audio-guide
 scripts/              seed, scrape, review-courses, e2e
 sql/ · migrations/    Neon setup + D1 migrations
 ```
@@ -119,13 +119,13 @@ pnpm generate:dry <slug>       # preview without saving
 pnpm generate:batch            # generate all missing lessons
 pnpm review:courses            # batch-review unreviewed courses
 
-pnpm backend:rust              # run langgraph-server on :7860 (Rust)
+pnpm backend:rust              # run knowledge-server on :7860 (Rust)
 pnpm backend:rust:index        # (re)build the LanceDB section index
 pnpm generate:rust <args>      # gen-article bin (research→…→finalize)
 pnpm seed:courses <args>       # seed-topic-courses bin → data/courses.db
 pnpm audio:meta <args>         # markdown → AudioMeta JSON (deterministic)
 
-pnpm backend:test              # cargo test (langgraph-server + langgraph-audio)
+pnpm backend:test              # cargo test (knowledge-server + audio-guide)
 pnpm test:e2e                  # smoke the running server
 ```
 
@@ -139,7 +139,7 @@ pnpm backend:rust              # serve POST /runs/wait on :7860
 ```
 
 Env: `DEEPSEEK_API_KEY` (or `LLM_*`), `EMBED_URL`, `KNOWLEDGE_DB`, `LANCEDB_PATH`,
-`LANGGRAPH_AUTH_TOKEN`, `PORT`. Set `LANGGRAPH_URL` + `LANGGRAPH_AUTH_TOKEN` in the
+`BACKEND_AUTH_TOKEN`, `PORT`. Set `BACKEND_URL` + `BACKEND_AUTH_TOKEN` in the
 Vercel environment so `/api/chat` and the prep / memorize routes reach the server.
 Course data is scraped/reviewed into `data/courses.db` and surfaced to the
 frontend as JSON via `pnpm export:content` (Rust → `data/content/*.json`).
@@ -150,8 +150,8 @@ frontend as JSON via `pnpm export:content` (Rust → `data/content/*.json`).
 DATABASE_URL=             # Neon connection string (also used by backend container)
 OPENAI_API_KEY=
 DEEPSEEK_API_KEY=
-LANGGRAPH_URL=            # http://127.0.0.1:7860 locally; workers.dev URL in prod
-LANGGRAPH_AUTH_TOKEN=     # bearer token shared between Next.js and backend
+BACKEND_URL=            # http://127.0.0.1:7860 locally; workers.dev URL in prod
+BACKEND_AUTH_TOKEN=     # bearer token shared between Next.js and backend
 NEXT_PUBLIC_DATA_SOURCE=  # "db" | "fs"
 NEXT_PUBLIC_R2_DOMAIN=    # audio CDN domain
 R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET_NAME=

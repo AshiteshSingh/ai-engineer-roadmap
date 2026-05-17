@@ -5,8 +5,8 @@
  * Pass `--live` to additionally exercise the `chat` graph with one real
  * DeepSeek call (~$0.001) to validate the full stack including the LLM.
  *
- *   LANGGRAPH_URL=https://knowledge-langgraph.eeeew.workers.dev \
- *   LANGGRAPH_AUTH_TOKEN=... \
+ *   BACKEND_URL=https://knowledge-langgraph.eeeew.workers.dev \
+ *   BACKEND_AUTH_TOKEN=... \
  *   pnpm test:e2e           # smoke only
  *   pnpm test:e2e --live    # + one live chat call
  *
@@ -14,9 +14,9 @@
  * deliberately no vitest/jest dep so it runs as a thin shell from CI.
  */
 
-const LANGGRAPH_URL =
-  process.env.LANGGRAPH_URL || "http://127.0.0.1:7860";
-const LANGGRAPH_AUTH_TOKEN = process.env.LANGGRAPH_AUTH_TOKEN;
+const BACKEND_URL =
+  process.env.BACKEND_URL || "http://127.0.0.1:7860";
+const BACKEND_AUTH_TOKEN = process.env.BACKEND_AUTH_TOKEN;
 const LIVE = process.argv.includes("--live");
 
 interface Check {
@@ -60,10 +60,10 @@ async function post(
   withAuth: boolean,
 ): Promise<Response> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (withAuth && LANGGRAPH_AUTH_TOKEN) {
-    headers.Authorization = `Bearer ${LANGGRAPH_AUTH_TOKEN}`;
+  if (withAuth && BACKEND_AUTH_TOKEN) {
+    headers.Authorization = `Bearer ${BACKEND_AUTH_TOKEN}`;
   }
-  return fetch(`${LANGGRAPH_URL}${path}`, {
+  return fetch(`${BACKEND_URL}${path}`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -75,7 +75,7 @@ const checks: Check[] = [
   {
     name: "GET /health returns 200 {status: ok}",
     run: async () => {
-      const res = await fetch(`${LANGGRAPH_URL}/health`, {
+      const res = await fetch(`${BACKEND_URL}/health`, {
         signal: AbortSignal.timeout(10_000),
       });
       assertEq(res.status, 200, "status");
@@ -97,7 +97,7 @@ const checks: Check[] = [
   {
     name: "POST /runs/wait with wrong Authorization → 401",
     run: async () => {
-      const res = await fetch(`${LANGGRAPH_URL}/runs/wait`, {
+      const res = await fetch(`${BACKEND_URL}/runs/wait`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -112,7 +112,7 @@ const checks: Check[] = [
   {
     name: "POST /runs/wait with valid auth + unknown assistant_id → 404",
     run: async () => {
-      assert(LANGGRAPH_AUTH_TOKEN, "LANGGRAPH_AUTH_TOKEN env var is required");
+      assert(BACKEND_AUTH_TOKEN, "BACKEND_AUTH_TOKEN env var is required");
       const res = await post(
         "/runs/wait",
         { assistant_id: "does-not-exist", input: {} },
@@ -149,11 +149,11 @@ const checks: Check[] = [
         "course_review",
       ];
       for (const id of ids) {
-        const res = await fetch(`${LANGGRAPH_URL}/runs/wait`, {
+        const res = await fetch(`${BACKEND_URL}/runs/wait`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${LANGGRAPH_AUTH_TOKEN ?? ""}`,
+            Authorization: `Bearer ${BACKEND_AUTH_TOKEN ?? ""}`,
           },
           body: JSON.stringify({ assistant_id: id, input: {} }),
           signal: AbortSignal.timeout(2_000),
@@ -177,12 +177,12 @@ if (LIVE) {
   checks.push({
     name: "[live] chat graph returns {response: string} from real DeepSeek call",
     run: async () => {
-      assert(LANGGRAPH_AUTH_TOKEN, "LANGGRAPH_AUTH_TOKEN env var is required");
-      const res = await fetch(`${LANGGRAPH_URL}/runs/wait`, {
+      assert(BACKEND_AUTH_TOKEN, "BACKEND_AUTH_TOKEN env var is required");
+      const res = await fetch(`${BACKEND_URL}/runs/wait`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${LANGGRAPH_AUTH_TOKEN}`,
+          Authorization: `Bearer ${BACKEND_AUTH_TOKEN}`,
         },
         body: JSON.stringify({
           assistant_id: "chat",
@@ -205,7 +205,7 @@ if (LIVE) {
 }
 
 async function main() {
-  console.log(`Testing ${LANGGRAPH_URL}${LIVE ? " (with live LLM call)" : ""}`);
+  console.log(`Testing ${BACKEND_URL}${LIVE ? " (with live LLM call)" : ""}`);
   console.log();
 
   for (const c of checks) {

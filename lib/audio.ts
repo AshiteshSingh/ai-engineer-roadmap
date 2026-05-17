@@ -3,7 +3,7 @@
  *
  * Precedence: Cloudflare R2 first (so a later TTS pass that publishes a real
  * MP3 + populated `audio_url` automatically wins), then the in-repo
- * `data/audio/<slug>.json` fallback written by the Rust `build-langgraph-audio`
+ * `data/audio/<slug>.json` fallback written by the Rust `build-audio-guide`
  * pipeline. The fallback lets the chaptered transcript + player render in any
  * environment without R2 configured (voice still "pending-tts", no playback).
  *
