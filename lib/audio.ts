@@ -39,16 +39,21 @@ export interface AudioMeta {
 
 const R2_PUBLIC_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || process.env.R2_PUBLIC_DOMAIN || "";
 
+// process.cwd()-scoped paths are the bundler-static form Turbopack accepts;
+// the /*turbopackIgnore*/ comments stop its NFT tracer from conservatively
+// walking the whole project. The JSON ships explicitly via next.config.ts
+// `outputFileTracingIncludes` ("./data/audio/**"), so nothing is lost. There
+// is intentionally NO __dirname candidate — it is opaque to the tracer and
+// is never the resolved path in prod (cwd is /var/task).
 function resolveAudioDir(): string {
   if (process.env.AUDIO_JSON_DIR) return process.env.AUDIO_JSON_DIR;
   const candidates = [
-    path.join(process.cwd(), "data", "audio"),
-    path.join(process.cwd(), "apps", "knowledge", "data", "audio"),
-    path.join(process.cwd(), "apps", "ai-engineer-roadmap", "data", "audio"),
-    path.join(__dirname, "data", "audio"),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "data", "audio"),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "apps", "knowledge", "data", "audio"),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "apps", "ai-engineer-roadmap", "data", "audio"),
   ];
   for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
+    if (fs.existsSync(/*turbopackIgnore: true*/ c)) return c;
   }
   return candidates[0];
 }
@@ -60,8 +65,10 @@ function readLocalAudioMeta(slug: string): AudioMeta | null {
   let meta: AudioMeta | null = null;
   try {
     const file = path.join(resolveAudioDir(), `${slug}.json`);
-    if (fs.existsSync(file)) {
-      meta = JSON.parse(fs.readFileSync(file, "utf-8")) as AudioMeta;
+    if (fs.existsSync(/*turbopackIgnore: true*/ file)) {
+      meta = JSON.parse(
+        fs.readFileSync(/*turbopackIgnore: true*/ file, "utf-8"),
+      ) as AudioMeta;
     }
   } catch {
     meta = null;

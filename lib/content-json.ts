@@ -51,14 +51,18 @@ interface LessonFull extends LessonMeta {
 export function resolveContentDir(): string {
   if (process.env.CONTENT_JSON_DIR) return process.env.CONTENT_JSON_DIR;
 
+  // process.cwd()-scoped, /*turbopackIgnore*/-annotated: keeps Turbopack's
+  // NFT tracer from walking the whole project. The JSON ships explicitly via
+  // next.config.ts `outputFileTracingIncludes` ("./data/content/**"). No
+  // __dirname candidate — opaque to the tracer, never resolved in prod.
   const candidates = [
-    path.join(process.cwd(), "data", "content"),
-    path.join(process.cwd(), "apps", "knowledge", "data", "content"),
-    path.join(process.cwd(), "apps", "ai-engineer-roadmap", "data", "content"),
-    path.join(__dirname, "data", "content"),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "data", "content"),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "apps", "knowledge", "data", "content"),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "apps", "ai-engineer-roadmap", "data", "content"),
   ];
   for (const c of candidates) {
-    if (fs.existsSync(path.join(c, "index.json"))) return c;
+    if (fs.existsSync(/*turbopackIgnore: true*/ path.join(c, "index.json")))
+      return c;
   }
   return candidates[0];
 }
@@ -69,7 +73,9 @@ const _lessonCache = new Map<string, LessonFull | null>();
 function loadIndex(): ContentIndex {
   if (_index) return _index;
   const file = path.join(resolveContentDir(), "index.json");
-  _index = JSON.parse(fs.readFileSync(file, "utf-8")) as ContentIndex;
+  _index = JSON.parse(
+    fs.readFileSync(/*turbopackIgnore: true*/ file, "utf-8"),
+  ) as ContentIndex;
   return _index;
 }
 
@@ -77,8 +83,10 @@ function loadLessonFile(slug: string): LessonFull | null {
   if (_lessonCache.has(slug)) return _lessonCache.get(slug)!;
   const file = path.join(resolveContentDir(), `${slug}.json`);
   let lesson: LessonFull | null = null;
-  if (fs.existsSync(file)) {
-    lesson = JSON.parse(fs.readFileSync(file, "utf-8")) as LessonFull;
+  if (fs.existsSync(/*turbopackIgnore: true*/ file)) {
+    lesson = JSON.parse(
+      fs.readFileSync(/*turbopackIgnore: true*/ file, "utf-8"),
+    ) as LessonFull;
   }
   _lessonCache.set(slug, lesson);
   return lesson;
