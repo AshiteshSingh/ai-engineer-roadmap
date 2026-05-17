@@ -149,18 +149,28 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
     [lessons],
   );
 
-  const supported =
-    typeof window !== "undefined" && "speechSynthesis" in window;
-
+  // `supported` MUST be false for SSR *and* the first client render so the
+  // prerendered HTML and hydration agree (the phase hub is statically
+  // prerendered). Real SpeechSynthesis feature-detection runs post-mount in
+  // the effect below, which flips this true and triggers a second render.
   const [state, setState] = React.useState<SpeechState>({
-    supported,
+    supported: false,
     status: "idle",
     lessonIdx: -1,
     chapterIdx: 0,
     sentenceIdx: 0,
     rate: 1,
   });
+  const supported = state.supported;
   const [savedPos, setSavedPos] = React.useState<SavedPos | null>(null);
+
+  // Feature-detect after mount only (never during SSR / first client render)
+  // so the read-along ⇄ narrated copy can't desync hydration.
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      setState((s) => (s.supported ? s : { ...s, supported: true }));
+    }
+  }, []);
 
   // Refs drive the speech callbacks (no stale closures); state mirrors for UI.
   const lessonsRef = React.useRef(lessons);
