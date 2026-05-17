@@ -475,88 +475,11 @@ export type Resume = typeof resumes.$inferSelect;
 export type NewResume = typeof resumes.$inferInsert;
 
 // ── External Courses ─────────────────────────────────────────────
-
-export const externalCourses = pgTable(
-  "external_courses",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    title: text("title").notNull(),
-    url: text("url").notNull().unique(),
-    provider: text("provider").notNull(),
-    description: text("description"),
-    level: text("level"), // "Beginner" | "Intermediate" | "Advanced"
-    rating: real("rating"),
-    reviewCount: integer("review_count"),
-    durationHours: real("duration_hours"),
-    isFree: boolean("is_free").notNull().default(true),
-    enrolled: integer("enrolled"),
-    imageUrl: text("image_url"),
-    language: text("language").notNull().default("English"),
-    topicGroup: text("topic_group"),
-    metadata: jsonb("metadata").default({}),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    index("external_courses_provider_idx").on(table.provider),
-  ],
-);
-
-export const lessonCourses = pgTable(
-  "lesson_courses",
-  {
-    lessonSlug: text("lesson_slug").notNull(),
-    courseId: uuid("course_id")
-      .references(() => externalCourses.id, { onDelete: "cascade" })
-      .notNull(),
-    relevance: real("relevance").notNull().default(1.0),
-  },
-  (table) => [
-    primaryKey({ columns: [table.lessonSlug, table.courseId] }),
-    index("lesson_courses_slug_idx").on(table.lessonSlug),
-  ],
-);
-
-export type ExternalCourse = typeof externalCourses.$inferSelect;
-
-export const courseReviews = pgTable(
-  "course_reviews",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    courseId: uuid("course_id")
-      .references(() => externalCourses.id, { onDelete: "cascade" })
-      .notNull(),
-    pedagogyScore: integer("pedagogy_score"),
-    technicalAccuracyScore: integer("technical_accuracy_score"),
-    contentDepthScore: integer("content_depth_score"),
-    practicalApplicationScore: integer("practical_application_score"),
-    instructorClarityScore: integer("instructor_clarity_score"),
-    curriculumFitScore: integer("curriculum_fit_score"),
-    prerequisitesScore: integer("prerequisites_score"),
-    aiDomainRelevanceScore: integer("ai_domain_relevance_score"),
-    communityHealthScore: integer("community_health_score"),
-    valuePropositionScore: integer("value_proposition_score"),
-    aggregateScore: real("aggregate_score"),
-    verdict: text("verdict"),
-    summary: text("summary"),
-    expertDetails: jsonb("expert_details"),
-    modelVersion: text("model_version").notNull().default("deepseek-chat"),
-    reviewedAt: timestamp("reviewed_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    index("course_reviews_course_idx").on(table.courseId),
-    uniqueIndex("course_reviews_course_unique").on(table.courseId),
-  ],
-);
-
-export type CourseReview = typeof courseReviews.$inferSelect;
-export type NewCourseReview = typeof courseReviews.$inferInsert;
+// Moved off Neon Postgres into a dedicated SQLite store. The write side is
+// src/db/courses-sqlite.ts (data/courses.db); the read side is the
+// Rust-exported courses.json / course-reviews.json via lib/db/queries.ts.
+// The retired Python seed_topic_courses.py is now the Rust
+// `seed-topic-courses` bin.
 
 // ── Application Notes ─────────────────────────────────────────────
 
@@ -688,17 +611,8 @@ export const lessonConceptsRelations = relations(lessonConcepts, ({ one }) => ({
   }),
 }));
 
-export const externalCoursesRelations = relations(externalCourses, ({ many }) => ({
-  lessonCourses: many(lessonCourses),
-  reviews: many(courseReviews),
-}));
-
-export const courseReviewsRelations = relations(courseReviews, ({ one }) => ({
-  course: one(externalCourses, {
-    fields: [courseReviews.courseId],
-    references: [externalCourses.id],
-  }),
-}));
+// External courses now live in the dedicated SQLite store
+// (src/db/courses-sqlite.ts → data/courses.db), not Neon Postgres.
 
 export const applicationsRelations = relations(applications, ({ many }) => ({
   applicationNotes: many(applicationNotes),

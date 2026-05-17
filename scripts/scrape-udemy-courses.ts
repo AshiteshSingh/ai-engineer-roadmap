@@ -9,8 +9,10 @@
  *  4. Upsert into external_courses with topic_group; map to lesson slugs
  */
 import { webkit, type BrowserContext } from "playwright";
-import { db } from "@/src/db";
-import { externalCourses, lessonCourses } from "@/src/db/schema";
+import {
+  upsertCourse as upsertCourseRow,
+  linkLessonCourse,
+} from "@/src/db/courses-sqlite";
 
 const DELAY_MS = 3000;
 
@@ -680,16 +682,9 @@ async function upsertCourse(course: ScrapedCourse, topicGroup: string) {
     metadata: slimMetaFinal,
   };
 
-  const [row] = await db
-    .insert(externalCourses)
-    .values(values)
-    .onConflictDoUpdate({
-      target: externalCourses.url,
-      set: { ...values, updatedAt: new Date() },
-    })
-    .returning({ id: externalCourses.id });
-
-  return row.id;
+  // Writes to the dedicated SQLite course store (data/courses.db); the Rust
+  // export-content bin turns it into courses.json for the frontend.
+  return upsertCourseRow(values);
 }
 
 // ── Main ─────────────────────────────────────────────────────────────
@@ -764,7 +759,7 @@ async function main() {
       const courseId = await upsertCourse(course, topicGroup);
       const slugs = matchSlugs(course);
       for (const { slug, relevance } of slugs) {
-        await db.insert(lessonCourses).values({ lessonSlug: slug, courseId, relevance }).onConflictDoNothing();
+        linkLessonCourse(slug, courseId, relevance);
       }
 
       console.log(`    ✓ [${topicGroup}] "${course.title}"`);
@@ -816,7 +811,7 @@ async function main() {
           const courseId = await upsertCourse(course, topicGroup);
           const slugs = matchSlugs(course);
           for (const { slug, relevance } of slugs) {
-            await db.insert(lessonCourses).values({ lessonSlug: slug, courseId, relevance }).onConflictDoNothing();
+            linkLessonCourse(slug, courseId, relevance);
           }
           console.log(`    ✓ [${topicGroup}] "${course.title}"`);
           saved++;

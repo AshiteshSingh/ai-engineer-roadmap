@@ -1,5 +1,8 @@
 import { parseArgs } from "node:util";
-import { neon } from "@neondatabase/serverless";
+import {
+  fetchUnreviewedCourses,
+  upsertCourseReview,
+} from "../src/db/courses-sqlite";
 import { runCourseReview, type CourseReviewResult } from "../src/lib/langgraph-client";
 
 interface Args {
@@ -41,60 +44,14 @@ async function fetchUnreviewed(
   limit: number,
   provider: string | undefined,
 ): Promise<CourseRow[]> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is required");
-  const sql = neon(databaseUrl);
-
-  const rows = provider
-    ? await sql`
-        SELECT
-          ec.id::text AS id,
-          ec.title,
-          ec.url,
-          ec.provider,
-          COALESCE(ec.description, '')      AS description,
-          COALESCE(ec.level, 'Beginner')    AS level,
-          COALESCE(ec.rating, 0.0)          AS rating,
-          COALESCE(ec.review_count, 0)      AS review_count,
-          COALESCE(ec.duration_hours, 0.0)  AS duration_hours,
-          ec.is_free
-        FROM external_courses ec
-        WHERE NOT EXISTS (
-          SELECT 1 FROM course_reviews cr WHERE cr.course_id = ec.id
-        )
-          AND lower(ec.provider) LIKE ${"%" + provider.toLowerCase() + "%"}
-        ORDER BY ec.created_at
-        LIMIT ${limit}
-      `
-    : await sql`
-        SELECT
-          ec.id::text AS id,
-          ec.title,
-          ec.url,
-          ec.provider,
-          COALESCE(ec.description, '')      AS description,
-          COALESCE(ec.level, 'Beginner')    AS level,
-          COALESCE(ec.rating, 0.0)          AS rating,
-          COALESCE(ec.review_count, 0)      AS review_count,
-          COALESCE(ec.duration_hours, 0.0)  AS duration_hours,
-          ec.is_free
-        FROM external_courses ec
-        WHERE NOT EXISTS (
-          SELECT 1 FROM course_reviews cr WHERE cr.course_id = ec.id
-        )
-        ORDER BY ec.created_at
-        LIMIT ${limit}
-      `;
-  return rows as unknown as CourseRow[];
+  // Reads the dedicated SQLite course store (data/courses.db).
+  return fetchUnreviewedCourses(limit, provider) as unknown as CourseRow[];
 }
 
 async function upsertReview(
   row: CourseRow,
   result: CourseReviewResult,
 ): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL!;
-  const sql = neon(databaseUrl);
-
   const expertDetails = {
     pedagogy_score: result.pedagogy_score,
     technical_accuracy_score: result.technical_accuracy_score,
@@ -108,62 +65,23 @@ async function upsertReview(
     value_proposition_score: result.value_proposition_score,
   };
 
-  await sql`
-    INSERT INTO course_reviews (
-      course_id,
-      pedagogy_score,
-      technical_accuracy_score,
-      content_depth_score,
-      practical_application_score,
-      instructor_clarity_score,
-      curriculum_fit_score,
-      prerequisites_score,
-      ai_domain_relevance_score,
-      community_health_score,
-      value_proposition_score,
-      aggregate_score,
-      verdict,
-      summary,
-      expert_details,
-      model_version,
-      reviewed_at
-    ) VALUES (
-      ${row.id},
-      ${result.pedagogy_score.score},
-      ${result.technical_accuracy_score.score},
-      ${result.content_depth_score.score},
-      ${result.practical_application_score.score},
-      ${result.instructor_clarity_score.score},
-      ${result.curriculum_fit_score.score},
-      ${result.prerequisites_score.score},
-      ${result.ai_domain_relevance_score.score},
-      ${result.community_health_score.score},
-      ${result.value_proposition_score.score},
-      ${result.aggregate_score},
-      ${result.verdict},
-      ${result.summary},
-      ${JSON.stringify(expertDetails)}::jsonb,
-      ${process.env.LLM_MODEL ?? "deepseek-chat"},
-      NOW()
-    )
-    ON CONFLICT (course_id) DO UPDATE SET
-      pedagogy_score               = EXCLUDED.pedagogy_score,
-      technical_accuracy_score     = EXCLUDED.technical_accuracy_score,
-      content_depth_score          = EXCLUDED.content_depth_score,
-      practical_application_score  = EXCLUDED.practical_application_score,
-      instructor_clarity_score     = EXCLUDED.instructor_clarity_score,
-      curriculum_fit_score         = EXCLUDED.curriculum_fit_score,
-      prerequisites_score          = EXCLUDED.prerequisites_score,
-      ai_domain_relevance_score    = EXCLUDED.ai_domain_relevance_score,
-      community_health_score       = EXCLUDED.community_health_score,
-      value_proposition_score      = EXCLUDED.value_proposition_score,
-      aggregate_score              = EXCLUDED.aggregate_score,
-      verdict                      = EXCLUDED.verdict,
-      summary                      = EXCLUDED.summary,
-      expert_details               = EXCLUDED.expert_details,
-      model_version                = EXCLUDED.model_version,
-      reviewed_at                  = NOW()
-  `;
+  upsertCourseReview(row.id, {
+    pedagogy_score: result.pedagogy_score.score,
+    technical_accuracy_score: result.technical_accuracy_score.score,
+    content_depth_score: result.content_depth_score.score,
+    practical_application_score: result.practical_application_score.score,
+    instructor_clarity_score: result.instructor_clarity_score.score,
+    curriculum_fit_score: result.curriculum_fit_score.score,
+    prerequisites_score: result.prerequisites_score.score,
+    ai_domain_relevance_score: result.ai_domain_relevance_score.score,
+    community_health_score: result.community_health_score.score,
+    value_proposition_score: result.value_proposition_score.score,
+    aggregate_score: result.aggregate_score,
+    verdict: result.verdict,
+    summary: result.summary,
+    expert_details: expertDetails,
+    model_version: process.env.LLM_MODEL ?? "deepseek-chat",
+  });
 }
 
 async function main() {

@@ -223,11 +223,11 @@ export function fetchUnreviewedCourses(
       .prepare(
         `${base} AND lower(ec.provider) LIKE ? ORDER BY ec.created_at LIMIT ?`,
       )
-      .all(`%${provider.toLowerCase()}%`, limit) as UnreviewedCourse[];
+      .all(`%${provider.toLowerCase()}%`, limit) as unknown as UnreviewedCourse[];
   }
   return db
     .prepare(`${base} ORDER BY ec.created_at LIMIT ?`)
-    .all(limit) as UnreviewedCourse[];
+    .all(limit) as unknown as UnreviewedCourse[];
 }
 
 export interface CourseReviewWrite {
