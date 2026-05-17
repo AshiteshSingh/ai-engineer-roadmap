@@ -2,7 +2,7 @@
  * Scrape a Udemy search/topic listing URL and emit JSON to stdout.
  *
  * Used as a subprocess by the Rust `seed-topic-courses` bin
- * (crates/ml/langgraph-server) — Rust handles LangGraph orchestration and the
+ * (crates/ml/server) — Rust handles LangGraph orchestration and the
  * SQLite (data/courses.db) writes; this script only does Playwright scraping
  * because Udemy is heavily Cloudflare-protected and httpx-style fetches fail.
  *

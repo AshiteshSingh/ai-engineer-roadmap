@@ -9,7 +9,7 @@
  * `course-reviews.json`, which the frontend reads via `lib/db/queries.ts`.
  *
  * Schema is kept byte-for-byte in sync with
- * `crates/ml/langgraph-server/src/courses.rs::COURSE_SCHEMA` — both run
+ * `crates/ml/server/src/courses.rs::COURSE_SCHEMA` — both run
  * `CREATE TABLE IF NOT EXISTS`, so whichever process touches the file first
  * wins and the other is a no-op.
  */
