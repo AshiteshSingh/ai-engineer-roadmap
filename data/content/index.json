@@ -249,8 +249,8 @@
       "number": 23,
       "title": "LanceDB: Embedded Multimodal Vector Lakehouse",
       "category": "Phase 3 · Embeddings & RAG",
-      "wordCount": 3213,
-      "readingTimeMin": 16
+      "wordCount": 3076,
+      "readingTimeMin": 15
     },
     {
       "slug": "chunking-strategies",
@@ -853,5 +853,5 @@
       "readingTimeMin": 10
     }
   ],
-  "totalWordCount": 471988
+  "totalWordCount": 471851
 }
