@@ -45,7 +45,7 @@ const LESSON_SLUGS = [
   "bias-fairness", "ai-governance", "interpretability", "ci-cd-ai",
   "vision-language-models", "audio-speech-ai", "ai-for-code", "conversational-ai",
   "search-recommendations", "production-patterns", "langgraph",
-  "langgraph-red-teaming", "llamaindex", "ai-engineer-roadmap",
+  "langgraph-red-teaming", "llamaindex", "roadmap",
   "gcp", "docker", "kubernetes",
   "microservices", "ci-cd", "nodejs", "solid-principles", "acid-properties",
 ];
@@ -79,7 +79,7 @@ const TITLE_OVERRIDES: Record<string, string> = {
   "llm-serving": "LLM Serving & Inference",
   "ai-for-code": "AI for Code Generation",
   "ai-gateway": "AI Gateway & Routing",
-  "ai-engineer-roadmap": "AI Engineer Roadmap",
+  "roadmap": "AI Engineer Roadmap",
   "ai-governance": "AI Governance & Policy",
   "deepeval-synthesizer": "DeepEval Synthesizer",
   "lora-adapters": "LoRA & QLoRA Adapters",

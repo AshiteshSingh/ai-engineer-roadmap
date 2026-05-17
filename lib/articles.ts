@@ -43,7 +43,7 @@ export interface GroupedLessons {
 const LESSON_SLUGS = [
   // Phase 1 · Foundations & Model Inference (1-9)
   "ai-on-cloudflare-workers", // *
-  "ai-engineer-roadmap",
+  "roadmap",
   "workers-ai-models", // *
   "transformer-architecture",
   "tokenization",

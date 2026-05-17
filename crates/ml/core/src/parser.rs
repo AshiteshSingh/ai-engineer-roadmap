@@ -101,7 +101,7 @@ fn category_from_slug(slug: &str) -> &'static str {
         s if matches!(s, "llm-serving"|"scaling-load-balancing"|"cost-optimization"|"observability"|"edge-deployment"|"ai-gateway") => "Infrastructure & Deployment",
         s if matches!(s, "constitutional-ai"|"guardrails-filtering"|"hallucination-mitigation"|"bias-fairness"|"ai-governance"|"interpretability"|"ci-cd-ai") => "Safety & Alignment",
         s if matches!(s, "vision-language-models"|"audio-speech-ai"|"ai-for-code"|"conversational-ai") => "Multimodal AI",
-        s if matches!(s, "search-recommendations"|"production-patterns"|"langgraph"|"langgraph-red-teaming"|"llamaindex"|"ai-engineer-roadmap") => "Applied AI & Production",
+        s if matches!(s, "search-recommendations"|"production-patterns"|"langgraph"|"langgraph-red-teaming"|"llamaindex"|"roadmap") => "Applied AI & Production",
         s if matches!(s, "aws"|"azure"|"gcp"|"docker"|"kubernetes") => "Cloud Platforms",
         s if s.starts_with("aws-") || s == "dynamodb-data-services" => "AWS Deep Dives",
         s if matches!(s, "microservices"|"ci-cd"|"nodejs"|"solid-principles"|"acid-properties") => "Software Engineering",

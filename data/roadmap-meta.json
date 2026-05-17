@@ -165,7 +165,7 @@
   ],
   "lessonNumber": {
     "ai-on-cloudflare-workers": 1,
-    "ai-engineer-roadmap": 2,
+    "roadmap": 2,
     "workers-ai-models": 3,
     "transformer-architecture": 4,
     "tokenization": 5,

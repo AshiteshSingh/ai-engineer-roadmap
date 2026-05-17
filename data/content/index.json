@@ -93,9 +93,9 @@
   ],
   "lessons": [
     {
-      "slug": "ai-engineer-roadmap",
+      "slug": "roadmap",
       "number": 2,
-      "title": "The AI Engineer's Roadmap: Skills, Tools & Career Path (2026+)",
+      "title": "The AI Engineer's Roadmap: Skills, Tools & Career Path",
       "category": "Phase 1 · Foundations & Model Inference",
       "wordCount": 7129,
       "readingTimeMin": 36

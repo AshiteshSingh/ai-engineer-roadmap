@@ -229,8 +229,8 @@
       }
     },
     {
-      "slug": "ai-engineer-roadmap",
-      "file": "content/ai-engineer-roadmap.md",
+      "slug": "roadmap",
+      "file": "content/roadmap.md",
       "structure_ok": true,
       "relation_ok": true,
       "quality_ok": true,
@@ -1330,7 +1330,7 @@
       ],
       "relation_issues": [
         "Relations: only 0 cross-refs (min 3 for a connected lesson)",
-        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /structured-output, /production-patterns, /context-engineering, /ai-engineer-roadmap"
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /structured-output, /production-patterns, /context-engineering, /roadmap"
       ],
       "quality_issues": [
         "Q2: Flesch-Kincaid 6.6 outside [10,22]",
