@@ -19,14 +19,13 @@ interface CategoryModalApi {
 
 const Ctx = createContext<CategoryModalApi | null>(null);
 
+const NOOP_API: CategoryModalApi = { open: () => {}, close: () => {} };
+
+/** Returns the modal API, or a no-op fallback when rendered outside a
+ * <CategoryModalProvider> (e.g. the shared Footer on non-homepage routes,
+ * where there is no roadmap grid to preview). */
 export function useCategoryModal(): CategoryModalApi {
-  const v = useContext(Ctx);
-  if (!v) {
-    throw new Error(
-      "useCategoryModal must be used within <CategoryModalProvider>",
-    );
-  }
-  return v;
+  return useContext(Ctx) ?? NOOP_API;
 }
 
 function diffLabel(d: string): string {
@@ -179,9 +178,14 @@ export function CategoryModalTrigger({
   children: React.ReactNode;
   as?: "a" | "button";
 }) {
-  const { open } = useCategoryModal();
+  // Raw context: null when outside a provider (shared Footer on non-home
+  // routes) — fall back to native /#cat-<slug> navigation, the original
+  // cross-page behavior.
+  const ctx = useContext(Ctx);
+  const href = `/#cat-${slug}`;
 
   const handleClick = (e: React.MouseEvent) => {
+    if (!ctx) return; // no provider → let the browser follow href
     if (as === "a") {
       if (e.defaultPrevented) return;
       if (
@@ -191,11 +195,11 @@ export function CategoryModalTrigger({
         e.altKey ||
         e.button === 1
       ) {
-        return; // let the browser follow href="#cat-<slug>"
+        return; // let the browser follow href (deep-link / new tab)
       }
       e.preventDefault();
     }
-    open(slug);
+    ctx.open(slug);
   };
 
   if (as === "button") {
@@ -207,7 +211,7 @@ export function CategoryModalTrigger({
   }
 
   return (
-    <a href={`#cat-${slug}`} className={className} onClick={handleClick}>
+    <a href={href} className={className} onClick={handleClick}>
       {children}
     </a>
   );
