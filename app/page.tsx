@@ -20,11 +20,6 @@ export default async function HomePage() {
       <ScrollReveal>
         <LearningPath groups={groups} />
       </ScrollReveal>
-
-      {/* Search + Bento Grid */}
-      <div id="lessons">
-        <Search groups={groups} />
-      </div>
       </main>
 
       <Footer wordCount={wordCount} />
