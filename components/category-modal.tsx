@@ -83,10 +83,10 @@ function CategoryModalBody({
 
       <div className={styles.listWrap}>
         <ol className={styles.list}>
-          {group.articles.map((l) => (
+          {group.articles.map((l, i) => (
             <li key={l.slug} className={styles.row}>
               <span className={styles.rowNum} aria-hidden="true">
-                {String(l.number).padStart(2, "0")}
+                {String(i + 1).padStart(2, "0")}
               </span>
               <Link
                 href={l.url}
@@ -112,7 +112,7 @@ function CategoryModalBody({
         </Dialog.Close>
         {first && (
           <Link href={first.url} className={styles.cta} onClick={onClose}>
-            Start with lesson {String(first.number).padStart(2, "0")}
+            Start with lesson 01
             <span aria-hidden="true"> &rarr;</span>
           </Link>
         )}

@@ -77,10 +77,10 @@ export function LearningPath({ groups }: Props) {
                 <p className="lp-desc">{g.meta.description}</p>
 
                 <ul className="lp-lessons">
-                  {preview.map((l) => (
+                  {preview.map((l, i) => (
                     <li key={l.slug} className="lp-lesson">
                       <span className="lp-lesson-n">
-                        {String(l.number).padStart(2, "0")}
+                        {String(i + 1).padStart(2, "0")}
                       </span>
                       <span className="lp-lesson-t">{l.title}</span>
                     </li>

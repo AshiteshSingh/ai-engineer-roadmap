@@ -19,7 +19,7 @@ function diffLabel(d: Lesson["difficulty"]): string {
   return d === "beginner" ? "Beginner" : d === "intermediate" ? "Mid" : "Adv";
 }
 
-function LessonCard({ lesson, isFirst }: { lesson: Lesson; isFirst?: boolean }) {
+function LessonCard({ lesson, isFirst, pos }: { lesson: Lesson; isFirst?: boolean; pos: number }) {
   const ref = useRef<HTMLAnchorElement>(null);
 
   const onMove = useCallback((e: React.MouseEvent) => {
@@ -40,7 +40,7 @@ function LessonCard({ lesson, isFirst }: { lesson: Lesson; isFirst?: boolean }) 
       onMouseMove={onMove}
     >
       <span className="cat-row-num">
-        {String(lesson.number).padStart(2, "0")}
+        {String(pos).padStart(2, "0")}
       </span>
       <span className="cat-row-body">
         <span className="cat-row-title">{lesson.title}</span>
@@ -172,6 +172,7 @@ export function CategoryGrid({ groups }: Props) {
                     key={lesson.slug}
                     lesson={lesson}
                     isFirst={j === 0}
+                    pos={j + 1}
                   />
                 ))}
               </div>
