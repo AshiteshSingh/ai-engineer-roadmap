@@ -85,7 +85,8 @@ export interface LessonCardProps {
   progressPercent?: number;
   /** Narration tri-state. `undefined` = audio feature off for this hub
    *  (render NO listen tile — keeps /evals byte-identical). `null` = feature
-   *  on but no narration on the CDN ("coming soon" tile). Object = playable. */
+   *  on but this lesson has no narration script ("coming soon" tile).
+   *  Object = playable via the hub's Web-Speech player. */
   audio?: AudioMeta | null;
   className?: string;
 }

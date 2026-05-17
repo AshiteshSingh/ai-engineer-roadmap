@@ -37,18 +37,24 @@ export async function PhaseHub({ slug, audio = false }: PhaseHubProps) {
 
   // Narration metadata for every lesson, fetched in parallel. getAudioMeta
   // returns null on no-R2 / 404 / error and is `revalidate: 3600`, so /rag
-  // stays ISR-static and degrades to all-"coming soon" if R2 is unset. Only
-  // entries with a real audio_url are playable (empty / "pending-tts" ⇒
-  // "coming soon"). Skipped entirely unless the route opted in via `audio`.
+  // stays ISR-static. A lesson is PLAYABLE when it has chapter scripts — the
+  // hub reads them aloud via SpeechSynthesis (no MP3 needed; audio_url empty /
+  // "pending-tts" is fine). `audioMetas` is the ordered (roadmap-order) queue
+  // for the whole-phase continuous playthrough. Skipped unless `audio` opted in.
   let audioBySlug: Record<string, AudioMeta> | undefined;
+  let audioMetas: AudioMeta[] | undefined;
   if (audio) {
     const metas = await Promise.all(
       articles.map((a) => getAudioMeta(a.fileSlug)),
     );
     audioBySlug = {};
+    audioMetas = [];
     articles.forEach((a, i) => {
       const m = metas[i];
-      if (m && m.audio_url) audioBySlug![a.slug] = m;
+      if (m && m.chapters?.length) {
+        audioBySlug![a.slug] = m;
+        audioMetas!.push(m);
+      }
     });
   }
 
@@ -74,6 +80,7 @@ export async function PhaseHub({ slug, audio = false }: PhaseHubProps) {
       <PhaseBrowser
         lessons={articles}
         audioBySlug={audioBySlug}
+        audioMetas={audioMetas}
         gradient={meta.gradient}
         icon={meta.icon}
         category={category}

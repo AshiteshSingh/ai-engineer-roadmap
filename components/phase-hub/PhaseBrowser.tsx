@@ -6,7 +6,7 @@
 import * as React from "react";
 import { PhaseControls } from "@/components/phase-hub/PhaseControls";
 import { LessonGrid } from "@/components/phase-hub/LessonGrid";
-import { HubAudioProvider } from "@/components/phase-hub/HubAudio";
+import { HubAudioProvider, PhasePlayAll } from "@/components/phase-hub/HubAudio";
 import { DEFAULT_PHASE_FILTER_STATE } from "@/components/phase-hub/types";
 import type {
   Lesson,
@@ -25,6 +25,8 @@ export interface PhaseBrowserProps {
   heading?: string;
   /** Defined ⇒ audio feature on (wrap in player provider, render tiles). */
   audioBySlug?: Record<string, AudioMeta>;
+  /** Ordered (roadmap order) playable metas — the whole-phase listen queue. */
+  audioMetas?: AudioMeta[];
   gradient?: [string, string];
   icon?: string;
   category?: string;
@@ -34,6 +36,7 @@ export function PhaseBrowser({
   lessons,
   heading = "Lessons in this phase",
   audioBySlug,
+  audioMetas,
   gradient,
   icon,
   category,
@@ -61,6 +64,7 @@ export function PhaseBrowser({
         onChange={setState}
         onReset={() => setState(DEFAULT_PHASE_FILTER_STATE)}
       />
+      {audioBySlug ? <PhasePlayAll /> : null}
       <LessonGrid
         lessons={filtered}
         progressBySlug={progressBySlug}
@@ -74,7 +78,12 @@ export function PhaseBrowser({
   if (!audioBySlug) return inner;
 
   return (
-    <HubAudioProvider gradient={gradient} icon={icon} category={category}>
+    <HubAudioProvider
+      metas={audioMetas}
+      gradient={gradient}
+      icon={icon}
+      category={category}
+    >
       {inner}
     </HubAudioProvider>
   );
