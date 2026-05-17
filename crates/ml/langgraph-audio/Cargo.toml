@@ -24,6 +24,13 @@ cuda = [
 name = "build-langgraph-audio"
 path = "src/bin/build_langgraph_audio.rs"
 
+# Deterministic markdown → AudioMeta JSON. 1:1 port of the retired
+# backend/scripts/build_audio_meta.py — no LLM, reuses the tested
+# markdown/wpm/audio_meta modules.
+[[bin]]
+name = "build-audio-meta"
+path = "src/bin/build_audio_meta.rs"
+
 [dependencies]
 candle              = { path = "../../../../../crates/candle", default-features = false }
 candle-core         = "0.9"

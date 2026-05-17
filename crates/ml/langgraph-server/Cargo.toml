@@ -17,6 +17,18 @@ path = "src/bin/langgraph-server.rs"
 name = "langgraph-index"
 path = "src/bin/langgraph-index.rs"
 
+# Port of backend/scripts/generate_article.py — runs the in-process
+# article_generate graph and writes content/<slug>.md.
+[[bin]]
+name = "gen-article"
+path = "src/bin/gen-article.rs"
+
+# Port of backend/scripts/seed_topic_courses.py — scrape (TS subprocess) →
+# fetch_courses graph → upsert into data/knowledge.db (SQLite, not Neon).
+[[bin]]
+name = "seed-topic-courses"
+path = "src/bin/seed-topic-courses.rs"
+
 [dependencies]
 # HTTP server / runtime
 axum  = "0.8"
@@ -40,6 +52,10 @@ clap = { version = "4", features = ["derive", "env"] }
 
 # SQLite content store (canonical data/knowledge.db)
 rusqlite = { version = "0.32", features = ["bundled"] }
+
+# UUID v4 for external_courses/course_reviews primary keys (was Postgres
+# gen_random_uuid(); SQLite has no built-in, so we mint ids host-side)
+uuid = { version = "1", features = ["v4"] }
 
 # LanceDB vector store + Arrow (versions matched to topic-miner / udemy)
 lancedb      = "0.27"
