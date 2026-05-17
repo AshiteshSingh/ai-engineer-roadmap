@@ -274,14 +274,16 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
 
   const jump = React.useCallback(
     (li: number, ci: number) => {
-      if (!supported) return;
-      genRef.current++;
-      try {
-        window.speechSynthesis.cancel();
-      } catch {
-        /* ignore */
-      }
       const L = lessonsRef.current;
+      if (!L.length) return;
+      genRef.current++;
+      if (supported) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch {
+          /* ignore */
+        }
+      }
       const clampedLi = Math.max(0, Math.min(li, L.length - 1));
       const maxCi = Math.max(0, (L[clampedLi]?.chapters.length ?? 1) - 1);
       posRef.current = {
@@ -290,10 +292,16 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
         si: 0,
       };
       persist();
-      setStatus("playing");
-      speakCurrent();
+      if (supported) {
+        setStatus("playing");
+        speakCurrent();
+      } else {
+        // No SpeechSynthesis → mount a manual, read-along transcript.
+        setStatus("paused");
+        sync();
+      }
     },
-    [supported, persist, speakCurrent],
+    [supported, persist, speakCurrent, sync],
   );
 
   const controls = React.useMemo<SpeechQueue["controls"]>(
