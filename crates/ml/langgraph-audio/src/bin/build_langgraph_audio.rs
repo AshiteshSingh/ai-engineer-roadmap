@@ -69,6 +69,11 @@ struct Args {
     #[arg(long)]
     strip_diagrams: bool,
 
+    /// Skip the audio-quality gate that otherwise bails before writing a
+    /// non-conforming AudioMeta. Off by default — bad audio never ships.
+    #[arg(long)]
+    no_gate: bool,
+
     /// Article mode: skip DeepSeek, read the script from `--script-cache`.
     #[arg(long)]
     use_cached_script: bool,
@@ -127,6 +132,40 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let meta = build_meta(&script_raw, &slug, &title)?;
+
+    // Audio-quality / audio-experience gate. Warnings are advisory; a hard
+    // failure bails BEFORE save_json so a non-conforming AudioMeta is never
+    // written (and `ml:rag-audio`'s `|| exit 1` aborts the batch). Escape
+    // hatch: --no-gate.
+    let gate_report = langgraph_audio::gate::gate_audio(&meta);
+    for w in &gate_report.warnings {
+        tracing::warn!(
+            "audio-gate warn [{}]{}: {}",
+            w.rule,
+            w.chapter.map(|c| format!(" ch{c}")).unwrap_or_default(),
+            w.detail
+        );
+    }
+    if !gate_report.ok {
+        for f in &gate_report.failures {
+            tracing::error!(
+                "audio-gate FAIL [{}]{}: {}",
+                f.rule,
+                f.chapter.map(|c| format!(" ch{c}")).unwrap_or_default(),
+                f.detail
+            );
+        }
+        if !args.no_gate {
+            anyhow::bail!(
+                "audio gate failed: {} violation(s) in {} — not writing {} (use --no-gate to override)",
+                gate_report.failures.len(),
+                slug,
+                args.output.display()
+            );
+        }
+        tracing::warn!("--no-gate set: writing despite {} failure(s)", gate_report.failures.len());
+    }
+
     meta.save_json(&args.output)?;
 
     let total_words: usize = meta

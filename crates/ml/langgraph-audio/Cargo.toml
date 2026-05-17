@@ -31,6 +31,11 @@ path = "src/bin/build_langgraph_audio.rs"
 name = "build-audio-meta"
 path = "src/bin/build_audio_meta.rs"
 
+# Quality + audio-experience gate over generated AudioMeta JSON.
+[[bin]]
+name = "audio-gate"
+path = "src/bin/audio_gate.rs"
+
 [dependencies]
 candle              = { path = "../../../../../crates/candle", default-features = false }
 candle-core         = "0.9"
