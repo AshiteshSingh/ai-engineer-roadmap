@@ -4,7 +4,7 @@ import path from "path";
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
   outputFileTracingIncludes: {
-    "/*": ["./data/content/**"],
+    "/*": ["./data/content/**", "./data/audio/**"],
     "/langgraph/lead-gen": ["./data/langgraph-lead-gen.script.md"],
   },
   async redirects() {
