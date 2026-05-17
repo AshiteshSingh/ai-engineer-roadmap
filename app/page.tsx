@@ -1,7 +1,6 @@
 import { getGroupedLessons } from "@/lib/data";
 import { Topbar } from "@/components/topbar";
 import { LearningPath } from "@/components/learning-path";
-import { Search } from "@/components/search";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { CategoryModalProvider } from "@/components/category-modal";
@@ -13,7 +12,7 @@ export default async function HomePage() {
   const wordCount = allLessons.reduce((sum, l) => sum + l.wordCount, 0);
   return (
     <div>
-      <a href="#lessons" className="skip-link">Skip to lessons</a>
+      <a href="#content" className="skip-link">Skip to content</a>
       <Topbar lessonCount={total} />
 
       <CategoryModalProvider groups={groups}>
