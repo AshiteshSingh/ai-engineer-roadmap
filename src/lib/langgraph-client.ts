@@ -1,9 +1,9 @@
 /**
  * Typed HTTP client for the knowledge LangGraph backend.
  *
- * Calls the FastAPI harness at apps/knowledge/backend/app.py via POST /runs/wait.
- * Local dev: start the container or run `uvicorn app:app --port 7860` from
- * `apps/knowledge/backend/`. Point LANGGRAPH_URL at the deployed worker in prod.
+ * Calls the Rust langgraph-server (crates/ml/langgraph-server) via POST
+ * /runs/wait. Local dev: `pnpm backend:rust` (serves :7860). Point
+ * LANGGRAPH_URL at the deployed server in prod.
  */
 
 const LANGGRAPH_URL =
@@ -165,9 +165,10 @@ export function runMemorizeGenerate(input: {
   );
 }
 
-// Article generation does NOT go through this TS client.
-// It runs the Python LangGraph StateGraph directly via
-// `backend/scripts/generate_article.py` — see that file's docstring.
+// Article generation does NOT go through this TS client. It runs the
+// in-process Rust `article_generate` graph via the `gen-article` bin
+// (crates/ml/langgraph-server/src/bin/gen-article.rs — `pnpm generate:rust`),
+// or over POST /runs/wait with assistant_id "article_generate".
 
 /**
  * 10-expert course review: parallel fan-out + weighted aggregator. Input and

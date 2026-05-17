@@ -64,9 +64,9 @@ That's the full read-only app — search, audio, knowledge graph, and analytics 
 | **Database** | Neon PostgreSQL + pgvector, Drizzle ORM |
 | **UI** | Radix UI Themes |
 | **AI / LLM** | OpenAI · DeepSeek |
-| **AI backend** | Python FastAPI + LangGraph on Cloudflare Containers — 5 graphs (`chat`, `app_prep`, `memorize_generate`, `article_generate`, `course_review`) with `AsyncPostgresSaver` checkpointing |
-| **Storage** | Cloudflare R2 (audio) · D1 (per-user playback state) |
-| **Deployment** | Vercel (frontend) + Cloudflare Containers (backend) |
+| **AI backend** | Rust `axum` LangGraph service (`crates/ml/langgraph-server`) — 6 graphs (`chat`, `app_prep`, `memorize_generate`, `article_generate`, `course_review`, `fetch_courses`); `chat` does SQLite + LanceDB RAG, the rest are stateless LLM orchestration |
+| **Storage** | SQLite (`data/knowledge.db` content, `data/courses.db` courses) + LanceDB (vectors) · Cloudflare R2 (audio) · D1 (per-user playback state) |
+| **Deployment** | Vercel (frontend) + the Rust `langgraph-server` binary (backend) |
 
 ## 🏗 Architecture
 
@@ -76,21 +76,20 @@ graph TD
     Next --> Adapter["data.ts adapter"]
     Adapter -->|"DATA_SOURCE=db"| DB[("Neon Postgres<br/>+ pgvector + checkpoints")]
     Adapter -->|"DATA_SOURCE=fs"| FS["content/*.md"]
-    Next -->|"LANGGRAPH_URL + bearer"| Worker["CF Worker proxy"]
-    Worker --> Container["FastAPI container :7860<br/>5 LangGraph graphs"]
-    Container --> DeepSeek["DeepSeek API"]
-    Container --> DB
+    Next -->|"LANGGRAPH_URL + bearer"| Rust["Rust langgraph-server :7860<br/>6 LangGraph graphs"]
+    Rust --> DeepSeek["DeepSeek API"]
+    Rust --> SQLite[("SQLite + LanceDB<br/>knowledge.db · courses.db")]
     Next --> R2["Cloudflare R2<br/>audio files"]
     Next --> D1["Cloudflare D1<br/>audio progress"]
 ```
 
-**Request paths:** lesson pages read through `data.ts` (DB or filesystem) and pull related lessons via pgvector cosine similarity. Chat does FTS + vector retrieval in Next.js, then POSTs snippets + history to the LangGraph container, which calls DeepSeek and persists the thread.
+**Request paths:** lesson pages read through `data.ts` (DB or filesystem) and pull related lessons via pgvector cosine similarity. Chat does FTS + vector retrieval in Next.js, then POSTs snippets + history to the Rust `langgraph-server`, which merges them with its own SQLite + LanceDB retrieval and calls DeepSeek (stateless — history is supplied by the caller).
 
 ## 🔀 LangGraph Pipelines
 
-- **Content generation** (`article_generate`) — research → outline → draft → review → revise, with a conditional revision loop (max 2) gated on word count, code blocks, cross-refs, ≥5 xyflow diagrams, and mandatory sections. Runs in pure Python in-process (no HTTP).
-- **RAG chat** (`chat`) — classify intent (keyword vs. conceptual) → retrieve (FTS / vector / hybrid) → format context → generate.
-- **Course review** (`course_review`) — 10 expert evaluators run concurrently via `asyncio.gather`, then a weighted aggregator computes score + verdict.
+- **Content generation** (`article_generate`) — research → outline → draft → review → revise, with a conditional revision loop (max 2) gated on word count, code blocks, cross-refs, ≥5 xyflow diagrams, and mandatory sections. Run via the `gen-article` Rust bin (`pnpm generate:rust`) or over `/runs/wait`.
+- **RAG chat** (`chat`) — SQLite lexical + LanceDB vector retrieval merged with caller snippets → format context → one DeepSeek call.
+- **Course review** (`course_review`) — 10 expert evaluators run concurrently, then a weighted aggregator computes score + verdict.
 
 ## 🗂 Project Layout
 
@@ -101,7 +100,8 @@ content/              Markdown lesson files
 src/db/               Neon client + Drizzle schema (22 tables)
 src/lib/              langgraph-client (typed POST /runs/wait)
 lib/                  data.ts adapter, db queries, r2.ts, d1.ts, server actions
-backend/              Python FastAPI + LangGraph (5 graphs, pytest + deepeval, wrangler)
+crates/ml/            Rust workspace — langgraph-server (6 graphs, gen-article,
+                      seed-topic-courses), core (seed/export), langgraph-audio
 scripts/              seed, scrape, review-courses, e2e
 sql/ · migrations/    Neon setup + D1 migrations
 ```
@@ -119,30 +119,30 @@ pnpm generate:dry <slug>       # preview without saving
 pnpm generate:batch            # generate all missing lessons
 pnpm review:courses            # batch-review unreviewed courses
 
-pnpm backend:dev               # uvicorn --reload on :7860 (needs backend/.env)
-pnpm backend:deploy            # wrangler deploy from backend/
+pnpm backend:rust              # run langgraph-server on :7860 (Rust)
+pnpm backend:rust:index        # (re)build the LanceDB section index
+pnpm generate:rust <args>      # gen-article bin (research→…→finalize)
+pnpm seed:courses <args>       # seed-topic-courses bin → data/courses.db
+pnpm audio:meta <args>         # markdown → AudioMeta JSON (deterministic)
 
-pnpm test:backend              # pytest (stubbed graphs, no LLM/DB)
-pnpm test:e2e                  # smoke the deployed worker
-pnpm test:deepeval             # LLM-judge gate on chat + app_prep (~$0.05)
-pnpm test:deepeval:all         # + course_review + article_generate (~$0.20)
+pnpm backend:test              # cargo test (langgraph-server + langgraph-audio)
+pnpm test:e2e                  # smoke the running server
 ```
 
-**DeepEval gate:** each of the 4 LLM-driven graphs has a 5-case golden set judged by an aggregate pass-rate gate (currently `0.65`, the empirical floor for DeepSeek-judged 5-case goldens). Excluded from `pnpm test:backend` by default; opt in via `pnpm test:deepeval*`.
-
-### LangGraph backend
+### LangGraph backend (Rust)
 
 ```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app:app --port 7860 --reload          # or: docker build / docker run
-
-wrangler deploy                                # deploy to Cloudflare Containers
-wrangler secret put DATABASE_URL DEEPSEEK_API_KEY LANGGRAPH_AUTH_TOKEN
+# RAG chat needs the candle embed server for vector search:
+#   cd crates/candle && cargo run --release --bin embed-server --features server
+pnpm backend:rust:index        # one-time: build data/lancedb from knowledge.db
+pnpm backend:rust              # serve POST /runs/wait on :7860
 ```
 
-Once deployed, set `LANGGRAPH_URL` + `LANGGRAPH_AUTH_TOKEN` in the Vercel environment so `/api/chat` and the prep / memorize routes reach the container. First-time pytest setup uses an isolated venv: `cd backend && python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`.
+Env: `DEEPSEEK_API_KEY` (or `LLM_*`), `EMBED_URL`, `KNOWLEDGE_DB`, `LANCEDB_PATH`,
+`LANGGRAPH_AUTH_TOKEN`, `PORT`. Set `LANGGRAPH_URL` + `LANGGRAPH_AUTH_TOKEN` in the
+Vercel environment so `/api/chat` and the prep / memorize routes reach the server.
+Course data is scraped/reviewed into `data/courses.db` and surfaced to the
+frontend as JSON via `pnpm export:content` (Rust → `data/content/*.json`).
 
 ### Environment
 
