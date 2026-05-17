@@ -200,7 +200,7 @@ where n is total samples generated and c is the number that pass. HumanEval has 
 - **ARC (AI2 Reasoning Challenge)**: Science questions from grade school exams, with an easy set and a challenge set. The challenge set filters for questions that retrieval and co-occurrence methods get wrong.
 - **BBH (BIG-Bench Hard)**: A curated subset of BIG-Bench tasks where language models previously performed below average human raters. Includes algorithmic, logical, and linguistic reasoning tasks.
 
-### 2024-2025 Benchmarks and the Saturation Problem
+### 2024-2026 Benchmarks and the Saturation Problem
 
 As frontier models saturate older benchmarks, the evaluation community has introduced harder suites designed to maintain discriminative power:
 

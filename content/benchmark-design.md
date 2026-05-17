@@ -174,7 +174,7 @@ def update_elo(rating: float, actual: float, expected: float,
     return rating + k * (actual - expected)
 ```
 
-Chatbot Arena's key insight is that human preference is ultimately what matters for assistant-style models, and pairwise comparison is more reliable than absolute scoring. The platform has collected over 500,000 votes as of early 2025, making it one of the largest-scale human evaluations in AI.
+Chatbot Arena's key insight is that human preference is ultimately what matters for assistant-style models, and pairwise comparison is more reliable than absolute scoring. The platform has collected over 500,000 votes as of early 2026, making it one of the largest-scale human evaluations in AI.
 
 Limitations include:
 - **User bias**: Arena users are not representative of the general population.
@@ -292,7 +292,7 @@ The key design choice is that FrontierMath problems are not drawn from existing 
 
 The Abstraction and Reasoning Corpus (ARC), created by Chollet (2019), takes a different approach. ARC presents visual grid-transformation tasks where the model must infer an abstract rule from a few input-output examples and apply it to a new input. The tasks are designed to test fluid intelligence -- the ability to adapt to novel situations -- rather than crystallized knowledge.
 
-ARC-AGI (the benchmark built around ARC tasks) has proven remarkably resistant to scaling. Larger models do not dramatically outperform smaller ones, suggesting that the tasks test something fundamentally different from what standard language modeling optimizes for. The ARC-AGI-2 competition in 2025 continued to show that even frontier models struggle with tasks that most humans find straightforward, though the gap has narrowed with reasoning-focused architectures. This connects to the broader question of what evaluation signals actually tell us about model internals, a topic explored in [Article 33: LLM-as-Judge](/llm-as-judge).
+ARC-AGI (the benchmark built around ARC tasks) has proven remarkably resistant to scaling. Larger models do not dramatically outperform smaller ones, suggesting that the tasks test something fundamentally different from what standard language modeling optimizes for. The ARC-AGI-2 competition in 2026 continued to show that even frontier models struggle with tasks that most humans find straightforward, though the gap has narrowed with reasoning-focused architectures. This connects to the broader question of what evaluation signals actually tell us about model internals, a topic explored in [Article 33: LLM-as-Judge](/llm-as-judge).
 
 ### GPQA (Graduate-Level Google-Proof QA)
 

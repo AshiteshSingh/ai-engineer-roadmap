@@ -308,7 +308,7 @@ Supported filter operators: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `
 collection.update(
     ids=["doc1"],
     documents=["Updated: RAG pipelines retrieve relevant context before generation."],
-    metadatas=[{"source": "article", "topic": "rag", "year": 2025}]
+    metadatas=[{"source": "article", "topic": "rag", "year": 2026}]
 )
 
 # Upsert -- insert or update

@@ -358,7 +358,7 @@ For production VLM applications:
 - **Caching**: Store embeddings and common query results
 - **Model selection**: Use smaller VLMs (e.g., LLaVA-7B, MiniCPM-V) for simpler tasks, reserving larger models for complex reasoning
 
-## Open-Source VLM Landscape (2025)
+## Open-Source VLM Landscape (2026)
 
 The open-source VLM ecosystem has matured rapidly, with several model families now rivaling proprietary systems on standard benchmarks. Understanding the relative strengths of each family is essential for practitioners selecting models for production workloads.
 

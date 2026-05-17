@@ -1,6 +1,6 @@
 # Agent SDKs: Claude, OpenAI, Vercel AI SDK & Framework Comparison
 
-The proliferation of agent SDKs marks a decisive shift in AI engineering: building agents is no longer an exercise in low-level prompt plumbing but an SDK-level concern. In 2024-2025, every major model provider and framework vendor shipped dedicated agent SDKs -- Anthropic released the Claude Agent SDK, OpenAI shipped the Agents SDK (evolving from Swarm), Vercel expanded its AI SDK with multi-step agent primitives, and the framework ecosystem (LangChain/LangGraph, LlamaIndex) continued refining their agent abstractions. This article provides a deep technical comparison of these SDKs: their architectures, primitives, tradeoffs, and the practical question of when to use which. For foundational concepts on how agents reason and act, see [Agent Architectures](/agent-architectures); for tool integration mechanics, see [Function Calling](/function-calling); for stateful graph-based orchestration, see [LangGraph](/langgraph).
+The proliferation of agent SDKs marks a decisive shift in AI engineering: building agents is no longer an exercise in low-level prompt plumbing but an SDK-level concern. In 2024-2026, every major model provider and framework vendor shipped dedicated agent SDKs -- Anthropic released the Claude Agent SDK, OpenAI shipped the Agents SDK (evolving from Swarm), Vercel expanded its AI SDK with multi-step agent primitives, and the framework ecosystem (LangChain/LangGraph, LlamaIndex) continued refining their agent abstractions. This article provides a deep technical comparison of these SDKs: their architectures, primitives, tradeoffs, and the practical question of when to use which. For foundational concepts on how agents reason and act, see [Agent Architectures](/agent-architectures); for tool integration mechanics, see [Function Calling](/function-calling); for stateful graph-based orchestration, see [LangGraph](/langgraph).
 
 ## Mental Model
 
@@ -328,7 +328,7 @@ MCP is covered in depth in its own section below. The key point here is that Cla
 
 ### From Swarm to Agents SDK
 
-OpenAI's Agents SDK (released March 2025) evolved from Swarm, an experimental multi-agent framework. Where Swarm was a research prototype demonstrating patterns, the Agents SDK is a production-grade library built around three primitives: **Agent**, **Runner**, and **Handoff**.
+OpenAI's Agents SDK (released March 2026) evolved from Swarm, an experimental multi-agent framework. Where Swarm was a research prototype demonstrating patterns, the Agents SDK is a production-grade library built around three primitives: **Agent**, **Runner**, and **Handoff**.
 
 The design philosophy is explicitly minimal: the SDK provides the smallest useful abstraction layer over the Chat Completions API, avoiding the framework complexity of LangChain while adding enough structure for reliable multi-agent systems.
 

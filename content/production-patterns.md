@@ -852,7 +852,7 @@ We will implement a multi-provider architecture with:
 - Must maintain provider-specific prompt optimizations
 - Additional latency for routing decisions (~5ms)
 
-## Review Date: 2025-06-01
+## Review Date: 2026-06-01
 ```
 
 Key AI-specific decisions to document:

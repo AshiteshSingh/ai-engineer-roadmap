@@ -4,7 +4,7 @@ The rapid deployment of large language models into high-stakes domains has outpa
 
 ## TL;DR
 
-- The EU AI Act is the world's first comprehensive AI regulation, using a risk-based tier system with enforcement deadlines from February 2025 through August 2027.
+- The EU AI Act is the world's first comprehensive AI regulation, using a risk-based tier system with enforcement deadlines from February 2026 through August 2027.
 - Model cards and system cards are both communication tools and compliance artifacts — maintain them as living documents alongside code.
 - Audit trails must be immutable and capture the full decision pipeline: inputs (or hashes), model version, retrieved context, outputs, and safety check results.
 - ISO 42001 provides a certifiable AI management system standard that maps to multiple regulations and is becoming a procurement prerequisite.
@@ -62,8 +62,8 @@ High-risk systems must comply with requirements for risk management systems, dat
 
 The EU AI Act follows a phased enforcement schedule that engineering teams must plan around:
 
-- **February 2025**: Prohibitions on unacceptable-risk AI systems take effect (social scoring, manipulative techniques, untargeted facial recognition database scraping).
-- **August 2025**: Obligations for general-purpose AI (GPAI) models become enforceable, including transparency requirements and systemic risk assessments for the most capable models.
+- **February 2026**: Prohibitions on unacceptable-risk AI systems take effect (social scoring, manipulative techniques, untargeted facial recognition database scraping).
+- **August 2026**: Obligations for general-purpose AI (GPAI) models become enforceable, including transparency requirements and systemic risk assessments for the most capable models.
 - **August 2026**: The full set of requirements for high-risk AI systems kicks in -- risk management, data governance, technical documentation, logging, human oversight, accuracy, and robustness.
 - **August 2027**: Extended deadline for high-risk AI systems that are safety components of products already regulated under existing EU sectoral legislation (medical devices, automotive, aviation).
 
@@ -129,7 +129,7 @@ model_card:
     version: "3.2.1"
     type: "Fine-tuned LLM for customer service"
     base_model: "Llama-3-70B"
-    training_date: "2025-09-15"
+    training_date: "2026-09-15"
     developers: "AI Platform Team"
     license: "Internal use only"
 
@@ -150,7 +150,7 @@ model_card:
     datasets:
       - name: "internal_support_logs"
         size: "2.4M conversations"
-        date_range: "2022-01 to 2025-06"
+        date_range: "2022-01 to 2026-06"
         preprocessing: "PII removed, quality filtered"
       - name: "product_documentation"
         size: "50K documents"
@@ -619,7 +619,7 @@ For engineering teams, the key practice is to maintain a model license registry 
 
 ## OWASP LLM Top 10
 
-The OWASP Top 10 for Large Language Model Applications provides a standardized security reference for teams building LLM-powered systems. First published in 2023 and updated for 2025, it catalogs the most critical security risks specific to LLM applications, complementing the general OWASP Top 10 for web applications.
+The OWASP Top 10 for Large Language Model Applications provides a standardized security reference for teams building LLM-powered systems. First published in 2023 and updated for 2026, it catalogs the most critical security risks specific to LLM applications, complementing the general OWASP Top 10 for web applications.
 
 ### The Ten Risk Categories
 
@@ -818,7 +818,7 @@ This article connects to several related topics covered elsewhere in this series
 
 ## Key Takeaways
 
-- **The EU AI Act** is the most comprehensive AI regulation, with a phased enforcement timeline running from February 2025 through August 2027. Engineering teams must plan compliance work against these concrete deadlines.
+- **The EU AI Act** is the most comprehensive AI regulation, with a phased enforcement timeline running from February 2026 through August 2027. Engineering teams must plan compliance work against these concrete deadlines.
 - **AI Safety Institutes** in the UK, US, Japan, and the EU are converging on standardized evaluation methodologies for frontier models. Pre-deployment safety evaluation is becoming a baseline expectation.
 - **ISO 42001** provides a certifiable AI management system standard that is becoming a competitive differentiator and procurement prerequisite for enterprises deploying AI.
 - **Model cards and system cards** provide standardized documentation that serves both as communication tools and compliance artifacts. They should be maintained as living documents.

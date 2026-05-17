@@ -320,7 +320,7 @@ def test_answer_is_grounded():
 - Evals API integrates directly into OpenAI platform
 
 **Limitations:**
-- `simple-evals` repo no longer updated for new models as of mid-2025
+- `simple-evals` repo no longer updated for new models as of mid-2026
 - Primarily designed for OpenAI models
 - Less comprehensive than DeepEval or RAGAS for production use
 

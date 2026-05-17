@@ -1,4 +1,4 @@
-# The AI Engineer's Roadmap: Skills, Tools & Career Path (2025+)
+# The AI Engineer's Roadmap: Skills, Tools & Career Path (2026+)
 
 The AI Engineer has emerged as a distinct role at the intersection of software engineering and machine learning, responsible for building products and systems powered by foundation models, embeddings, and AI infrastructure. Unlike the ML engineer who focuses on training models or the data scientist who focuses on analysis, the AI engineer integrates pre-trained models into production applications, designs prompt architectures, builds retrieval systems, and ships AI-powered features to users. This article maps the skills, tools, career trajectory, and community resources that define this rapidly maturing discipline.
 
@@ -192,7 +192,7 @@ class EvalSuite:
 
 ## Essential Tools and Frameworks
 
-### The AI Engineer's Toolkit (2025)
+### The AI Engineer's Toolkit (2026)
 
 ```
 LLM Providers:
@@ -494,7 +494,7 @@ Practical Exercises:
 
 **Model commoditization**: As model quality converges across providers, the differentiator shifts from "which model" to "how you use it." AI engineering becomes more about system design, evaluation, and user experience than model selection.
 
-**Agents becoming practical**: 2024-2025 saw [agents](/agent-architectures) move from demos to production for constrained domains. The next phase is expanding the reliability envelope - making agents work for broader, more complex tasks. This requires better [evaluation](/agent-evaluation), error recovery, and [human oversight](/human-evaluation) patterns. [Multi-agent systems](/multi-agent-systems) and [code agents](/code-agents) are leading indicators of this trend.
+**Agents becoming practical**: 2024-2026 saw [agents](/agent-architectures) move from demos to production for constrained domains. The next phase is expanding the reliability envelope - making agents work for broader, more complex tasks. This requires better [evaluation](/agent-evaluation), error recovery, and [human oversight](/human-evaluation) patterns. [Multi-agent systems](/multi-agent-systems) and [code agents](/code-agents) are leading indicators of this trend.
 
 **Multimodal as default**: Text-only AI applications will be the exception, not the rule. Engineers will need to handle [images](/vision-language-models), [audio](/audio-speech-ai), video, and structured data alongside text as a baseline expectation.
 

@@ -293,7 +293,7 @@ class SessionAffinityRouter:
 
 Modern GPU clusters have complex interconnect topologies. Within a node, GPUs may be connected via NVLink or PCIe. Across nodes, InfiniBand or RoCE provides RDMA networking. The serving system must be topology-aware to minimize communication overhead.
 
-With the NVIDIA B200 and GB200 NVL72 systems entering deployment in 2025, the scale-up story has changed significantly. A GB200 NVL72 rack connects 72 B200 GPUs via a single NVLink domain, delivering 130 TB/s of aggregate bisection bandwidth within the rack. This effectively makes the entire rack behave like a single node for tensor parallelism purposes, eliminating the TP-within-node / PP-across-node split for models up to roughly 700B parameters. For serving infrastructure, this means a single GB200 NVL72 rack can host a full Llama 3.1 405B instance with TP=72, yielding lower latency than any multi-node configuration achievable with prior hardware:
+With the NVIDIA B200 and GB200 NVL72 systems entering deployment in 2026, the scale-up story has changed significantly. A GB200 NVL72 rack connects 72 B200 GPUs via a single NVLink domain, delivering 130 TB/s of aggregate bisection bandwidth within the rack. This effectively makes the entire rack behave like a single node for tensor parallelism purposes, eliminating the TP-within-node / PP-across-node split for models up to roughly 700B parameters. For serving infrastructure, this means a single GB200 NVL72 rack can host a full Llama 3.1 405B instance with TP=72, yielding lower latency than any multi-node configuration achievable with prior hardware:
 
 ```
 DGX H100 Node Topology:
@@ -318,7 +318,7 @@ DGX H100 Node Topology:
 
 ### Heterogeneous GPU Clusters
 
-Production clusters rarely consist of a single GPU generation. Organizations accumulate hardware over successive procurement cycles, resulting in mixed fleets -- A100s purchased in 2022 running alongside H100s from 2023 and B200s arriving in 2025. Managing these heterogeneous clusters effectively is a significant operational challenge.
+Production clusters rarely consist of a single GPU generation. Organizations accumulate hardware over successive procurement cycles, resulting in mixed fleets -- A100s purchased in 2022 running alongside H100s from 2023 and B200s arriving in 2026. Managing these heterogeneous clusters effectively is a significant operational challenge.
 
 The core problem is that different GPU generations have different memory capacities, compute throughputs, and interconnect bandwidths. An A100-80GB can serve a quantized 70B model at TP=2, but its lower memory bandwidth (2 TB/s vs. H100's 3.35 TB/s) means ~40% lower decode throughput per GPU. Naive scheduling that treats all GPUs as interchangeable wastes capacity or creates latency variance.
 

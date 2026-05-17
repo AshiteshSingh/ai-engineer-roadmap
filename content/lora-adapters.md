@@ -8,7 +8,7 @@ Parameter-efficient fine-tuning (PEFT) methods have fundamentally changed the ec
 - **QLoRA** adds 4-bit NF4 quantization of the base model, enabling 70B model fine-tuning on a single 48GB GPU with minimal quality loss.
 - LoRA adapters can be merged into the base model after training, adding zero inference latency; multiple adapters can be swapped at serving time.
 - **vLLM** supports multi-LoRA serving natively: one base model in GPU memory, hundreds of adapters loaded on demand.
-- For 2024-2025, the practical default is QLoRA with rank 16, applied to all linear layers, using `paged_adamw_8bit`.
+- For 2024-2026, the practical default is QLoRA with rank 16, applied to all linear layers, using `paged_adamw_8bit`.
 
 ## Mental Model
 
@@ -664,7 +664,7 @@ A LoRA-aware server keeps one base resident and applies a different small adapte
 - **Training acceleration** through Unsloth, Flash Attention, and gradient checkpointing makes QLoRA training 2-5x faster and more memory-efficient.
 - **Emerging methods** like LoRA+, GaLore, and rsLoRA refine the training dynamics and expand the applicability of parameter-efficient approaches.
 - **GGUF deployment** provides a path from LoRA-trained models to efficient CPU and edge inference via the llama.cpp ecosystem.
-- For practical fine-tuning in 2024-2025, **QLoRA with rank 16, applied to all linear layers, using `paged_adamw_8bit`** is the default recommendation. Adjust rank and alpha based on task complexity and available data.
+- For practical fine-tuning in 2024-2026, **QLoRA with rank 16, applied to all linear layers, using `paged_adamw_8bit`** is the default recommendation. Adjust rank and alpha based on task complexity and available data.
 
 ## Key Takeaways
 

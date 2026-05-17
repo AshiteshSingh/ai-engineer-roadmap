@@ -94,7 +94,7 @@ class CodeDataFilter:
 
 **StarCoder / StarCoder2** (Li et al., 2023; Lozhkov et al., 2024): BigCode's open-source models trained on The Stack. StarCoder2-15B uses a 16K context window and was trained on 3.3T+ tokens. Notable for its transparent training process and permissive license. StarCoder2 introduced grouped query attention and sliding window attention.
 
-**DeepSeek-Coder** (Guo et al., 2024): Available in 1.3B, 6.7B, and 33B sizes. Trained on 2T tokens comprising 87% code and 13% natural language. Achieves strong performance across multiple benchmarks. DeepSeek-Coder-V2 further improved with mixture-of-experts architecture. The later DeepSeek-V3 and DeepSeek-R1 models (late 2024/early 2025) demonstrated that general-purpose reasoning models with strong chain-of-thought capabilities can match or exceed dedicated code models on coding benchmarks, blurring the line between "code LLMs" and "reasoning LLMs" for software engineering tasks.
+**DeepSeek-Coder** (Guo et al., 2024): Available in 1.3B, 6.7B, and 33B sizes. Trained on 2T tokens comprising 87% code and 13% natural language. Achieves strong performance across multiple benchmarks. DeepSeek-Coder-V2 further improved with mixture-of-experts architecture. The later DeepSeek-V3 and DeepSeek-R1 models (late 2024/early 2026) demonstrated that general-purpose reasoning models with strong chain-of-thought capabilities can match or exceed dedicated code models on coding benchmarks, blurring the line between "code LLMs" and "reasoning LLMs" for software engineering tasks.
 
 **Qwen2.5-Coder** (Yang et al., 2024): Alibaba's code model achieving state-of-the-art performance among open-source models on multiple benchmarks. Trained with careful data mixing strategies between code and natural language.
 
@@ -481,17 +481,17 @@ SWE-bench (Jimenez et al., 2024) represents a massive step up in evaluation comp
 The task: given the issue description and the repository state before the fix, generate a patch that resolves the issue and passes the repository's test suite.
 
 ```
-SWE-bench performance (as of early 2025):
+SWE-bench performance (as of early 2026):
   - SWE-bench Lite (300 problems subset):
     - Claude 3.5 Sonnet + SWE-agent: ~49%
     - GPT-4o + SWE-agent: ~33%
     - DeepSeek-V3 + SWE-agent: ~42%
   - SWE-bench Verified (500 human-validated problems):
-    - Best agent systems: ~55-65% (with top systems exceeding 50% by early 2025)
+    - Best agent systems: ~55-65% (with top systems exceeding 50% by early 2026)
     - Best non-agentic: ~25-30%
 ```
 
-The rapid progression on SWE-bench Verified is notable: agent systems crossed the 50% threshold in early 2025, meaning they can resolve more than half of real-world GitHub issues autonomously. This milestone suggests that AI coding agents are approaching practical utility for a meaningful fraction of routine software maintenance work. For a detailed treatment of how these agent systems are architecturally composed, see [Article 29: Code Generation Agents](/code-agents).
+The rapid progression on SWE-bench Verified is notable: agent systems crossed the 50% threshold in early 2026, meaning they can resolve more than half of real-world GitHub issues autonomously. This milestone suggests that AI coding agents are approaching practical utility for a meaningful fraction of routine software maintenance work. For a detailed treatment of how these agent systems are architecturally composed, see [Article 29: Code Generation Agents](/code-agents).
 
 SWE-bench tests capabilities that HumanEval misses entirely:
 - Repository navigation and understanding
@@ -634,7 +634,7 @@ While AI IDEs embed intelligence into the editor, a parallel category of tools o
 
 ### Claude Code
 
-Claude Code (Anthropic, 2025) runs as a CLI agent that operates within the developer's terminal and file system. It reads and writes files, executes shell commands, interacts with git, and runs tests - all through an agentic loop where the model decides which tool to invoke next. Its architecture is notable for operating without a predefined plan: the model receives the developer's request along with available tools (file read/write, bash execution, search) and iterates until the task is complete or it needs human input.
+Claude Code (Anthropic, 2026) runs as a CLI agent that operates within the developer's terminal and file system. It reads and writes files, executes shell commands, interacts with git, and runs tests - all through an agentic loop where the model decides which tool to invoke next. Its architecture is notable for operating without a predefined plan: the model receives the developer's request along with available tools (file read/write, bash execution, search) and iterates until the task is complete or it needs human input.
 
 Key design decisions include:
 - **No sandbox by default**: Claude Code operates directly on the developer's file system, enabling real git commits, real test runs, and real build processes. This contrasts with sandboxed approaches but requires a trust model where the developer reviews changes before accepting.

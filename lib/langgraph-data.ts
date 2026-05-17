@@ -212,7 +212,7 @@ export const courses: LangGraphCourse[] = [
     numLectures: 164,
     level: "All Levels",
     durationHours: 38.5,
-    lastUpdated: "2025-12",
+    lastUpdated: "2026-12",
     whatYouLearn: [
       "Foundational Agentic AI principles and autonomous agent design",
       "LangGraph workflows: state, memory, and event-driven systems",
@@ -310,7 +310,7 @@ export const courses: LangGraphCourse[] = [
     numLectures: 38,
     level: "All Levels",
     durationHours: 3.0,
-    lastUpdated: "2025-02",
+    lastUpdated: "2026-02",
     whatYouLearn: [
       "Fundamentals and significance of AI agents",
       "LangGraph building blocks and main components",
@@ -340,7 +340,7 @@ export const courses: LangGraphCourse[] = [
     numLectures: 137,
     level: "All Levels",
     durationHours: 31.5,
-    lastUpdated: "2025-12",
+    lastUpdated: "2026-12",
     whatYouLearn: [
       "Traditional RAG pipelines for information retrieval",
       "Advanced retrieval: hybrid search, multimodal RAG, persistent memory",
@@ -407,7 +407,7 @@ export const courses: LangGraphCourse[] = [
     numLectures: 112,
     level: "All Levels",
     durationHours: 16.5,
-    lastUpdated: "2025-12",
+    lastUpdated: "2026-12",
     whatYouLearn: [
       "Production-ready AI agents with LangChain.js and LangGraph.js",
       "Web search agents, documentation chatbots with RAG",
@@ -438,7 +438,7 @@ export const courses: LangGraphCourse[] = [
     numLectures: 19,
     level: "Intermediate",
     durationHours: 1.6,
-    lastUpdated: "2025-05",
+    lastUpdated: "2026-05",
     whatYouLearn: [
       "Core principles: graphs, nodes, edges, and states",
       "Constructing basic and News Writer agents",

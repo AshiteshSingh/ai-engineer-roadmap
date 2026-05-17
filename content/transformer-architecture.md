@@ -240,7 +240,7 @@ The $O(n^2)$ cost of standard self-attention has motivated a sustained line of r
 
 Linear attention methods remove the softmax from the attention computation and instead approximate or replace it with a kernel function $\phi$, allowing the computation to be rewritten as $\phi(Q)(\phi(K)^T V)$ rather than $\text{softmax}(QK^T)V$. The key algebraic insight is that by computing $\phi(K)^T V$ first (an $O(n d^2)$ operation), the overall cost drops from quadratic to linear in sequence length. **Katharopoulos et al. (2020)** formalized this in their "Transformers are RNNs" paper, showing that linear attention can be expressed as a recurrent computation, enabling constant-time per-step inference.
 
-In practice, linear attention has struggled to match standard softmax attention on language modeling quality. The softmax concentrates attention mass on a small number of relevant tokens — a property that linear kernels approximate poorly. Recent work like **TransNormerLLM (Qin et al., 2024)** and **Based (Arora et al., 2024)** has narrowed the gap by combining linear attention with gating mechanisms and short-range sliding-window attention, but as of 2025, no pure linear attention model has matched a comparable-scale standard transformer on general benchmarks.
+In practice, linear attention has struggled to match standard softmax attention on language modeling quality. The softmax concentrates attention mass on a small number of relevant tokens — a property that linear kernels approximate poorly. Recent work like **TransNormerLLM (Qin et al., 2024)** and **Based (Arora et al., 2024)** has narrowed the gap by combining linear attention with gating mechanisms and short-range sliding-window attention, but as of 2026, no pure linear attention model has matched a comparable-scale standard transformer on general benchmarks.
 
 ### State-Space Models: S4 and Mamba
 
@@ -260,7 +260,7 @@ RWKV has reached the 14B parameter scale and produces competitive results on sta
 
 ### Where Things Stand
 
-As of early 2025, the standard softmax transformer remains the dominant architecture for frontier language models. No sub-quadratic alternative has convincingly matched full attention at the largest scales on the most demanding tasks — particularly in-context learning, retrieval-intensive reasoning, and instruction following. However, the gap is closing, and hybrid architectures that mix SSM and attention layers are increasingly practical. The most likely near-term trajectory is not a wholesale replacement of attention but a gradual reduction in the fraction of layers that use it.
+As of early 2026, the standard softmax transformer remains the dominant architecture for frontier language models. No sub-quadratic alternative has convincingly matched full attention at the largest scales on the most demanding tasks — particularly in-context learning, retrieval-intensive reasoning, and instruction following. However, the gap is closing, and hybrid architectures that mix SSM and attention layers are increasingly practical. The most likely near-term trajectory is not a wholesale replacement of attention but a gradual reduction in the fraction of layers that use it.
 
 ## Attention Sink Phenomenon
 

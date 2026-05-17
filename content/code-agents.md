@@ -467,12 +467,12 @@ Performance progression on SWE-bench Verified (a curated subset of 500 problems)
 | System | SWE-bench Verified (%) | Date |
 |---|---|---|
 | Claude 3.5 Sonnet (basic scaffolding) | ~33% | Oct 2024 |
-| OpenAI Codex CLI | ~60% | Early 2025 |
-| Claude Code | ~72% | Mid 2025 |
-| Devin | ~55% | Mid 2025 |
-| Amazon Q Developer | ~52% | Mid 2025 |
+| OpenAI Codex CLI | ~60% | Early 2026 |
+| Claude Code | ~72% | Mid 2026 |
+| Devin | ~55% | Mid 2026 |
+| Amazon Q Developer | ~52% | Mid 2026 |
 
-*Note: these scores are approximate and evolving rapidly. Multiple systems crossed the 50% threshold on SWE-bench Verified by early 2025, and the leaderboard continues to shift as both models and agent scaffolding improve. Scores should be treated as directional rather than definitive, since evaluation methodology, subset selection, and infrastructure differences make exact comparisons difficult. For a deeper discussion of agent benchmarking methodology, see [Article 30: Agent Evaluation](/agent-evaluation).*
+*Note: these scores are approximate and evolving rapidly. Multiple systems crossed the 50% threshold on SWE-bench Verified by early 2026, and the leaderboard continues to shift as both models and agent scaffolding improve. Scores should be treated as directional rather than definitive, since evaluation methodology, subset selection, and infrastructure differences make exact comparisons difficult. For a deeper discussion of agent benchmarking methodology, see [Article 30: Agent Evaluation](/agent-evaluation).*
 
 These results demonstrate that agent scaffolding, tool use, and iterative repair contribute as much to performance as the underlying model's raw coding ability.
 

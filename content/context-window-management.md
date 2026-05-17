@@ -1052,13 +1052,13 @@ class ExtractiveCompressor:
 
 ```
 Original (48 tokens):
-"The quarterly earnings report for Q3 2025 shows that the company's
+"The quarterly earnings report for Q3 2026 shows that the company's
 revenue increased by 15% compared to the previous quarter, reaching
 a total of $2.3 billion, which exceeded analyst expectations by
 approximately 3 percentage points."
 
 Compressed (22 tokens):
-"Q3 2025 earnings: revenue increased 15% quarter-over-quarter,
+"Q3 2026 earnings: revenue increased 15% quarter-over-quarter,
 reaching $2.3 billion, exceeding expectations by 3 points."
 ```
 

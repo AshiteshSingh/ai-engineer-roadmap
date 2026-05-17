@@ -771,4 +771,4 @@ def safe_router(state: AgentState) -> str:
 - [Search & Recommendations with LLMs](/search-recommendations)
 - [Advanced RAG: Agentic, Graph-Based & Multi-Hop Retrieval](/advanced-rag)
 - [LlamaIndex](/llamaindex)
-- [The AI Engineer's Roadmap: Skills, Tools & Career Path (2025+)](/ai-engineer-roadmap)
+- [The AI Engineer's Roadmap: Skills, Tools & Career Path (2026+)](/ai-engineer-roadmap)

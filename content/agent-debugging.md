@@ -2047,7 +2047,7 @@ class DebugSession:
             "task": trace.task,
             "expected_answer": expected_answer,
             "source": f"production_failure:{run_id}",
-            "added_date": "2025-01-15",
+            "added_date": "2026-01-15",
             "tags": ["regression", "production_failure"],
         })
 ```

@@ -33,7 +33,7 @@ That reframes the comparison table as a deployment-decision tool, not trivia. Th
 
 ## The Decoder-Only Consensus
 
-Before comparing individual architectures, it is worth noting the remarkable convergence. Every major frontier LLM as of 2025 — GPT-4, Claude, Llama 3, Gemini, Mistral, Qwen, DeepSeek — uses a decoder-only transformer architecture with causal (left-to-right) attention masking. This convergence was not inevitable; T5 (**Raffel et al., 2020**) showed competitive results with encoder-decoder architectures, and models like UL2 (**Tay et al., 2022**) explored hybrid approaches.
+Before comparing individual architectures, it is worth noting the remarkable convergence. Every major frontier LLM as of 2026 — GPT-4, Claude, Llama 3, Gemini, Mistral, Qwen, DeepSeek — uses a decoder-only transformer architecture with causal (left-to-right) attention masking. This convergence was not inevitable; T5 (**Raffel et al., 2020**) showed competitive results with encoder-decoder architectures, and models like UL2 (**Tay et al., 2022**) explored hybrid approaches.
 
 The decoder-only design won for several reinforcing reasons:
 
@@ -315,7 +315,7 @@ class MultiHeadLatentAttention(torch.nn.Module):
 
 ### DeepSeek-R1
 
-DeepSeek-R1 (**DeepSeek-AI, 2025**) applies reinforcement learning to elicit reasoning behavior from the V3 base model (see the Reasoning Architectures section below for full treatment).
+DeepSeek-R1 (**DeepSeek-AI, 2026**) applies reinforcement learning to elicit reasoning behavior from the V3 base model (see the Reasoning Architectures section below for full treatment).
 
 ## Qwen Architecture Family
 
@@ -397,11 +397,11 @@ OpenAI's o1 (**OpenAI, 2024**) introduced the concept of **internal chain-of-tho
 - **Verification-based rewards**: the reinforcement learning training uses outcome-based verification — checking whether the final answer is correct — rather than process-based supervision of individual reasoning steps.
 - **Test-time compute scaling**: performance improves with more inference-time tokens spent on reasoning, creating a new scaling axis orthogonal to model size and training data (the traditional scaling dimensions).
 
-o3 (2025) extends this approach with improved reasoning efficiency and reliability, reportedly achieving expert-level performance on competition mathematics and doctoral-level science benchmarks.
+o3 (2026) extends this approach with improved reasoning efficiency and reliability, reportedly achieving expert-level performance on competition mathematics and doctoral-level science benchmarks.
 
 ### DeepSeek-R1
 
-DeepSeek-R1 (**DeepSeek-AI, 2025**) demonstrated that reasoning capabilities can emerge from pure reinforcement learning without supervised chain-of-thought data:
+DeepSeek-R1 (**DeepSeek-AI, 2026**) demonstrated that reasoning capabilities can emerge from pure reinforcement learning without supervised chain-of-thought data:
 
 - **Base architecture**: uses the DeepSeek-V3 model (671B/37B MoE) as its foundation
 - **Group Relative Policy Optimization (GRPO)**: instead of training a separate reward model, GRPO estimates the baseline from group scores — sampling multiple responses for each prompt and using their relative rankings as the reward signal

@@ -493,7 +493,7 @@ For tasks that feed into RLHF preference data (see Article 21), the confidence-r
 
 ## Cost Benchmarking
 
-Human evaluation costs are frequently underestimated, leading to underpowered studies or budget overruns. The following benchmarks, drawn from published research and industry practice as of 2025, provide realistic planning figures.
+Human evaluation costs are frequently underestimated, leading to underpowered studies or budget overruns. The following benchmarks, drawn from published research and industry practice as of 2026, provide realistic planning figures.
 
 ### Per-Annotation Cost by Task Type
 

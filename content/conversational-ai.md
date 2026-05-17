@@ -122,7 +122,7 @@ class ClarificationStrategy:
 User: Cancel my subscription
 Bot:  I can cancel your Pro subscription ($29/month).
       This will take effect at the end of your current billing
-      period (March 15, 2025). You'll lose access to:
+      period (March 15, 2026). You'll lose access to:
       - Advanced analytics
       - Priority support
       - Team collaboration features
