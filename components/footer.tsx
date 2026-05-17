@@ -32,7 +32,7 @@ export function Footer({ wordCount }: { wordCount?: number }) {
           </h2>
         </div>
         <Link
-          href="/#cat-phase-0-orientation"
+          href="/#cat-phase-1-models"
           className={cx("ftr-cta-btn", styles.cta)}
         >
           <span>Start the path</span>

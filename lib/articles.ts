@@ -37,14 +37,13 @@ export interface GroupedLessons {
 }
 
 // Ordered list of slugs — position (1-indexed) defines the lesson number.
-// This order IS the audiobook spine: phases 0-6 play continuously; the
+// This order IS the audiobook spine: phases 1-6 play continuously; the
 // Appendix is reachable but excluded from the continuous-play flow.
 // `*` slugs are new Cloudflare-specific pilot chapters.
 const LESSON_SLUGS = [
-  // Phase 0 · The AI Engineer on the Edge (1-2)
+  // Phase 1 · Foundations & Model Inference (1-9)
   "ai-on-cloudflare-workers", // *
   "ai-engineer-roadmap",
-  // Phase 1 · Models & Inference on Workers AI (3-9)
   "workers-ai-models", // *
   "transformer-architecture",
   "tokenization",
@@ -62,7 +61,7 @@ const LESSON_SLUGS = [
   "prompt-optimization",
   "prompt-caching",
   "adversarial-prompting",
-  // Phase 3 · Embeddings & RAG on Vectorize (19-27)
+  // Phase 3 · Embeddings & RAG (19-27)
   "vectorize-rag", // *
   "embeddings",
   "embedding-models",
@@ -72,7 +71,7 @@ const LESSON_SLUGS = [
   "rag",
   "advanced-rag",
   "rag-evaluation",
-  // Phase 4 · Agents, Memory & Orchestration on Workers (28-44)
+  // Phase 4 · Agents, Memory & Orchestration (28-44)
   "langgraph-d1-checkpointing", // *
   "langmem-vectorize-memory", // *
   "agent-architectures",
@@ -109,7 +108,7 @@ const LESSON_SLUGS = [
   "observability",
   "online-evaluation",
   "ai-gateway",
-  // Phase 6 · Ship on Cloudflare (63-73)
+  // Phase 6 · Ship to Production (63-73)
   "edge-deployment",
   "cost-optimization",
   "scaling-load-balancing",
@@ -121,7 +120,7 @@ const LESSON_SLUGS = [
   "vision-language-models",
   "audio-speech-ai",
   "ai-for-code",
-  // Appendix · Fine-tuning & Training (74-79) — beyond the edge
+  // Appendix · Fine-tuning & Training (74-79) — optional track
   "fine-tuning-fundamentals",
   "lora-adapters",
   "rlhf-preference",
@@ -149,15 +148,14 @@ export const LESSON_NUMBER: Record<string, number> = Object.fromEntries(
 );
 
 export const CATEGORIES: [number, number, string][] = [
-  // Phases 0-6 form the continuous-play roadmap spine
-  [1, 2, "Phase 0 · The AI Engineer on the Edge"],
-  [3, 9, "Phase 1 · Models & Inference on Workers AI"],
+  // Phases 1-6 form the continuous-play roadmap spine
+  [1, 9, "Phase 1 · Foundations & Model Inference"],
   [10, 18, "Phase 2 · Prompting & Structured Output"],
-  [19, 27, "Phase 3 · Embeddings & RAG on Vectorize"],
+  [19, 27, "Phase 3 · Embeddings & RAG"],
   [28, 44, "Phase 4 · Agents, Memory & Orchestration"],
   [45, 62, "Phase 5 · Evals, Safety & Observability"],
-  [63, 73, "Phase 6 · Ship on Cloudflare"],
-  // Appendix · Beyond the Edge — reachable, excluded from the flow spine
+  [63, 73, "Phase 6 · Ship to Production"],
+  // Appendix · reachable, excluded from the flow spine
   [74, 79, "Appendix · Fine-tuning & Training"],
   [80, 82, "Appendix · Other Clouds & Platforms"],
   [83, 91, "Appendix · Engineering & Communication"],
@@ -171,24 +169,14 @@ export const FLOW_MAX_NUMBER = 73;
 // Outcomes: falsifiable "you can now build/ship X" capability statements,
 // bound to the master article's Portfolio Levels where they line up.
 export const CATEGORY_META: Record<string, CategoryMeta> = {
-  "Phase 0 · The AI Engineer on the Edge": {
-    slug: "phase-0-orientation",
-    icon: "🧭",
-    description: "Understand what an AI engineer actually ships — and the one concrete runtime (Workers, Workers AI, Vectorize, D1) every later phase builds on",
-    gradient: ["var(--orange-9)", "var(--amber-11)"],
-    outcomes: [
-      "Explain how the AI-engineer role differs from ML engineer and data scientist",
-      "Name the Workers AI / Vectorize / D1 substrate each phase uses",
-      "Pick your entry point into the roadmap by experience level",
-    ],
-  },
-  "Phase 1 · Models & Inference on Workers AI": {
+  "Phase 1 · Foundations & Model Inference": {
     slug: "phase-1-models",
     icon: "🧠",
-    description: "Run real inference on pre-trained models — served from the edge through the Workers AI binding",
+    description: "Understand what an AI engineer ships, then run real inference on pre-trained models — and reason about their token and cost behavior",
     gradient: ["var(--violet-9)", "var(--violet-11)"],
     outcomes: [
-      "Call a Workers AI model and read its token and cost implications",
+      "Explain how the AI-engineer role differs from ML engineer and data scientist",
+      "Call a hosted model and read its token and cost implications",
       "Explain tokenization, attention and scaling laws in applied terms",
       "Pick a model for a task by latency, cost and capability",
     ],
@@ -196,21 +184,21 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
   "Phase 2 · Prompting & Structured Output": {
     slug: "phase-2-prompting",
     icon: "💬",
-    description: "Make model output reliable — prompts, tool/function calling, and schema-valid JSON from Workers AI",
+    description: "Make model output reliable — prompts, tool/function calling, and schema-valid JSON",
     gradient: ["var(--blue-9)", "var(--blue-11)"],
     outcomes: [
       "Write system prompts and few-shot examples that hold under variation",
-      "Drive function/tool calls from a Worker",
+      "Drive function/tool calls",
       "Ship a Structured Data Extractor: text in, schema-validated JSON out (Portfolio L1)",
     ],
   },
-  "Phase 3 · Embeddings & RAG on Vectorize": {
+  "Phase 3 · Embeddings & RAG": {
     slug: "phase-3-rag",
     icon: "🔍",
-    description: "Ground answers in your own data — embeddings and retrieval on Vectorize with D1 metadata",
+    description: "Ground answers in your own data — embeddings and retrieval with a vector database and a metadata store",
     gradient: ["var(--cyan-9)", "var(--cyan-11)"],
     outcomes: [
-      "Embed and index a corpus with CloudflareWorkersAIEmbeddings",
+      "Embed and index a corpus with an embedding model",
       "Tune chunking and retrieval strategies, then measure them",
       "Ship a Document Q&A System with citations and a faithfulness/relevance eval (Portfolio L1)",
     ],
@@ -218,18 +206,18 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
   "Phase 4 · Agents, Memory & Orchestration": {
     slug: "phase-4-agents",
     icon: "🤖",
-    description: "Build agents that reason and act — LangGraph checkpointed on D1, long-term memory on Vectorize, durable on Workers",
+    description: "Build agents that reason and act — LangGraph with checkpointed state and long-term vector memory",
     gradient: ["var(--amber-9)", "var(--amber-11)"],
     outcomes: [
       "Build a tool-using agent loop with persistent memory",
-      "Checkpoint and resume graphs on D1; orchestrate with Durable Objects, Queues & Workflows",
+      "Checkpoint and resume graphs; orchestrate long-running work with queues and workflows",
       "Ship a Multi-Source Research Agent reusing Phase 2 tool calls and Phase 3 retrieval (Portfolio L2)",
     ],
   },
   "Phase 5 · Evals, Safety & Observability": {
     slug: "phase-5-evals",
     icon: "🛡",
-    description: "Prove it works and ships safely — evals, red-teaming, guardrails, and AI Gateway observability",
+    description: "Prove it works and ships safely — evals, red-teaming, guardrails, and gateway-level observability",
     gradient: ["var(--crimson-9)", "var(--crimson-11)"],
     outcomes: [
       "Build an eval suite (benchmarks + LLM-as-judge) that gates a model change",
@@ -237,13 +225,13 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
       "Ship an eval + red-team + observability harness over your Phase 4 agent (Portfolio L3)",
     ],
   },
-  "Phase 6 · Ship on Cloudflare": {
+  "Phase 6 · Ship to Production": {
     slug: "phase-6-ship",
     icon: "🚀",
-    description: "Take it to production on the edge — deploy, scale, cost-control, and CI/CD with Wrangler",
+    description: "Take it to production — deploy, scale, cost-control, and CI/CD",
     gradient: ["var(--jade-9)", "var(--jade-11)"],
     outcomes: [
-      "Deploy and scale on Workers with Wrangler",
+      "Deploy and scale a production service",
       "Cap inference cost and wire CI/CD-gated evals",
       "Ship a cost-bounded, observable AI feature to production (e.g. an AI Code Review Bot)",
     ],
@@ -262,10 +250,10 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
   "Appendix · Other Clouds & Platforms": {
     slug: "appendix-clouds",
     icon: "☁",
-    description: "Optional track — GCP, Docker and Kubernetes for portability and comparison off the Cloudflare path",
+    description: "Optional track — GCP, Docker and Kubernetes for portability and comparison off the primary path",
     gradient: ["var(--sky-9)", "var(--sky-11)"],
     outcomes: [
-      "Map Workers concepts onto GCP equivalents",
+      "Map serverless concepts onto GCP equivalents",
       "Containerize a service with Docker",
       "Run a workload on Kubernetes",
     ],
@@ -349,7 +337,7 @@ export function isAppendixSlug(slug: string): boolean {
   return APPENDIX_SLUGS.has(slug);
 }
 
-// The audiobook spine: phases 0-6 in order, Appendix excluded. This is the
+// The audiobook spine: phases 1-6 in order, Appendix excluded. This is the
 // sequence the persistent player auto-advances through.
 export function getFlowOrder(): Lesson[] {
   return getAllLessons().filter((l) => !APPENDIX_SLUGS.has(l.slug));
