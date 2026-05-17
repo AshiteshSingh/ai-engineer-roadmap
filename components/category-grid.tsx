@@ -86,29 +86,6 @@ export function CategoryGrid({ groups }: Props) {
 
   return (
     <>
-      <nav className="cat-nav" aria-label="Category navigation">
-        <span className="cat-nav-label" aria-hidden="true">Jump to</span>
-        <div className="cat-nav-track">
-          {groups.map((g) => {
-            const isActive = activeSlug === `cat-${g.meta.slug}`;
-            return (
-              <button
-                key={g.category}
-                type="button"
-                className={`cat-nav-pill cat-${g.meta.slug}${isActive ? " cat-nav-pill--active" : ""}`}
-                aria-pressed={isActive}
-                onClick={() => open(g.meta.slug)}
-              >
-                <span className="cat-nav-dot" aria-hidden="true" />
-                <span className="cat-nav-icon" aria-hidden="true">{g.meta.icon}</span>
-                <span className="cat-nav-text">{g.category}</span>
-                <span className="cat-nav-count">{g.articles.length}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
       <div className="bento-grid">
         {groups.map((group, i) => {
           const totalMin = Math.round(

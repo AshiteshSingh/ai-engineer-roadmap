@@ -263,27 +263,6 @@ export function Search({ groups }: Props) {
         </div>
       )}
 
-      {!hasQuery && (
-        <div className="cmd-filter" role="group" aria-label="Filter by difficulty">
-          {DIFFICULTY_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              className={`cmd-filter-btn${f.value !== "all" ? ` cmd-filter-btn--${f.value}` : ""}${diffFilter === f.value ? " cmd-filter-btn--active" : ""}`}
-              aria-pressed={diffFilter === f.value}
-              onClick={() => setDiffFilter(f.value)}
-            >
-              {f.label}
-              {f.value !== "all" && (
-                <span className="cmd-filter-count">
-                  {groups.reduce((sum, g) => sum + g.articles.filter((a) => a.difficulty === f.value).length, 0)}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
       {hasQuery ? (
         <div className="search-results" aria-live="polite">
           {searching && results.length === 0 && (
