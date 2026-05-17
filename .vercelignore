@@ -1,6 +1,5 @@
 .next
 .vercel
-backend/
 crates/
 data/*.mp3
 data/*.wav

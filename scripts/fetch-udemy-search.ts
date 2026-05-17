@@ -1,10 +1,10 @@
 /**
  * Scrape a Udemy search/topic listing URL and emit JSON to stdout.
  *
- * Used as a subprocess by the Python orchestrator at
- * `backend/scripts/seed_topic_courses.py` — Python handles LangGraph
- * orchestration and DB writes; this script only does Playwright scraping
- * because Udemy is heavily Cloudflare-protected and Python httpx is blocked.
+ * Used as a subprocess by the Rust `seed-topic-courses` bin
+ * (crates/ml/langgraph-server) — Rust handles LangGraph orchestration and the
+ * SQLite (data/courses.db) writes; this script only does Playwright scraping
+ * because Udemy is heavily Cloudflare-protected and httpx-style fetches fail.
  *
  * Usage:
  *   pnpm tsx scripts/fetch-udemy-search.ts \
