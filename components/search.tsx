@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { GroupedLessons, DifficultyLevel } from "@/lib/articles";
+import type { GroupedLessons } from "@/lib/articles";
 import type { SearchResult } from "@/lib/data";
 import { searchContent } from "@/lib/actions/search";
 import { deepSearch, type DeepSearchResult } from "@/lib/actions/deep-search";
@@ -29,13 +29,6 @@ interface Props {
   groups: GroupedLessons[];
 }
 
-const DIFFICULTY_FILTERS: { value: DifficultyLevel | "all"; label: string }[] = [
-  { value: "all", label: "All Levels" },
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-];
-
 const SEARCH_SUGGESTIONS = [
   "transformers",
   "RAG",
@@ -52,7 +45,6 @@ export function Search({ groups }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [diffFilter, setDiffFilter] = useState<DifficultyLevel | "all">("all");
   const [isDeepSearch, setIsDeepSearch] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [inputFocused, setInputFocused] = useState(false);
@@ -68,16 +60,6 @@ export function Search({ groups }: Props) {
     }
     return map;
   }, [groups]);
-
-  const filteredGroups = useMemo(() => {
-    if (diffFilter === "all") return groups;
-    return groups
-      .map((g) => ({
-        ...g,
-        articles: g.articles.filter((a) => a.difficulty === diffFilter),
-      }))
-      .filter((g) => g.articles.length > 0);
-  }, [groups, diffFilter]);
 
   const totalLessons = useMemo(
     () => groups.reduce((sum, g) => sum + g.articles.length, 0),
@@ -352,7 +334,7 @@ export function Search({ groups }: Props) {
           })}
         </div>
       ) : (
-        <CategoryGrid groups={filteredGroups} />
+        <CategoryGrid groups={groups} />
       )}
     </>
   );
