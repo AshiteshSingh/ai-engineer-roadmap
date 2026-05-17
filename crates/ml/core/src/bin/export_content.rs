@@ -19,6 +19,11 @@ use tracing_subscriber::EnvFilter;
 struct Args {
     #[arg(long, default_value = "../../data/knowledge.db")]
     db: PathBuf,
+    /// Dedicated course store (scraped/reviewed courses live here, not in
+    /// knowledge.db, which `seed:content` rebuilds from scratch). Absent →
+    /// courses.json / course-reviews.json are written empty.
+    #[arg(long, default_value = "../../data/courses.db")]
+    courses_db: PathBuf,
     #[arg(long, default_value = "../../data/content")]
     out_dir: PathBuf,
 }
@@ -65,13 +70,21 @@ fn main() -> anyhow::Result<()> {
         serde_json::to_vec_pretty(&jobs)?,
     )?;
 
-    let courses = sqlite::load_external_courses(&conn)?;
+    // Courses/reviews live in their own DB so `seed:content` (which deletes
+    // and rebuilds knowledge.db) can't wipe them. Missing file → empty export.
+    let (courses, reviews) = if args.courses_db.exists() {
+        let cconn = sqlite::open_ro(&args.courses_db)?;
+        (
+            sqlite::load_external_courses(&cconn)?,
+            sqlite::load_course_reviews(&cconn)?,
+        )
+    } else {
+        (Vec::new(), Vec::new())
+    };
     fs::write(
         args.out_dir.join("courses.json"),
         serde_json::to_vec_pretty(&courses)?,
     )?;
-
-    let reviews = sqlite::load_course_reviews(&conn)?;
     fs::write(
         args.out_dir.join("course-reviews.json"),
         serde_json::to_vec_pretty(&reviews)?,
