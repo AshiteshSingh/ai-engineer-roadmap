@@ -3244,9 +3244,123 @@
 /* <<< TEAM-C <<< */
 
 /* >>> TEAM-D READING: /[slug] ARTICLE / MARKDOWN / TOC — DO NOT EDIT outside this fence >>> */
+/* Cherry-picked from mobile-optimization (branch obsoleted by the homepage
+   redesign). Only selectors verified live in the current codebase are kept;
+   .toc-sidebar / .toc-mobile-trigger / .toc-mobile-drawer / .category-progress-dot*
+   were dropped as orphaned (mobile TOC drawer removed since the branch). */
+
+/* Article banner title — fluid token (clamp max == prior fixed 2rem/32px,
+   so desktop >768px is byte-identical). */
+.article-banner-title {
+  font-size: var(--text-2xl);
+}
+
+/* Markdown body — fluid base size (desktop renders at the clamp max which
+   the foundation tuned, so visuals stay stable >768px). */
+.markdown-prose {
+  font-size: var(--text-base);
+  line-height: 1.8;
+}
+
+@media (max-width: 768px) {
+  /* 1 — Single-column article layout. Gap + horizontal padding use the
+     responsive shell tokens. */
+  .article-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-gutter);
+    padding-left: var(--space-section-x);
+    padding-right: var(--space-section-x);
+  }
+  .has-audio-player .article-grid {
+    padding-left: var(--space-section-x);
+    padding-right: var(--space-section-x);
+  }
+
+  /* 4 — Content overflow guards: nothing in the article body may push
+     the page horizontally at narrow widths. */
+  .markdown-prose pre,
+  .markdown-prose table,
+  .markdown-prose img {
+    max-width: 100%;
+  }
+  .markdown-prose pre {
+    overflow-x: auto;
+  }
+  .markdown-prose pre code {
+    /* let the <pre> own the horizontal scroll */
+    overflow-x: visible;
+  }
+  .markdown-prose table {
+    display: block;
+    overflow-x: auto;
+  }
+  .markdown-prose img {
+    height: auto;
+  }
+  .markdown-prose {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  /* Allow the content column to shrink so the wrapper's overflow:hidden /
+     pre's overflow-x:auto engage instead of pinning a fixed width. */
+  .article-grid { min-width: 0; }
+  .article-grid > * { min-width: 0; }
+  .markdown-prose { min-width: 0; }
+
+  /* 2/3 — Category progress strip: wrap so it never pushes the page
+     horizontally at 360-414px. */
+  .category-progress { flex-wrap: wrap; max-width: 100%; min-width: 0; }
+  .category-progress-label { white-space: normal; }
+  .category-progress-dots { flex-wrap: wrap; gap: 0; }
+}
 /* <<< TEAM-D <<< */
 
 /* >>> TEAM-E APP SECTIONS: auth / applications / coursework / memorize / courses / problems / aws / kv-quant — DO NOT EDIT outside this fence >>> */
+/* Cherry-picked from mobile-optimization. Auth block dropped (auth pages
+   migrated to DS CSS modules — .auth-shell/.auth-card orphaned); kv-quant
+   .se-paper-* block dropped (restructured since). Memorize-flashcard and
+   /courses rules verified live and kept. */
+
+@media (max-width: 768px) {
+  /* ---- Memorize: flashcard split ----
+     .flashcard-split-wrapper is a fixed 2-col grid that never collapsed —
+     unusable < ~600px. Stack into a single column. */
+  .flashcard-split-wrapper {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto;
+    overflow-y: auto;
+  }
+  .flashcard-left,
+  .flashcard-right,
+  .flashcard-controls {
+    grid-column: 1 !important;
+  }
+  .flashcard-left { grid-row: 1 !important; }
+  .flashcard-right {
+    grid-row: 2 !important;
+    min-height: 240px;
+  }
+  .flashcard-controls { grid-row: 3 !important; }
+
+  /* Long single-token terms must not push the card wider than the
+     viewport. Keep the visual weight, allow wrap. */
+  .flashcard-property {
+    font-size: clamp(28px, 11vw, 52px);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  /* ---- Courses (/courses) ----
+     Normalize to the shared 768px breakpoint so it is single-column on
+     tablet too. */
+  .courses-group-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  /* Tighten flashcard term further on the narrowest phones. */
+  .flashcard-property { font-size: clamp(24px, 9vw, 40px); }
+}
 /* <<< TEAM-E <<< */
 
 /* ===== END MANAGED REGIONS ===== */
