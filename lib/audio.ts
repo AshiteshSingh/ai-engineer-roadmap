@@ -20,6 +20,9 @@ export interface AudioChapter {
   title: string;
   start_secs: number;
   duration_secs: number;
+  /** Per-chapter narration prose. Present in the generated JSON; consumed by
+   *  the hub's Web-Speech player. Optional so an MP3-only meta still type-checks. */
+  script?: string;
 }
 
 export interface AudioMeta {
@@ -30,6 +33,8 @@ export interface AudioMeta {
   file_size_bytes: number;
   audio_url: string;
   chapters: AudioChapter[];
+  /** Concatenated "## title\n\nscript" of every chapter. Present in generated JSON. */
+  full_script?: string;
 }
 
 const R2_PUBLIC_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || process.env.R2_PUBLIC_DOMAIN || "";
