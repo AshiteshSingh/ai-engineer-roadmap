@@ -15,6 +15,7 @@
 //! Postgres in `app/api/chat/route.ts`); the other graphs run with a fresh
 //! thread id (`resumable=False` in Python), so there is no checkpointer.
 
+pub mod courses;
 pub mod graphs;
 pub mod json;
 pub mod llm;
