@@ -61,17 +61,18 @@ const LESSON_SLUGS = [
   "prompt-optimization",
   "prompt-caching",
   "adversarial-prompting",
-  // Phase 3 · Embeddings & RAG (19-27)
+  // Phase 3 · Embeddings & RAG (19-28)
   "vectorize-rag", // *
   "embeddings",
   "embedding-models",
   "vector-databases",
+  "lancedb",
   "chunking-strategies",
   "retrieval-strategies",
   "rag",
   "advanced-rag",
   "rag-evaluation",
-  // Phase 4 · Agents, Memory & Orchestration (28-41)
+  // Phase 4 · Agents, Memory & Orchestration (29-42)
   "agent-architectures",
   "multi-agent-systems",
   "agent-memory",
@@ -86,7 +87,7 @@ const LESSON_SLUGS = [
   "memory-architectures",
   "dynamic-context-assembly",
   "context-compression",
-  // Phase 5 · LangChain & LangGraph (42-51)
+  // Phase 5 · LangChain & LangGraph (43-52)
   "langchain-fundamentals",
   "langchain-tools-retrievers",
   "langgraph",
@@ -97,7 +98,7 @@ const LESSON_SLUGS = [
   "langgraph-streaming-observability",
   "langgraph-deployment",
   "langgraph-red-teaming",
-  // Phase 6 · Evals, Safety & Observability (52-68)
+  // Phase 6 · Evals, Safety & Observability (53-69)
   "eval-fundamentals",
   "benchmark-design",
   "llm-as-judge",
@@ -115,7 +116,7 @@ const LESSON_SLUGS = [
   "observability",
   "online-evaluation",
   "ai-gateway",
-  // Phase 7 · Ship to Production (69-79)
+  // Phase 7 · Ship to Production (70-80)
   "edge-deployment",
   "cost-optimization",
   "scaling-load-balancing",
@@ -127,18 +128,18 @@ const LESSON_SLUGS = [
   "vision-language-models",
   "audio-speech-ai",
   "ai-for-code",
-  // Appendix · Fine-tuning & Training (80-85) — optional track
+  // Appendix · Fine-tuning & Training (81-86) — optional track
   "fine-tuning-fundamentals",
   "lora-adapters",
   "rlhf-preference",
   "dataset-curation",
   "continual-learning",
   "distillation-compression",
-  // Appendix · Other Clouds & Platforms (86-88)
+  // Appendix · Other Clouds & Platforms (87-89)
   "gcp",
   "docker",
   "kubernetes",
-  // Appendix · Engineering & Communication (89-97)
+  // Appendix · Engineering & Communication (90-98)
   "microservices",
   "ci-cd",
   "nodejs",
@@ -158,20 +159,20 @@ export const CATEGORIES: [number, number, string][] = [
   // Phases 1-7 form the continuous-play roadmap spine
   [1, 9, "Phase 1 · Foundations & Model Inference"],
   [10, 18, "Phase 2 · Prompting & Structured Output"],
-  [19, 27, "Phase 3 · Embeddings & RAG"],
-  [28, 41, "Phase 4 · Agents, Memory & Orchestration"],
-  [42, 51, "Phase 5 · LangChain & LangGraph"],
-  [52, 68, "Phase 6 · Evals, Safety & Observability"],
-  [69, 79, "Phase 7 · Ship to Production"],
+  [19, 28, "Phase 3 · Embeddings & RAG"],
+  [29, 42, "Phase 4 · Agents, Memory & Orchestration"],
+  [43, 52, "Phase 5 · LangChain & LangGraph"],
+  [53, 69, "Phase 6 · Evals, Safety & Observability"],
+  [70, 80, "Phase 7 · Ship to Production"],
   // Appendix · reachable, excluded from the flow spine
-  [80, 85, "Appendix · Fine-tuning & Training"],
-  [86, 88, "Appendix · Other Clouds & Platforms"],
-  [89, 97, "Appendix · Engineering & Communication"],
+  [81, 86, "Appendix · Fine-tuning & Training"],
+  [87, 89, "Appendix · Other Clouds & Platforms"],
+  [90, 98, "Appendix · Engineering & Communication"],
 ];
 
 // The cut-off lesson number for the continuous-play spine. Lessons numbered
 // above this belong to the Appendix and are excluded from getFlowOrder().
-export const FLOW_MAX_NUMBER = 79;
+export const FLOW_MAX_NUMBER = 80;
 
 // Descriptions: parallel "outcome — concrete substrate" form, jargon-free.
 // Outcomes: falsifiable "you can now build/ship X" capability statements,

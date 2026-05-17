@@ -454,13 +454,9 @@ For more sophisticated retrieval patterns including query routing, self-correcti
 
 ### LanceDB
 
-**Architecture**: Open-source, embedded vector database built on the Lance columnar data format. LanceDB runs in-process (similar to SQLite for vectors) with zero-copy access to data on local disk or object storage. Written in Rust with Python, TypeScript, and Rust client libraries.
+Open-source, **embedded** vector database (in-process, like SQLite for vectors) built on the Lance columnar format — versioned datasets, native multi-modal data, and zero-copy access to local disk or object storage, with optional managed scale via LanceDB Enterprise. Its embedded-vs-lakehouse model and operational trade-offs differ enough from the server and serverless databases above that it gets its own deep-dive.
 
-**Strengths**: No server to manage -- runs embedded in your application process. The Lance format supports versioned datasets with efficient appends and updates, making it well-suited for ML workflows where data evolves over time. Native support for multi-modal data (images, text, tabular). Automatic IVF-PQ index construction. Direct integration with data lake storage (S3, GCS).
-
-**Limitations**: Embedded architecture means no built-in multi-process concurrency (though Lance's MVCC allows concurrent readers). Query performance at very large scale hasn't been validated as extensively as established distributed databases.
-
-**Best for**: Data science workflows, applications needing versioned vector datasets, edge deployments, and teams wanting to avoid managing a separate database server.
+→ **Full lesson:** [LanceDB: Embedded Multimodal Vector Lakehouse](/lancedb)
 
 ### pgvector
 
