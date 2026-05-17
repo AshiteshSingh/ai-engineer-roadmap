@@ -88,8 +88,8 @@
       "number": 2,
       "title": "The AI Engineer's Roadmap: Skills, Tools & Career Path (2025+)",
       "category": "Phase 1 · Foundations & Model Inference",
-      "wordCount": 6880,
-      "readingTimeMin": 34
+      "wordCount": 7129,
+      "readingTimeMin": 36
     },
     {
       "slug": "transformer-architecture",
@@ -112,8 +112,8 @@
       "number": 6,
       "title": "LLM Architectures Compared: GPT, Claude, Llama, Gemini, Mistral, and Beyond",
       "category": "Phase 1 · Foundations & Model Inference",
-      "wordCount": 5599,
-      "readingTimeMin": 28
+      "wordCount": 5802,
+      "readingTimeMin": 29
     },
     {
       "slug": "scaling-laws",
@@ -128,8 +128,8 @@
       "number": 8,
       "title": "Inference Optimization: KV Cache, Quantization & Speculative Decoding",
       "category": "Phase 1 · Foundations & Model Inference",
-      "wordCount": 5572,
-      "readingTimeMin": 28
+      "wordCount": 5817,
+      "readingTimeMin": 29
     },
     {
       "slug": "pretraining-data",
@@ -176,8 +176,8 @@
       "number": 14,
       "title": "Function Calling & Tool Integration: APIs, Schemas & Execution",
       "category": "Phase 2 · Prompting & Structured Output",
-      "wordCount": 4978,
-      "readingTimeMin": 25
+      "wordCount": 5268,
+      "readingTimeMin": 26
     },
     {
       "slug": "tool-use",
@@ -208,8 +208,8 @@
       "number": 18,
       "title": "Adversarial Prompting: Jailbreaks, Injections & Defense Strategies",
       "category": "Phase 2 · Prompting & Structured Output",
-      "wordCount": 5743,
-      "readingTimeMin": 29
+      "wordCount": 6042,
+      "readingTimeMin": 30
     },
     {
       "slug": "embeddings",
@@ -224,8 +224,8 @@
       "number": 21,
       "title": "Embedding Models: Representations, Similarity & Fine-tuning",
       "category": "Phase 3 · Embeddings & RAG",
-      "wordCount": 5078,
-      "readingTimeMin": 25
+      "wordCount": 5293,
+      "readingTimeMin": 26
     },
     {
       "slug": "vector-databases",
@@ -240,16 +240,16 @@
       "number": 23,
       "title": "Chunking Strategies: Splitting, Overlap & Semantic Boundaries",
       "category": "Phase 3 · Embeddings & RAG",
-      "wordCount": 5360,
-      "readingTimeMin": 27
+      "wordCount": 5652,
+      "readingTimeMin": 28
     },
     {
       "slug": "retrieval-strategies",
       "number": 24,
       "title": "Retrieval Strategies: Hybrid Search, Reranking & HyDE",
       "category": "Phase 3 · Embeddings & RAG",
-      "wordCount": 5684,
-      "readingTimeMin": 28
+      "wordCount": 5951,
+      "readingTimeMin": 30
     },
     {
       "slug": "rag",
@@ -264,8 +264,8 @@
       "number": 26,
       "title": "Advanced RAG: Agentic, Graph-Based & Multi-Hop Retrieval",
       "category": "Phase 3 · Embeddings & RAG",
-      "wordCount": 5952,
-      "readingTimeMin": 30
+      "wordCount": 6104,
+      "readingTimeMin": 31
     },
     {
       "slug": "rag-evaluation",
@@ -280,7 +280,7 @@
       "number": 30,
       "title": "Agent Architectures: ReAct, Plan-and-Execute & Cognitive Frameworks",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 5701,
+      "wordCount": 5858,
       "readingTimeMin": 29
     },
     {
@@ -288,8 +288,8 @@
       "number": 31,
       "title": "Multi-Agent Systems: Orchestration, Delegation & Communication",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 4905,
-      "readingTimeMin": 25
+      "wordCount": 5113,
+      "readingTimeMin": 26
     },
     {
       "slug": "agent-memory",
@@ -312,24 +312,24 @@
       "number": 34,
       "title": "Agent Harnesses: Event Loops, Permission Models & Tool Sandboxing",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 9608,
-      "readingTimeMin": 48
+      "wordCount": 9784,
+      "readingTimeMin": 49
     },
     {
       "slug": "agent-sdks",
       "number": 35,
       "title": "Agent SDKs: Claude, OpenAI, Vercel AI SDK & Framework Comparison",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 8818,
-      "readingTimeMin": 44
+      "wordCount": 9032,
+      "readingTimeMin": 45
     },
     {
       "slug": "code-agents",
       "number": 36,
       "title": "Code Generation Agents: Sandboxing, Iteration & Self-Repair",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 5628,
-      "readingTimeMin": 28
+      "wordCount": 5784,
+      "readingTimeMin": 29
     },
     {
       "slug": "agent-debugging",
@@ -344,7 +344,7 @@
       "number": 38,
       "title": "LangGraph: Stateful Multi-Agent Graphs for Production AI",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 3508,
+      "wordCount": 3641,
       "readingTimeMin": 18
     },
     {
@@ -360,8 +360,8 @@
       "number": 40,
       "title": "Context Engineering: Designing What LLMs See",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 4037,
-      "readingTimeMin": 20
+      "wordCount": 4208,
+      "readingTimeMin": 21
     },
     {
       "slug": "context-window-management",
@@ -384,24 +384,24 @@
       "number": 43,
       "title": "Dynamic Context Assembly: Runtime Composition for LLM Applications",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 8293,
-      "readingTimeMin": 41
+      "wordCount": 8560,
+      "readingTimeMin": 43
     },
     {
       "slug": "context-compression",
       "number": 44,
       "title": "Context Compression: Fitting More Signal into Fewer Tokens",
       "category": "Phase 4 · Agents, Memory & Orchestration",
-      "wordCount": 8426,
-      "readingTimeMin": 42
+      "wordCount": 8618,
+      "readingTimeMin": 43
     },
     {
       "slug": "eval-fundamentals",
       "number": 45,
       "title": "LLM Evaluation Fundamentals: Metrics, Datasets & Methodology",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 6539,
-      "readingTimeMin": 33
+      "wordCount": 6886,
+      "readingTimeMin": 34
     },
     {
       "slug": "benchmark-design",
@@ -424,8 +424,8 @@
       "number": 48,
       "title": "Human Evaluation: Annotation Design, Inter-Rater Reliability & Scale",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 4961,
-      "readingTimeMin": 25
+      "wordCount": 5179,
+      "readingTimeMin": 26
     },
     {
       "slug": "eval-frameworks-comparison",
@@ -440,16 +440,16 @@
       "number": 50,
       "title": "DeepEval Synthesizer: Synthetic Golden Generation for LLM Evaluation",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 4773,
-      "readingTimeMin": 24
+      "wordCount": 4997,
+      "readingTimeMin": 25
     },
     {
       "slug": "agent-evaluation",
       "number": 51,
       "title": "Agent Evaluation: Reliability, Tool Use Accuracy & Trajectory Analysis",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 6470,
-      "readingTimeMin": 32
+      "wordCount": 6647,
+      "readingTimeMin": 33
     },
     {
       "slug": "red-teaming",
@@ -464,24 +464,24 @@
       "number": 53,
       "title": "Red-Teaming LLM Applications with LangGraph: Graph-Based Adversarial Pipelines",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 5940,
-      "readingTimeMin": 30
+      "wordCount": 6221,
+      "readingTimeMin": 31
     },
     {
       "slug": "guardrails-filtering",
       "number": 54,
       "title": "Guardrails & Content Filtering: Input/Output Safety Layers",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 5393,
-      "readingTimeMin": 27
+      "wordCount": 5635,
+      "readingTimeMin": 28
     },
     {
       "slug": "hallucination-mitigation",
       "number": 55,
       "title": "Hallucination Detection & Mitigation: Grounding & Verification",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 5283,
-      "readingTimeMin": 26
+      "wordCount": 5661,
+      "readingTimeMin": 28
     },
     {
       "slug": "constitutional-ai",
@@ -496,16 +496,16 @@
       "number": 57,
       "title": "Bias, Fairness & Responsible AI in Production",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 4673,
-      "readingTimeMin": 23
+      "wordCount": 4916,
+      "readingTimeMin": 25
     },
     {
       "slug": "ai-governance",
       "number": 58,
       "title": "AI Governance: Compliance, Auditing & Risk Management",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 5950,
-      "readingTimeMin": 30
+      "wordCount": 6242,
+      "readingTimeMin": 31
     },
     {
       "slug": "interpretability",
@@ -520,8 +520,8 @@
       "number": 60,
       "title": "Observability: Tracing, Logging & LLM Monitoring",
       "category": "Phase 5 · Evals, Safety & Observability",
-      "wordCount": 5676,
-      "readingTimeMin": 28
+      "wordCount": 5900,
+      "readingTimeMin": 30
     },
     {
       "slug": "online-evaluation",
@@ -544,24 +544,24 @@
       "number": 63,
       "title": "Edge Deployment: On-Device Models, ONNX & WebLLM",
       "category": "Phase 6 · Ship to Production",
-      "wordCount": 5866,
-      "readingTimeMin": 29
+      "wordCount": 6181,
+      "readingTimeMin": 31
     },
     {
       "slug": "cost-optimization",
       "number": 64,
       "title": "Cost Optimization: Token Economics, Caching & Model Selection",
       "category": "Phase 6 · Ship to Production",
-      "wordCount": 5643,
-      "readingTimeMin": 28
+      "wordCount": 5863,
+      "readingTimeMin": 29
     },
     {
       "slug": "scaling-load-balancing",
       "number": 65,
       "title": "Scaling & Load Balancing: GPU Clusters, Model Parallelism & Routing",
       "category": "Phase 6 · Ship to Production",
-      "wordCount": 4330,
-      "readingTimeMin": 22
+      "wordCount": 4693,
+      "readingTimeMin": 23
     },
     {
       "slug": "llm-serving",
@@ -584,32 +584,32 @@
       "number": 68,
       "title": "CI/CD for AI: Regression Testing, Monitoring & Continuous Eval",
       "category": "Phase 6 · Ship to Production",
-      "wordCount": 5970,
-      "readingTimeMin": 30
+      "wordCount": 6218,
+      "readingTimeMin": 31
     },
     {
       "slug": "search-recommendations",
       "number": 69,
       "title": "Search & Recommendations with LLMs",
       "category": "Phase 6 · Ship to Production",
-      "wordCount": 5938,
-      "readingTimeMin": 30
+      "wordCount": 6199,
+      "readingTimeMin": 31
     },
     {
       "slug": "conversational-ai",
       "number": 70,
       "title": "Conversational AI: Chatbot Design, Dialogue Management & UX",
       "category": "Phase 6 · Ship to Production",
-      "wordCount": 6072,
-      "readingTimeMin": 30
+      "wordCount": 6273,
+      "readingTimeMin": 31
     },
     {
       "slug": "vision-language-models",
       "number": 71,
       "title": "Vision-Language Models: Architecture, Training & Applications",
       "category": "Phase 6 · Ship to Production",
-      "wordCount": 5281,
-      "readingTimeMin": 26
+      "wordCount": 5542,
+      "readingTimeMin": 28
     },
     {
       "slug": "audio-speech-ai",
@@ -624,56 +624,56 @@
       "number": 73,
       "title": "AI for Code: Copilots, Code Review & Program Synthesis",
       "category": "Phase 6 · Ship to Production",
-      "wordCount": 5792,
-      "readingTimeMin": 29
+      "wordCount": 5994,
+      "readingTimeMin": 30
     },
     {
       "slug": "fine-tuning-fundamentals",
       "number": 74,
       "title": "Fine-tuning Fundamentals: Full, Freeze & Transfer Learning",
       "category": "Appendix · Fine-tuning & Training",
-      "wordCount": 5103,
-      "readingTimeMin": 26
+      "wordCount": 5500,
+      "readingTimeMin": 28
     },
     {
       "slug": "lora-adapters",
       "number": 75,
       "title": "LoRA, QLoRA & Adapter Methods: Parameter-Efficient Fine-tuning",
       "category": "Appendix · Fine-tuning & Training",
-      "wordCount": 5054,
-      "readingTimeMin": 25
+      "wordCount": 5274,
+      "readingTimeMin": 26
     },
     {
       "slug": "rlhf-preference",
       "number": 76,
       "title": "RLHF & Preference Optimization: DPO, ORPO & PPO",
       "category": "Appendix · Fine-tuning & Training",
-      "wordCount": 4675,
-      "readingTimeMin": 23
+      "wordCount": 4933,
+      "readingTimeMin": 25
     },
     {
       "slug": "dataset-curation",
       "number": 77,
       "title": "Dataset Curation: Synthetic Data, Quality Filtering & Annotation",
       "category": "Appendix · Fine-tuning & Training",
-      "wordCount": 5385,
-      "readingTimeMin": 27
+      "wordCount": 5587,
+      "readingTimeMin": 28
     },
     {
       "slug": "continual-learning",
       "number": 78,
       "title": "Continual Learning: Catastrophic Forgetting & Knowledge Retention",
       "category": "Appendix · Fine-tuning & Training",
-      "wordCount": 5574,
-      "readingTimeMin": 28
+      "wordCount": 5862,
+      "readingTimeMin": 29
     },
     {
       "slug": "distillation-compression",
       "number": 79,
       "title": "Distillation & Model Compression: Pruning, Quantization & Student Models",
       "category": "Appendix · Fine-tuning & Training",
-      "wordCount": 5716,
-      "readingTimeMin": 29
+      "wordCount": 5924,
+      "readingTimeMin": 30
     },
     {
       "slug": "gcp",
@@ -744,7 +744,7 @@
       "number": 88,
       "title": "PostgreSQL JOINs: Inner, Outer, Cross, Self, Lateral & Performance",
       "category": "Appendix · Engineering & Communication",
-      "wordCount": 2571,
+      "wordCount": 2548,
       "readingTimeMin": 13
     },
     {
@@ -760,8 +760,8 @@
       "number": 90,
       "title": "LlamaIndex",
       "category": "Appendix · Engineering & Communication",
-      "wordCount": 3023,
-      "readingTimeMin": 15
+      "wordCount": 3223,
+      "readingTimeMin": 16
     },
     {
       "slug": "public-speaking",
@@ -772,5 +772,5 @@
       "readingTimeMin": 10
     }
   ],
-  "totalWordCount": 445467
+  "totalWordCount": 455800
 }

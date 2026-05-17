@@ -16,13 +16,6 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 };
 
 export function LearningPath({ groups }: Props) {
-  const totalLessons = groups.reduce((s, g) => s + g.articles.length, 0);
-  const totalMin = groups.reduce(
-    (s, g) => s + g.articles.reduce((a, l) => a + l.readingTimeMin, 0),
-    0,
-  );
-  const totalHours = Math.max(1, Math.round(totalMin / 60));
-
   return (
     <nav aria-label="Learning path" className="lp">
       <header className="lp-head">
@@ -32,20 +25,6 @@ export function LearningPath({ groups }: Props) {
           {groups.length} milestones, sequenced from fundamentals to production
           systems. Follow the rail or jump to any station.
         </p>
-        <dl className="lp-stats">
-          <div className="lp-stat">
-            <dt className="lp-stat-k">Milestones</dt>
-            <dd className="lp-stat-v">{groups.length}</dd>
-          </div>
-          <div className="lp-stat">
-            <dt className="lp-stat-k">Lessons</dt>
-            <dd className="lp-stat-v">{totalLessons}</dd>
-          </div>
-          <div className="lp-stat">
-            <dt className="lp-stat-k">Est. time</dt>
-            <dd className="lp-stat-v">~{totalHours}h</dd>
-          </div>
-        </dl>
       </header>
 
       <ol className="lp-rail">
