@@ -62,6 +62,13 @@ struct Args {
     #[arg(long, default_value_t = 1800)]
     target_words: usize,
 
+    /// Article mode: strip fenced ```xyflow / ```mermaid diagram blocks and
+    /// standalone image refs from the article before the DeepSeek call, and
+    /// instruct the model not to describe or invent diagrams. Off by default
+    /// so the langgraph path is byte-for-byte unchanged.
+    #[arg(long)]
+    strip_diagrams: bool,
+
     /// Article mode: skip DeepSeek, read the script from `--script-cache`.
     #[arg(long)]
     use_cached_script: bool,
@@ -151,18 +158,79 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run_article_mode(args: &Args) -> anyhow::Result<(String, String, String)> {
-    let article = std::fs::read_to_string(&args.input)
+    let mut article = std::fs::read_to_string(&args.input)
         .map_err(|e| anyhow::anyhow!("reading {}: {e}", args.input.display()))?;
+
+    if args.strip_diagrams {
+        let before = article.len();
+        article = strip_diagram_fences(&article);
+        tracing::info!(
+            "strip-diagrams: article {} → {} bytes",
+            before,
+            article.len()
+        );
+    }
 
     let script_raw = if args.use_cached_script {
         tracing::info!("reading cached script from {}", args.script_cache.display());
         std::fs::read_to_string(&args.script_cache)
             .map_err(|e| anyhow::anyhow!("reading cached script {}: {e}", args.script_cache.display()))?
     } else {
-        generate_with_deepseek(&article, &args.title, args.target_words).await?
+        generate_with_deepseek(&article, &args.title, args.target_words, args.strip_diagrams).await?
     };
 
     Ok((script_raw, args.slug.clone(), args.title.clone()))
+}
+
+/// Remove fenced ```xyflow / ```mermaid blocks and standalone image lines from
+/// the article, so the narration model never sees — and therefore never tries
+/// to describe — diagrams. Other fenced code blocks are left intact; the
+/// system prompt and downstream `strip_markdown` already handle those.
+fn strip_diagram_fences(md: &str) -> String {
+    let mut out: Vec<&str> = Vec::new();
+    let mut fence_char: Option<char> = None; // Some(_) while inside a dropped block.
+    for line in md.lines() {
+        let trimmed = line.trim_start();
+        if let Some(fc) = fence_char {
+            let tt = trimmed.trim_end();
+            if tt.len() >= 3 && tt.chars().all(|c| c == fc) {
+                fence_char = None; // Closing fence consumed.
+            }
+            continue; // Drop the body and both fences.
+        }
+        let mark = if trimmed.starts_with("```") {
+            Some('`')
+        } else if trimmed.starts_with("~~~") {
+            Some('~')
+        } else {
+            None
+        };
+        if let Some(fc) = mark {
+            let lang = trimmed.trim_start_matches(fc).trim().to_ascii_lowercase();
+            if lang == "xyflow" || lang == "mermaid" {
+                fence_char = Some(fc);
+                continue; // Drop the opening fence line.
+            }
+        }
+        let t = line.trim();
+        if t.starts_with("![") && t.ends_with(')') {
+            continue; // Standalone image reference.
+        }
+        out.push(line);
+    }
+    // Collapse runs of blank lines left behind into a single blank line.
+    let mut result = String::with_capacity(md.len());
+    let mut prev_blank = false;
+    for l in out {
+        let blank = l.trim().is_empty();
+        if blank && prev_blank {
+            continue;
+        }
+        prev_blank = blank;
+        result.push_str(l);
+        result.push('\n');
+    }
+    result
 }
 
 async fn run_outline_mode(
@@ -368,9 +436,10 @@ async fn generate_with_deepseek(
     article: &str,
     title: &str,
     target_words: usize,
+    diagrams_stripped: bool,
 ) -> anyhow::Result<String> {
     let client = deepseek::client_from_env()?;
-    let user = user_prompt_from_article(article, title, target_words);
+    let user = user_prompt_from_article(article, title, target_words, diagrams_stripped);
 
     tracing::info!(
         "calling DeepSeek (target ≈ {} words, article {} bytes)…",
@@ -386,7 +455,19 @@ async fn generate_with_deepseek(
     Ok(out.content)
 }
 
-fn user_prompt_from_article(article: &str, title: &str, target_words: usize) -> String {
+fn user_prompt_from_article(
+    article: &str,
+    title: &str,
+    target_words: usize,
+    diagrams_stripped: bool,
+) -> String {
+    let diagram_clause = if diagrams_stripped {
+        " Diagrams have been removed from this article: do not describe, narrate, \
+         reference, or invent any diagrams, figures, charts, or visual layouts — \
+         convey the underlying ideas in prose instead."
+    } else {
+        ""
+    };
     format!(
         "Rewrite the following technical article as a faithful audio guide titled \"{title}\" of \
          approximately {target_words} words.\n\nFollow the system prompt rules exactly. Every \
@@ -394,9 +475,9 @@ fn user_prompt_from_article(article: &str, title: &str, target_words: usize) -> 
          article. Each major H2 section of the article becomes one chapter in the narration; \
          start each chapter with a single line `## <Chapter Title>` (five words or fewer) \
          followed by a blank line and the prose body. Skip H2 sections that are pure tables, \
-         see-also lists, or cross-references — those don't read well as audio. Begin with the \
-         first chapter heading directly; no preamble, no closing summary.\n\n--- ARTICLE \
-         MARKDOWN ---\n{article}\n--- END ARTICLE ---"
+         see-also lists, or cross-references — those don't read well as audio.{diagram_clause} \
+         Begin with the first chapter heading directly; no preamble, no closing summary.\n\n\
+         --- ARTICLE MARKDOWN ---\n{article}\n--- END ARTICLE ---"
     )
 }
 

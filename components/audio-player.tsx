@@ -66,11 +66,15 @@ export function AudioPlayer({
   gradient,
   icon,
   category,
+  autoPlay = false,
 }: {
   meta: AudioMeta;
   gradient?: [string, string];
   icon?: string;
   category?: string;
+  /** Start playing as soon as metadata loads (resumes from saved position).
+   *  Default false — the lesson detail page must NOT autoplay. */
+  autoPlay?: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -164,6 +168,13 @@ export function AudioPlayer({
           });
         })
         .catch(() => {});
+
+      // Hub "Listen" entry point: begin playback immediately. localStorage
+      // restore above already set the resume position; the async D1 reconcile
+      // self-skips once audio.played is non-empty.
+      if (autoPlay) {
+        audio.play().catch(() => {});
+      }
     };
     const onEnded = () => {
       setIsPlaying(false);
@@ -195,7 +206,7 @@ export function AudioPlayer({
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
     };
-  }, [meta.slug]);
+  }, [meta.slug, autoPlay]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
