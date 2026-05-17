@@ -4061,14 +4061,17 @@
 .lp-level[data-level="beginner"] {
   color: var(--ds-success-text);
   border-color: var(--ds-success);
+  background: color-mix(in srgb, var(--ds-success) 14%, transparent);
 }
 .lp-level[data-level="intermediate"] {
   color: var(--ds-warn-text);
   border-color: var(--ds-warn);
+  background: color-mix(in srgb, var(--ds-warn) 14%, transparent);
 }
 .lp-level[data-level="advanced"] {
   color: var(--ds-danger-text);
   border-color: var(--ds-danger);
+  background: color-mix(in srgb, var(--ds-danger) 14%, transparent);
 }
 .lp-title {
   margin: 0;
@@ -4820,9 +4823,10 @@
   pointer-events: none;
 }
 .cat-card:hover {
-  border-color: var(--ds-border-strong);
-  box-shadow: var(--ds-shadow-2);
-  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--cat-from) 45%, var(--ds-border-strong));
+  box-shadow: var(--ds-shadow-2),
+    0 12px 32px -12px color-mix(in srgb, var(--cat-from) 32%, transparent);
+  transform: translateY(-3px);
 }
 .cat-card:hover .cat-card-rail { width: 5px; opacity: 1; }
 .cat-card:hover .cat-card-aura { opacity: 0.16; }
@@ -4975,6 +4979,10 @@
   transform: translateX(2px);
 }
 .cat-row:hover::before { opacity: 1; }
+.cat-row:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
+}
 .cat-row-num {
   display: inline-flex;
   align-items: center;
