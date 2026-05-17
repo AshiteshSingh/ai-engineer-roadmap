@@ -1,15 +1,15 @@
 /**
  * Typed HTTP client for the knowledge LangGraph backend.
  *
- * Calls the Rust langgraph-server (crates/ml/langgraph-server) via POST
+ * Calls the Rust knowledge-server (crates/ml/server) via POST
  * /runs/wait. Local dev: `pnpm backend:rust` (serves :7860). Point
- * LANGGRAPH_URL at the deployed server in prod.
+ * BACKEND_URL at the deployed server in prod.
  */
 
-const LANGGRAPH_URL =
-  process.env.LANGGRAPH_URL || "http://127.0.0.1:7860";
+const BACKEND_URL =
+  process.env.BACKEND_URL || "http://127.0.0.1:7860";
 
-const LANGGRAPH_AUTH_TOKEN = process.env.LANGGRAPH_AUTH_TOKEN;
+const BACKEND_AUTH_TOKEN = process.env.BACKEND_AUTH_TOKEN;
 
 async function runGraph<T>(
   assistantId: string,
@@ -19,10 +19,10 @@ async function runGraph<T>(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  if (LANGGRAPH_AUTH_TOKEN) {
-    headers.Authorization = `Bearer ${LANGGRAPH_AUTH_TOKEN}`;
+  if (BACKEND_AUTH_TOKEN) {
+    headers.Authorization = `Bearer ${BACKEND_AUTH_TOKEN}`;
   }
-  const res = await fetch(`${LANGGRAPH_URL}/runs/wait`, {
+  const res = await fetch(`${BACKEND_URL}/runs/wait`, {
     method: "POST",
     headers,
     body: JSON.stringify({ assistant_id: assistantId, input }),
@@ -167,7 +167,7 @@ export function runMemorizeGenerate(input: {
 
 // Article generation does NOT go through this TS client. It runs the
 // in-process Rust `article_generate` graph via the `gen-article` bin
-// (crates/ml/langgraph-server/src/bin/gen-article.rs — `pnpm generate:rust`),
+// (crates/ml/server/src/bin/gen-article.rs — `pnpm generate:rust`),
 // or over POST /runs/wait with assistant_id "article_generate".
 
 /**

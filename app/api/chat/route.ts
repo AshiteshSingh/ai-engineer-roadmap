@@ -4,7 +4,7 @@ import { chatMessages } from "@/src/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { searchContent } from "@/lib/actions/search";
 import { deepSearch } from "@/lib/actions/deep-search";
-import { chat } from "@/src/lib/langgraph-client";
+import { chat } from "@/src/lib/backend-client";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

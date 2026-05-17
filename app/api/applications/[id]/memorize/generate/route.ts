@@ -5,7 +5,7 @@ import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications, concepts } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";
-import { runMemorizeGenerate, type TechBadge } from "@/src/lib/langgraph-client";
+import { runMemorizeGenerate, type TechBadge } from "@/src/lib/backend-client";
 import type { MemorizeCategory } from "@/lib/memorize-types";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

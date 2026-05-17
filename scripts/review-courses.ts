@@ -3,7 +3,7 @@ import {
   fetchUnreviewedCourses,
   upsertCourseReview,
 } from "../src/db/courses-sqlite";
-import { runCourseReview, type CourseReviewResult } from "../src/lib/langgraph-client";
+import { runCourseReview, type CourseReviewResult } from "../src/lib/backend-client";
 
 interface Args {
   limit: number;
