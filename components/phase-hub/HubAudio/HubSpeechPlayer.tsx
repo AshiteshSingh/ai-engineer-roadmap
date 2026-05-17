@@ -11,19 +11,25 @@ import { SPEECH_RATES } from "./useSpeechQueue";
 import styles from "./HubSpeechPlayer.module.css";
 
 function Glyph({ d }: { d: string }) {
+  // Single canonical size; CSS adds `display:block` so the SVG has no inline
+  // baseline gap and centres identically in every button.
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d={d} />
     </svg>
   );
 }
-const PLAY = "M8 5.14v13.72a1 1 0 001.5.86l11-6.86a1 1 0 000-1.72l-11-6.86A1 1 0 008 5.14z";
-const PAUSE = "M6 5h4v14H6zM14 5h4v14h-4z";
-const PREV = "M7 6h2v12H7zm3.5 6l8.5 6V6z";
-const NEXT = "M15 6h2v12h-2zM5 6l8.5 6L5 18z";
-const PREVLESSON = "M6 6h2v12H6zm3 6l9 6V6z";
-const NEXTLESSON = "M16 6h2v12h-2zM4 6l9 6-9 6z";
-const CLOSE = "M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.3 19.7 2.88 18.3 9.17 12 2.88 5.71 4.3 4.29l6.29 6.3 6.3-6.3z";
+// One consistent, optically-centred icon family (mirror-paired so the row
+// reads evenly). Chapter skip = bar + single triangle; lesson skip = double
+// triangle (visually distinct from a chapter jump).
+const PLAY = "M8 5v14l11-7z";
+const PAUSE = "M6 5h4v14H6zm8 0h4v14h-4z";
+const PREV = "M7 6h2v12H7zM16 6v12l-8-6z";
+const NEXT = "M8 6l8 6-8 6V6zM15 6h2v12h-2z";
+const PREVLESSON = "M11 6 3 12l8 6V6zM20 6l-8 6 8 6V6z";
+const NEXTLESSON = "M4 6l8 6-8 6V6zM13 6l8 6-8 6V6z";
+const CLOSE =
+  "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z";
 
 export function HubSpeechPlayer({
   queue,

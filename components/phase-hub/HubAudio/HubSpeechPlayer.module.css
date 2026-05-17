@@ -126,7 +126,7 @@
 .right {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex: none;
 }
 
@@ -134,15 +134,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
   width: 36px;
   height: 36px;
   padding: 0;
   border: none;
   border-radius: 999px;
+  line-height: 1;
   cursor: pointer;
   color: var(--ds-text-muted, rgba(255, 255, 255, 0.7));
   background: transparent;
   transition: color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+/* Block SVG → no inline baseline gap; every icon centres identically. */
+.btn svg {
+  display: block;
 }
 
 .btn:hover {
@@ -162,14 +169,16 @@
 .btnText {
   width: auto;
   min-width: 36px;
+  height: 36px;
   padding: 0 10px;
+  line-height: 1;
   font-size: var(--text-xs, 12px);
   font-weight: 700;
 }
 
 .btnPlay {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   color: var(--gray-1, #0b0b0c);
   background: linear-gradient(135deg, var(--cat-from), var(--cat-to));
   box-shadow: 0 4px 14px -2px
