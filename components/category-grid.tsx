@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import Link from "next/link";
 import type { Lesson, GroupedLessons } from "@/lib/articles";
-import { useCategoryModal } from "@/components/category-modal";
 
 /** Fill incomplete last row: if 1 leftover → full-width, if 2 → last spans 2.
  *  The base .cat-card classes are owned by HP-TEAM-6; identity gradient comes
@@ -62,28 +61,6 @@ interface Props {
 }
 
 export function CategoryGrid({ groups }: Props) {
-  const { open } = useCategoryModal();
-  const [activeSlug, setActiveSlug] = useState<string>("");
-
-  useEffect(() => {
-    const ids = groups.map((g) => `cat-${g.meta.slug}`);
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveSlug(entry.target.id);
-          }
-        }
-      },
-      { rootMargin: "-20% 0px -60% 0px", threshold: 0 },
-    );
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, [groups]);
-
   return (
     <>
       <div className="bento-grid">
