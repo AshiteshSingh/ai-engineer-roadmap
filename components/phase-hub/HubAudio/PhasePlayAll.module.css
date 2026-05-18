@@ -7,10 +7,10 @@
 .cta {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 22px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
   border: 1px solid color-mix(in srgb, var(--cat-from, var(--accent-9)) 40%, transparent);
-  border-radius: var(--ds-radius-lg, 14px);
+  border-radius: var(--ds-radius-lg);
   cursor: pointer;
   text-align: left;
   color: var(--ds-ink, #fff);
@@ -21,7 +21,7 @@
   );
   box-shadow: 0 6px 20px -6px
     color-mix(in srgb, var(--cat-from, var(--accent-9)) 45%, transparent);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  transition: var(--ds-transition-elevate);
 }
 
 .cta:hover:not(:disabled) {
@@ -33,7 +33,7 @@
 
 .cta:focus-visible {
   outline: var(--ds-focus-ring, 2px solid #6ea8fe);
-  outline-offset: 3px;
+  outline-offset: var(--ds-focus-ring-offset);
 }
 
 .cta:disabled {
@@ -41,23 +41,24 @@
   opacity: 0.7;
 }
 
+/* Same 48px primary affordance as the docked player's `.btnPlay`. */
 .icon {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  border-radius: 999px;
-  color: var(--gray-1, #0b0b0c);
+  font-size: var(--text-lg);
+  border-radius: var(--ds-radius-pill);
+  color: var(--ds-on-accent);
   background: linear-gradient(135deg, var(--cat-from, var(--accent-9)), var(--cat-to, var(--accent-11)));
 }
 
 .text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   min-width: 0;
 }
 

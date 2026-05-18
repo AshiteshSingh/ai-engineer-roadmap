@@ -35,8 +35,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .transcriptChapter {
@@ -57,16 +57,16 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .sentence {
   font-size: var(--text-sm, 14px);
-  line-height: 1.6;
+  line-height: var(--ds-leading-body, 1.6);
   color: var(--ds-text-muted, rgba(255, 255, 255, 0.62));
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--ds-radius, 8px);
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: var(--ds-transition-colors);
 }
 
 .sentenceActive {
@@ -126,25 +126,30 @@
 .right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   flex: none;
 }
 
+/* Canonical transport-icon button — mirrors components/audio-player.module.css
+   `.audioBtn` (40px desktop / 36 mobile) so both players share one control
+   system. DS has no control-size token; 40/48/36/42 are the established
+   literals in the peer player. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--ds-radius-pill);
   line-height: 1;
   cursor: pointer;
   color: var(--ds-text-muted, rgba(255, 255, 255, 0.7));
   background: transparent;
-  transition: color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+  transition: var(--ds-transition-colors),
+    transform var(--ds-dur-fast) var(--ds-ease);
 }
 
 /* Block SVG → no inline baseline gap; every icon centres identically. */
@@ -163,37 +168,56 @@
 
 .btn:focus-visible {
   outline: var(--ds-focus-ring, 2px solid #6ea8fe);
-  outline-offset: 2px;
+  outline-offset: var(--ds-focus-ring-offset);
 }
 
 .btnText {
   width: auto;
-  min-width: 36px;
-  height: 36px;
-  padding: 0 10px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 var(--space-2);
   line-height: 1;
   font-size: var(--text-xs, 12px);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
+/* Primary action — mirrors `.audioBtnPlay` (48px desktop / 42 mobile). */
 .btnPlay {
-  width: 40px;
-  height: 40px;
-  color: var(--gray-1, #0b0b0c);
+  width: 48px;
+  height: 48px;
+  color: var(--ds-on-accent);
   background: linear-gradient(135deg, var(--cat-from), var(--cat-to));
   box-shadow: 0 4px 14px -2px
     color-mix(in srgb, var(--cat-from) 55%, transparent);
 }
 
 .btnPlay:hover {
-  color: var(--gray-1, #0b0b0c);
+  color: var(--ds-on-accent);
   background: linear-gradient(135deg, var(--cat-from), var(--cat-to));
   filter: brightness(1.08);
 }
 
+/* Size shrink — matches the peer MP3 player's 768px breakpoint. */
+@media (max-width: 768px) {
+  .btn {
+    width: 36px;
+    height: 36px;
+  }
+  .btnText {
+    min-width: 36px;
+    height: 36px;
+  }
+  .btnPlay {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* Behaviour shrink on phones: drop the lesson-skip buttons + tighten copy. */
 @media (max-width: 640px) {
   .sub {
-    font-size: 10px;
+    font-size: var(--text-2xs);
   }
   .transport .btn:first-child,
   .transport .btn:last-child {
