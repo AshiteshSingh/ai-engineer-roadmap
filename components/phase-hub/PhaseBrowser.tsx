@@ -34,6 +34,8 @@ export interface PhaseBrowserProps {
   audioBySlug?: Record<string, AudioMeta>;
   /** Ordered (roadmap order) playable metas — the whole-phase listen queue. */
   audioMetas?: AudioMeta[];
+  /** Defined ⇒ render the "RAG Podcasts" Spotify rail (route-level opt-in). */
+  podcasts?: RagPodcast[];
   gradient?: [string, string];
   icon?: string;
   category?: string;
@@ -57,6 +59,7 @@ export function PhaseBrowser({
   heading = "Lessons in this phase",
   audioBySlug,
   audioMetas,
+  podcasts,
   gradient,
   icon,
   category,
@@ -85,6 +88,7 @@ export function PhaseBrowser({
         onReset={() => setState(DEFAULT_PHASE_FILTER_STATE)}
       />
       {audioBySlug ? <PhasePlayAll phaseName={category} icon={icon} /> : null}
+      {podcasts ? <RagPodcasts episodes={podcasts} /> : null}
       <LessonGrid
         lessons={filtered}
         progressBySlug={progressBySlug}
