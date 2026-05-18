@@ -1,9 +1,22 @@
 /* Thin page layout wrapper — single-column port of the legacy .article-grid
    container. Tokens / literals only; no global CSS. */
 .layout {
-  max-width: 1060px;
+  max-width: var(--hub-measure);
   margin: 0 auto;
   padding: 24px 24px 64px;
+}
+
+/* Applied only while the docked speech player is mounted: reserve the
+   bar's height (+ safe-area) so the last lesson cards clear it, and keep
+   in-page anchor jumps off the dock. --player-bar-h (72) ≥ this dock's
+   ~68px bar → comfortable single-token clearance. */
+.layoutDocked {
+  padding-bottom: calc(
+    var(--player-bar-h) + var(--space-5) + env(safe-area-inset-bottom)
+  );
+  scroll-padding-bottom: calc(
+    var(--player-bar-h) + var(--space-5) + env(safe-area-inset-bottom)
+  );
 }
 
 @media (max-width: 768px) {

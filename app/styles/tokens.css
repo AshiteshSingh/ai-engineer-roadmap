@@ -199,6 +199,33 @@
     box-shadow var(--ds-dur) var(--ds-ease),
     transform var(--ds-dur-fast) var(--ds-ease);
 
+  /* Layering scale — ADDED. z-index is hand-written as raw 50/55/56
+     across the two audio players (+ topbar 50 in globals). Name the
+     tiers so the player + its overlays stop drifting. Values == current
+     literals → adopting them is stacking-identical. globals .yc-topbar
+     is documented here but NOT edited (out of scope; it's a global
+     rule). Additive only. */
+  --z-sticky: 50;   /* sticky chrome — globals .yc-topbar (doc only) */
+  --z-dock: 50;     /* fixed audio-player dock (.audioPlayer / .dock) */
+  --z-scrim: 55;    /* full-bleed backdrop behind a docked sheet */
+  --z-modal: 56;    /* sheet/panel above the scrim (chapter list) */
+
+  /* Audio-player dock metrics — ADDED. The MP3 player's total bar
+     height (seek 16 + inner 56 = 72; ≤768px 14 + 50 = 64) is duplicated
+     by hand as the chapter-panel `bottom` and kept in sync via a
+     comment. Name it once; the panel offset + the /rag page's
+     bottom-clearance derive from it. Values == current literals.
+     Additive only. */
+  --player-bar-h: 72px;
+  --player-bar-h-compact: 64px;
+
+  /* /rag hub column measure — ADDED. The hub column + hero hard-code
+     1060px; the docked player bar hard-codes 1100px so its controls
+     miss the grid edges. Name the shared measure (== current 1060) so
+     the player aligns to the column. Distinct from --ds-content (1120)
+     by design. Additive only. */
+  --hub-measure: 1060px;
+
   /* Legacy category-gradient hooks → rerouted to indigo (no teal) */
   --cat-from: var(--accent-9);
   --cat-to: var(--accent-11);
