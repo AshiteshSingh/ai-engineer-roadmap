@@ -1,20 +1,21 @@
 /**
- * Generate interview prep for an application via the LOCAL Rust knowledge-server
- * and persist it into Neon — the scriptable equivalent of clicking "Generate
- * Prep" on the application detail page (no browser/owner login needed).
+ * Push a committed prep artifact (data/app-prep/<slug>.json) into the Neon
+ * `applications` row — the scriptable equivalent of clicking "Generate Prep",
+ * but generation-agnostic: it just reads the artifact and writes the DB. The
+ * artifact is produced beforehand by either `pnpm prep:loop` (deepseek-loop
+ * CLI agent) or `pnpm prep:rust` (gen-app-prep bin).
  *
- * Why this exists: the DB-backed prep path
- * (POST /api/applications/[id]/prep -> runAppPrep -> Rust app_prep graph) is
- * dead in prod (the LANGGRAPH_*->BACKEND_* env rename was never migrated and no
- * Rust backend is deployed). Locally it works: backend-client defaults
- * BACKEND_URL to http://127.0.0.1:7860 and DATABASE_URL points at the shared
- * Neon — so generating here also fixes the live owner view.
+ * DATABASE_URL points at the shared Neon, so updating the row here also fixes
+ * the live owner view (GET /api/applications/[id] returns the owner row first;
+ * a non-empty aiInterviewQuestions wins over the static seed overlay).
  *
- *   pnpm backend:rust:local            # terminal 1: Rust server on :7860
- *   pnpm prep:db [--slug <slug>] [--user-id <id>]   # terminal 2
+ *   pnpm prep:loop                                  # 1. generate artifact
+ *   pnpm test:app-prep                              # 2. validate (gate)
+ *   pnpm prep:db [--slug <slug>] [--user-id <id>]   # 3. artifact -> Neon
  *
  * Default slug: european-central-bank-ssm-cockpit-developer.
- * Exits 0 on success, 1 on any error.
+ * Exits 0 on success, 1 on any error. Neon is left untouched on validation
+ * failure.
  */
 
 import fs from "fs";
@@ -22,7 +23,16 @@ import path from "path";
 import { eq } from "drizzle-orm";
 import { db } from "../src/db";
 import { applications } from "../src/db/schema";
-import { runAppPrep } from "../src/lib/backend-client";
+
+const VALID_CATEGORIES = new Set([
+  "Databases & Storage",
+  "Backend Frameworks",
+  "Frontend Frameworks",
+  "Cloud & DevOps",
+  "Languages",
+  "Testing & Quality",
+  "API & Communication",
+]);
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -37,22 +47,60 @@ function die(msg: string): never {
   process.exit(1);
 }
 
-/** Committed Rust artifact's synthesized JD, used when the DB row has none. */
-function artifactJobDescription(slug: string): string | null {
+interface PrepArtifact {
+  jobDescription?: string | null;
+  aiInterviewQuestions?: string | null;
+  aiTechStack?: string | null;
+}
+
+/** Read + validate the committed artifact. Throws (via die) on bad shape so
+ *  Neon is never written from a malformed/LLM-broken file. */
+function loadArtifact(slug: string): Required<PrepArtifact> {
   const file = path.join(process.cwd(), "data", "app-prep", `${slug}.json`);
-  if (!fs.existsSync(file)) return null;
-  try {
-    const a = JSON.parse(fs.readFileSync(file, "utf-8")) as {
-      jobDescription?: string | null;
-    };
-    return a.jobDescription?.trim() ? a.jobDescription : null;
-  } catch {
-    return null;
+  if (!fs.existsSync(file)) {
+    die(`No artifact at data/app-prep/${slug}.json — run \`pnpm prep:loop ${slug}\` first.`);
   }
+  let a: PrepArtifact;
+  try {
+    a = JSON.parse(fs.readFileSync(file, "utf-8")) as PrepArtifact;
+  } catch (e) {
+    die(`Artifact is not valid JSON: ${e instanceof Error ? e.message : e}`);
+  }
+
+  const iq = (a.aiInterviewQuestions ?? "").trim();
+  if (iq.length < 200) die(`aiInterviewQuestions too short/empty (${iq.length} chars).`);
+
+  const tsRaw = a.aiTechStack;
+  if (typeof tsRaw !== "string" || !tsRaw.trim()) {
+    die("aiTechStack must be a non-empty JSON string.");
+  }
+  let techs: Array<{ category?: string; relevance?: string; tag?: string; label?: string }>;
+  try {
+    techs = JSON.parse(tsRaw);
+  } catch {
+    die("aiTechStack is not parseable JSON.");
+  }
+  if (!Array.isArray(techs) || techs.length === 0) die("aiTechStack must parse to a non-empty array.");
+  for (const t of techs) {
+    if (!t || !t.tag || !t.label) die(`tech entry missing tag/label: ${JSON.stringify(t)}`);
+    if (!VALID_CATEGORIES.has(t.category ?? "")) die(`invalid tech category: ${JSON.stringify(t.category)}`);
+    if (t.relevance !== "primary" && t.relevance !== "secondary") {
+      die(`invalid relevance: ${JSON.stringify(t.relevance)}`);
+    }
+  }
+
+  return {
+    jobDescription: a.jobDescription?.trim() ? a.jobDescription : "",
+    aiInterviewQuestions: a.aiInterviewQuestions as string,
+    aiTechStack: tsRaw,
+  };
 }
 
 async function main() {
   if (!process.env.DATABASE_URL) die("DATABASE_URL not set (run via `pnpm prep:db`, which loads .env.local).");
+
+  const art = loadArtifact(SLUG);
+  console.log(`→ Artifact OK: aiInterviewQuestions=${art.aiInterviewQuestions.length} chars, aiTechStack=${JSON.parse(art.aiTechStack).length} badges`);
 
   console.log(`→ Resolving applications row for slug="${SLUG}"${USER_ID ? ` user-id=${USER_ID}` : ""}`);
   let rows = await db.select().from(applications).where(eq(applications.slug, SLUG));
@@ -71,38 +119,17 @@ async function main() {
   }
   const row = rows[0];
 
-  const jobDescription =
-    (row.jobDescription?.trim() ? row.jobDescription : null) ?? artifactJobDescription(SLUG);
-  if (!jobDescription) {
-    die(
-      `Application has no jobDescription and no data/app-prep/${SLUG}.json fallback. ` +
-        `app_prep returns empty on a blank JD — add one first.`,
-    );
-  }
-  const backfillJd = !row.jobDescription?.trim();
+  const backfillJd = !row.jobDescription?.trim() && !!art.jobDescription;
 
   console.log(`  row: id=${row.id} company="${row.company}" position="${row.position}"`);
-  console.log(`  jobDescription: ${jobDescription.length} chars${backfillJd ? " (from artifact — will backfill)" : " (from DB row)"}`);
-  console.log(`  before: aiInterviewQuestions=${row.aiInterviewQuestions?.length ?? 0} chars, aiTechStack=${row.aiTechStack ? "set" : "null"}`);
-
-  console.log(`→ runAppPrep against local Rust server (BACKEND_URL=${process.env.BACKEND_URL ?? "http://127.0.0.1:7860 (default)"}) …`);
-  const result = await runAppPrep({
-    appId: row.id,
-    jobDescription,
-    company: row.company,
-    position: row.position,
-  });
-
-  const iq = result.interview_questions ?? "";
-  const tech = Array.isArray(result.tech_stack) ? result.tech_stack : [];
-  if (!iq.trim()) die("Rust app_prep returned empty interview_questions (is the JD substantive? is the server up?).");
+  console.log(`  before: aiInterviewQuestions=${row.aiInterviewQuestions?.length ?? 0} chars, aiTechStack=${row.aiTechStack ? "set" : "null"}, jobDescription=${row.jobDescription?.trim() ? "set" : "null"}${backfillJd ? " (will backfill from artifact)" : ""}`);
 
   await db
     .update(applications)
     .set({
-      aiInterviewQuestions: iq,
-      aiTechStack: JSON.stringify(tech),
-      ...(backfillJd ? { jobDescription } : {}),
+      aiInterviewQuestions: art.aiInterviewQuestions,
+      aiTechStack: art.aiTechStack,
+      ...(backfillJd ? { jobDescription: art.jobDescription } : {}),
       updatedAt: new Date(),
     })
     .where(eq(applications.id, row.id));

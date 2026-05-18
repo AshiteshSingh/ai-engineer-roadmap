@@ -44,6 +44,7 @@
     "generate:rust": "cd crates/ml && cargo run -p aer-ml --release --bin gen-article --",
     "prep:rust": "cd crates/ml && cargo run -p aer-ml --release --bin gen-app-prep --",
     "prep:topic": "cd crates/ml && cargo run -p aer-ml --release --bin gen-topic --",
+    "prep:loop": "bash scripts/prep-loop.sh",
     "prep:db": "tsx --env-file=.env.local scripts/gen-app-prep-db.ts",
     "seed:courses": "cd crates/ml && cargo run -p aer-ml --release --bin seed-topic-courses --",
     "seed:deeplearning": "cd crates/ml && cargo run -p aer-ml --release --bin udemy -- deeplearning --seed-frontend",
