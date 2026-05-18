@@ -29,3 +29,33 @@ export function stripOwnerOnlyMarkdownLines(
     .filter((line) => !needles.some((n) => line.includes(n)))
     .join("\n");
 }
+
+// Owner-only "deep dive" topics associated with a job-application slug. These
+// are rendered as a card on the prep page (owner-gated client-side) and link
+// to the owner-gated /<slug> topic route. Kept OUT of the regenerated
+// aiInterviewQuestions markdown on purpose: that field is overwritten wholesale
+// by gen-app-prep / gen-app-prep-loop, so the relationship lives here in code —
+// regeneration can never wipe it.
+export interface OwnerDeepDive {
+  /** Topic route slug, e.g. "module-federation" → /module-federation. */
+  slug: string;
+  label: string;
+  blurb: string;
+}
+
+export const OWNER_DEEP_DIVES: Record<string, OwnerDeepDive[]> = {
+  "european-central-bank-ssm-cockpit-developer": [
+    {
+      slug: "module-federation",
+      label: "Module Federation",
+      blurb:
+        "Micro-frontend split: host/remote wiring, shared singletons, runtime version skew",
+    },
+  ],
+};
+
+export function ownerDeepDives(
+  appSlug: string | null | undefined,
+): OwnerDeepDive[] {
+  return (appSlug && OWNER_DEEP_DIVES[appSlug]) || [];
+}

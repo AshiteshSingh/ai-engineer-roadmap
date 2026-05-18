@@ -20,6 +20,9 @@ import remarkGfm from "remark-gfm";
 import type { AppData } from "@/components/app-detail/types";
 import { MermaidFlow } from "@/components/mermaid-flow";
 import { Section, Heading as DSHeading } from "@/components/ui";
+import { useSession } from "@/lib/auth-client";
+import { isOwner } from "@/lib/owner";
+import { OwnerDeepDives } from "@/components/app-detail/OwnerDeepDives";
 import styles from "./page.module.css";
 
 const remarkPlugins = [remarkGfm];
@@ -357,6 +360,8 @@ function InteractiveCodePlayground({ initialHtml, initialCss }: { initialHtml: s
 function PrepPageInner() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { data: session } = useSession();
+  const isAdmin = isOwner(session);
 
   const [app, setApp] = useState<AppData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -648,6 +653,8 @@ function PrepPageInner() {
           )}
         </Flex>
       </Flex>
+
+      {isAdmin && <OwnerDeepDives appSlug={app.slug} />}
 
       {/* Content */}
       {processed ? (
