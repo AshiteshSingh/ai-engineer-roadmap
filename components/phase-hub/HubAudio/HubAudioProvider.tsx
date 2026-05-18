@@ -11,6 +11,22 @@ import type { AudioMeta } from "@/lib/audio";
 import { useSpeechQueue, type SavedPos } from "./useSpeechQueue";
 import { HubSpeechPlayer } from "./HubSpeechPlayer";
 
+/** Audible-style "continue listening" snapshot, derived from the saved
+ *  position. Chapter-level granularity only (the queue persists slug +
+ *  chapterIdx), so the bar/percent are a per-chapter-stepped estimate. */
+export interface ResumeInfo {
+  /** Lesson title where the user left off. */
+  lessonTitle: string;
+  /** 0-based chapter index within that lesson. */
+  chapterIdx: number;
+  /** Total chapters in that lesson. */
+  chapterCount: number;
+  /** Whole-phase progress 0..100 (estimate). */
+  percent: number;
+  /** Estimated seconds left in the whole phase (at 1×). */
+  remainingSecs: number;
+}
+
 interface HubAudioContextValue {
   /** Slug of the lesson currently being read, or null. */
   activeSlug: string | null;
@@ -26,6 +42,8 @@ interface HubAudioContextValue {
   /** Estimated total seconds across the queued lessons (at 1×). */
   totalSecs: number;
   savedPos: SavedPos | null;
+  /** Resume snapshot, or null when nothing has been played yet. */
+  resumeInfo: ResumeInfo | null;
 }
 
 const FALLBACK: HubAudioContextValue = {
@@ -37,6 +55,7 @@ const FALLBACK: HubAudioContextValue = {
   hasAudio: false,
   totalSecs: 0,
   savedPos: null,
+  resumeInfo: null,
 };
 
 const HubAudioContext = React.createContext<HubAudioContextValue | null>(null);

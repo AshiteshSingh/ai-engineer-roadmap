@@ -1,4 +1,4 @@
-/* Co-located styles for app/applications/page.tsx.
+/* Shared styles for the Application Pipeline tabbed sub-routes.
    Static inline objects → DS tokens; per-column dynamic colors stay
    inline via CSS custom properties. No global CSS. */
 .backLink {
@@ -37,19 +37,10 @@
   text-overflow: ellipsis;
   display: block;
 }
-.secHeader {
-  cursor: pointer;
-  user-select: none;
-}
-.chevron {
-  color: var(--ds-text-faint);
-  flex-shrink: 0;
-}
 .list {
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-radius);
   overflow: hidden;
-  margin-left: 6px;
 }
 .emptySlot {
   border: 1px dashed var(--ds-border);
