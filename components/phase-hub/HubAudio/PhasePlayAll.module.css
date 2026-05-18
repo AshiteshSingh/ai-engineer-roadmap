@@ -1,73 +1,174 @@
 .wrap {
   display: flex;
   justify-content: center;
-  margin: 0 0 var(--space-4, 16px);
+  margin: 0 0 var(--space-5);
 }
 
 .cta {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  border: 1px solid color-mix(in srgb, var(--cat-from, var(--accent-9)) 40%, transparent);
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 520px;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--cat-from) 38%, transparent);
   border-radius: var(--ds-radius-lg);
   cursor: pointer;
   text-align: left;
-  color: var(--ds-ink, #fff);
+  color: var(--ds-ink);
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--cat-from, var(--accent-9)) 26%, transparent),
-    color-mix(in srgb, var(--cat-to, var(--accent-11)) 18%, transparent)
+    color-mix(in srgb, var(--cat-from) 24%, transparent),
+    color-mix(in srgb, var(--cat-to) 16%, transparent)
   );
-  box-shadow: 0 6px 20px -6px
-    color-mix(in srgb, var(--cat-from, var(--accent-9)) 45%, transparent);
+  box-shadow: var(--ds-shadow-1);
   transition: var(--ds-transition-elevate);
 }
 
 .cta:hover:not(:disabled) {
   transform: translateY(-1px);
-  filter: brightness(1.06);
-  box-shadow: 0 10px 26px -6px
-    color-mix(in srgb, var(--cat-from, var(--accent-9)) 55%, transparent);
+  box-shadow: var(--ds-shadow-2);
+  border-color: color-mix(in srgb, var(--cat-from) 55%, transparent);
 }
 
 .cta:focus-visible {
-  outline: var(--ds-focus-ring, 2px solid #6ea8fe);
+  outline: var(--ds-focus-ring);
   outline-offset: var(--ds-focus-ring-offset);
 }
 
 .cta:disabled {
   cursor: default;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
-/* Same 48px primary affordance as the docked player's `.btnPlay`. */
-.icon {
+/* Cover-art tile — same depth recipe as the docked player's `.audioCover`
+   so the card reads as a sibling of the player it launches. */
+.cover {
+  position: relative;
   flex: none;
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--text-lg);
-  border-radius: var(--ds-radius-pill);
+  overflow: hidden;
+  border-radius: var(--ds-radius-lg);
   color: var(--ds-on-accent);
-  background: linear-gradient(135deg, var(--cat-from, var(--accent-9)), var(--cat-to, var(--accent-11)));
+  background: linear-gradient(135deg, var(--cat-from), var(--cat-to));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.22),
+    0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
-.text {
+/* Phase glyph sits behind the play affordance as faint "cover art". */
+.coverIcon {
+  position: absolute;
+  font-size: 38px;
+  line-height: 1;
+  opacity: 0.28;
+  filter: saturate(0);
+  user-select: none;
+}
+
+.coverGlyph {
+  position: relative;
+  z-index: 1;
+  font-size: var(--text-xl);
+  line-height: 1;
+}
+
+.body {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
 }
 
-.title {
-  font-size: var(--text-sm, 14px);
+.eyebrow {
+  font-size: var(--text-xs);
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--ds-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub {
+  font-size: var(--text-sm);
+  color: var(--ds-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-sub);
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--progress, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cat-from), var(--cat-to));
+  transition: width var(--ds-dur) var(--ds-ease);
 }
 
 .meta {
-  font-size: var(--text-2xs, 11px);
-  color: var(--ds-text-faint, rgba(255, 255, 255, 0.55));
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--ds-text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .cta {
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .cover {
+    width: 48px;
+    height: 48px;
+  }
+  .coverIcon {
+    font-size: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta {
+    transition: none;
+  }
+  .cta:hover:not(:disabled) {
+    transform: none;
+  }
+  .fill {
+    transition: none;
+  }
 }

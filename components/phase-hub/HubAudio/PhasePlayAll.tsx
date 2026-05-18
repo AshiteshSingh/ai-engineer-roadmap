@@ -1,9 +1,11 @@
 "use client";
 
-// Primary CTA above the lesson grid: start the continuous Web-Speech
-// playthrough of the WHOLE phase (all chapters of all lessons, in order).
-// Resumes from the saved position if there is one. Renders nothing when the
-// phase has no narration scripts.
+// Primary CTA above the lesson grid: an Audible-style "continue listening"
+// card that starts (or resumes) the continuous Web-Speech playthrough of the
+// WHOLE phase (all chapters of all lessons, in order). Three states off the
+// hub-audio context: resume (cover + where-you-left-off + progress bar),
+// idle/never-played (start listening), and playing. Renders nothing when the
+// phase has no narration scripts. Phase-name agnostic (shared component).
 import * as React from "react";
 import { useHubAudio } from "./HubAudioProvider";
 import styles from "./PhasePlayAll.module.css";
@@ -14,19 +16,50 @@ function fmt(secs: number): string {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
-export function PhasePlayAll() {
-  const { hasAudio, status, playPhase, totalSecs, savedPos, supported } =
+export interface PhasePlayAllProps {
+  /** Human phase name for the CTA copy — never hardcode (shared component). */
+  phaseName?: string;
+  /** Phase cover glyph (matches the docked player's cover tile). */
+  icon?: string;
+}
+
+export function PhasePlayAll({
+  phaseName = "this phase",
+  icon,
+}: PhasePlayAllProps) {
+  const { hasAudio, status, playPhase, totalSecs, resumeInfo, supported } =
     useHubAudio();
 
   if (!hasAudio) return null;
 
   const playing = status !== "idle";
-  const resuming = !!savedPos;
-  const label = playing
-    ? "Playing the RAG phase…"
-    : resuming
-      ? "Resume the RAG phase"
-      : "Play the whole RAG phase";
+  const resuming = !playing && !!resumeInfo;
+
+  let eyebrow: string;
+  let title: string;
+  let sub: string;
+  let ariaLabel: string;
+
+  if (playing) {
+    eyebrow = `Now playing · ${phaseName}`;
+    title = `Playing ${phaseName}…`;
+    sub = "narrated end to end · auto-advances every chapter";
+    ariaLabel = `Playing ${phaseName}`;
+  } else if (resuming && resumeInfo) {
+    eyebrow = `Resume · ${phaseName}`;
+    title = resumeInfo.lessonTitle;
+    sub = `Chapter ${resumeInfo.chapterIdx + 1} of ${resumeInfo.chapterCount}`;
+    ariaLabel = `Resume ${phaseName} — ${resumeInfo.lessonTitle}, chapter ${
+      resumeInfo.chapterIdx + 1
+    } of ${resumeInfo.chapterCount}`;
+  } else {
+    eyebrow = `Listen · ${phaseName}`;
+    title = "Start listening";
+    sub = supported
+      ? `${totalSecs ? `≈ ${fmt(totalSecs)} · ` : ""}narrated end to end · auto-advances every chapter`
+      : "read-along transcript · your browser has no speech voice";
+    ariaLabel = `Play all of ${phaseName} from the start`;
+  }
 
   return (
     <div className={styles.wrap}>
@@ -35,18 +68,33 @@ export function PhasePlayAll() {
         className={styles.cta}
         onClick={playPhase}
         disabled={playing}
-        aria-label={label}
+        aria-label={ariaLabel}
       >
-        <span className={styles.icon} aria-hidden="true">
-          {playing ? "🎧" : "▶"}
+        <span className={styles.cover} aria-hidden="true">
+          <span className={styles.coverIcon}>{icon ?? "🎧"}</span>
+          <span className={styles.coverGlyph}>{playing ? "🎧" : "▶"}</span>
         </span>
-        <span className={styles.text}>
-          <span className={styles.title}>{label}</span>
-          <span className={styles.meta}>
-            {supported
-              ? `${totalSecs ? `≈ ${fmt(totalSecs)} · ` : ""}narrated end to end · auto-advances every chapter`
-              : "read-along transcript · your browser has no speech voice"}
-          </span>
+        <span className={styles.body}>
+          <span className={styles.eyebrow}>{eyebrow}</span>
+          <span className={styles.title}>{title}</span>
+          <span className={styles.sub}>{sub}</span>
+          {resuming && resumeInfo ? (
+            <span className={styles.progress}>
+              <span
+                className={styles.track}
+                style={
+                  {
+                    "--progress": `${resumeInfo.percent}%`,
+                  } as React.CSSProperties
+                }
+              >
+                <span className={styles.fill} />
+              </span>
+              <span className={styles.meta}>
+                {resumeInfo.percent}% · {fmt(resumeInfo.remainingSecs)} left
+              </span>
+            </span>
+          ) : null}
         </span>
       </button>
     </div>

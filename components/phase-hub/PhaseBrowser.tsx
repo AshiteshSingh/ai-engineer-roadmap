@@ -82,7 +82,7 @@ export function PhaseBrowser({
         onChange={setState}
         onReset={() => setState(DEFAULT_PHASE_FILTER_STATE)}
       />
-      {audioBySlug ? <PhasePlayAll /> : null}
+      {audioBySlug ? <PhasePlayAll phaseName={category} icon={icon} /> : null}
       <LessonGrid
         lessons={filtered}
         progressBySlug={progressBySlug}
