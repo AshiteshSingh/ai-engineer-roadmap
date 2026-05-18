@@ -139,6 +139,18 @@ pub struct ExternalCourseRecord {
     pub topic_group: Option<String>,
 }
 
+/// One row of the `lesson_courses` junction — joins a scraped course to a
+/// lesson slug (e.g. `rag`, `embeddings`) with a 0–1 relevance score.
+/// Exported to `data/content/lesson-courses.json` so the frontend can show
+/// per-lesson "related courses" rails on /rag pages.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LessonCourse {
+    pub lesson_slug: String,
+    pub course_id: String,
+    pub relevance: f64,
+}
+
 pub fn load_categories(conn: &Connection) -> anyhow::Result<Vec<CategoryRecord>> {
     let mut stmt = conn.prepare(
         "SELECT name, slug, icon, description, gradient_from, gradient_to, sort_order
@@ -286,6 +298,23 @@ pub fn load_course_reviews(conn: &Connection) -> anyhow::Result<Vec<serde_json::
             obj.insert(name.clone(), v);
         }
         Ok(serde_json::Value::Object(obj))
+    })?;
+    Ok(rows.collect::<Result<Vec<_>, _>>()?)
+}
+
+/// Lesson↔course links. Returns `[]` if the table is absent.
+pub fn load_lesson_courses(conn: &Connection) -> anyhow::Result<Vec<LessonCourse>> {
+    let mut stmt =
+        match conn.prepare("SELECT lesson_slug, course_id, relevance FROM lesson_courses") {
+            Ok(s) => s,
+            Err(_) => return Ok(Vec::new()),
+        };
+    let rows = stmt.query_map([], |r| {
+        Ok(LessonCourse {
+            lesson_slug: r.get(0)?,
+            course_id: r.get(1)?,
+            relevance: r.get::<_, f64>(2).unwrap_or(1.0),
+        })
     })?;
     Ok(rows.collect::<Result<Vec<_>, _>>()?)
 }

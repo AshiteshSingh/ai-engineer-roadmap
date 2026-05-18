@@ -72,14 +72,15 @@ fn main() -> anyhow::Result<()> {
 
     // Courses/reviews live in their own DB so `seed:content` (which deletes
     // and rebuilds knowledge.db) can't wipe them. Missing file → empty export.
-    let (courses, reviews) = if args.courses_db.exists() {
+    let (courses, reviews, lesson_courses) = if args.courses_db.exists() {
         let cconn = sqlite::open_ro(&args.courses_db)?;
         (
             sqlite::load_external_courses(&cconn)?,
             sqlite::load_course_reviews(&cconn)?,
+            sqlite::load_lesson_courses(&cconn)?,
         )
     } else {
-        (Vec::new(), Vec::new())
+        (Vec::new(), Vec::new(), Vec::new())
     };
     fs::write(
         args.out_dir.join("courses.json"),
@@ -89,15 +90,22 @@ fn main() -> anyhow::Result<()> {
         args.out_dir.join("course-reviews.json"),
         serde_json::to_vec_pretty(&reviews)?,
     )?;
+    // Lesson↔course mapping — read by lib/db/queries.ts to render the
+    // per-lesson related-courses rail on /rag pages.
+    fs::write(
+        args.out_dir.join("lesson-courses.json"),
+        serde_json::to_vec_pretty(&lesson_courses)?,
+    )?;
 
     tracing::info!(
-        "Exported: {} categories, {} lessons, {} sections, {} jobs, {} courses, {} reviews",
+        "Exported: {} categories, {} lessons, {} sections, {} jobs, {} courses, {} reviews, {} lesson-course links",
         index.categories.len(),
         lessons.len(),
         sections.len(),
         jobs.len(),
         courses.len(),
-        reviews.len()
+        reviews.len(),
+        lesson_courses.len()
     );
     println!(
         "Exported to {}: {} lessons, {} sections, {} jobs",

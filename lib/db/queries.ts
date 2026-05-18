@@ -67,27 +67,57 @@ function reviews(): Record<string, unknown>[] {
   return _reviews;
 }
 
-export async function getAllUdemyCoursesByGroup(): Promise<
+/** One row of data/content/lesson-courses.json (Rust-exported). */
+interface LessonCourseLink {
+  lessonSlug: string;
+  courseId: string;
+  relevance: number;
+}
+
+let _lessonCourses: LessonCourseLink[] | null = null;
+function lessonCourses(): LessonCourseLink[] {
+  if (!_lessonCourses)
+    _lessonCourses = readJson<LessonCourseLink[]>("lesson-courses.json", []);
+  return _lessonCourses;
+}
+
+export async function getAllCoursesByGroup(): Promise<
   Record<string, ExternalCourse[]>
 > {
   const grouped: Record<string, ExternalCourse[]> = {};
   for (const c of courses()) {
-    if (c.provider !== "Udemy") continue;
     const group = c.topicGroup ?? "Other";
     (grouped[group] ??= []).push(c);
   }
   for (const arr of Object.values(grouped)) {
+    // Rated items (Udemy) first by rating; unrated resources (Coursera
+    // articles) fall to the end of their group.
     arr.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
   }
   return grouped;
 }
 
-// No lesson↔course mapping is exported (it was never populated); the
-// related-courses rail simply shows nothing rather than reading SQLite.
+/**
+ * Courses linked to a lesson, via the Rust-exported lesson↔course mapping
+ * (data/content/lesson-courses.json, populated by `udemy rag-seed` →
+ * `export-content`). Joined to courses.json by id, ordered by link relevance
+ * then rating. Returns [] when nothing is linked (rail renders nothing).
+ */
 export async function getCoursesForLessonFromDb(
-  _slug: string,
+  slug: string,
 ): Promise<ExternalCourse[]> {
-  return [];
+  const links = lessonCourses().filter((l) => l.lessonSlug === slug);
+  if (links.length === 0) return [];
+  const rel = new Map(links.map((l) => [l.courseId, l.relevance]));
+  const byId = new Map(courses().map((c) => [c.id, c]));
+  return links
+    .map((l) => byId.get(l.courseId))
+    .filter((c): c is ExternalCourse => c != null)
+    .sort(
+      (a, b) =>
+        (rel.get(b.id) ?? 0) - (rel.get(a.id) ?? 0) ||
+        (b.rating ?? 0) - (a.rating ?? 0),
+    );
 }
 
 export async function getCourseReview(

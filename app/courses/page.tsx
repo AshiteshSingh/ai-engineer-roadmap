@@ -1,11 +1,11 @@
 import { Topbar } from "@/components/topbar";
-import { getAllUdemyCoursesByGroup, TOPIC_GROUP_ORDER } from "@/lib/db/queries";
+import { getAllCoursesByGroup, TOPIC_GROUP_ORDER } from "@/lib/db/queries";
 import type { ExternalCourse } from "@/lib/db/queries";
 import styles from "./page.module.css";
 
 export const metadata = {
-  title: "AI/ML Courses — Udemy",
-  description: "Curated Udemy courses on generative AI, RAG, deep learning, MLOps, and more — grouped by topic.",
+  title: "AI/ML Courses & Articles",
+  description: "Curated courses and articles on generative AI, RAG, deep learning, MLOps, and more — grouped by topic.",
 };
 
 export const dynamic = "force-dynamic";
@@ -32,8 +32,10 @@ function CourseCard({ course }: { course: ExternalCourse }) {
       className="course-card"
     >
       <div className="course-card-header">
-        <span className="course-provider-icon">📚</span>
-        <span className="course-provider-name">Udemy</span>
+        <span className="course-provider-icon">
+          {course.provider === "Coursera" ? "📄" : "📚"}
+        </span>
+        <span className="course-provider-name">{course.provider}</span>
         {course.isFree && <span className="badge-pill badge-pill--free">Free</span>}
       </div>
 
@@ -91,7 +93,7 @@ function CourseGroup({ name, courses }: { name: string; courses: ExternalCourse[
 }
 
 export default async function CoursesPage() {
-  const grouped = await getAllUdemyCoursesByGroup();
+  const grouped = await getAllCoursesByGroup();
 
   const orderedGroups = [
     ...TOPIC_GROUP_ORDER.filter((g) => grouped[g]?.length),
@@ -105,15 +107,15 @@ export default async function CoursesPage() {
       <Topbar />
       <main className="courses-page">
         <div className="courses-page-header">
-          <h1 className="courses-page-title">AI/ML Courses on Udemy</h1>
+          <h1 className="courses-page-title">AI/ML Courses &amp; Articles</h1>
           <p className="courses-page-subtitle">
-            {total} courses across {orderedGroups.length} topic groups
+            {total} resources across {orderedGroups.length} topic groups
           </p>
         </div>
 
         {orderedGroups.length === 0 ? (
           <p className={styles.empty}>
-            No courses yet — run <code>pnpm scrape:udemy</code> to populate.
+            Nothing yet — run the course/article scrapers to populate.
           </p>
         ) : (
           orderedGroups.map((group) => (
