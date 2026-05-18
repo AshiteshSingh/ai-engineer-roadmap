@@ -50,6 +50,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # CLI (index binary)
 clap = { version = "4", features = ["derive", "env"] }
 
+# Shared offline core — provides the `courses` SQLite writer (moved out of
+# this crate so `crates/udemy` can reuse it without the heavy server deps).
+knowledge-ml-core = { path = "../core" }
+
 # SQLite content store (canonical data/knowledge.db)
 rusqlite = { version = "0.32", features = ["bundled"] }
 

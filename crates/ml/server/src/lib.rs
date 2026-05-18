@@ -15,7 +15,10 @@
 //! Postgres in `app/api/chat/route.ts`); the other graphs run with a fresh
 //! thread id (`resumable=False` in Python), so there is no checkpointer.
 
-pub mod courses;
+// `courses` (data/courses.db schema + upsert/link) moved to knowledge-ml-core
+// so the udemy `rag-seed` bin can share one writer with `seed-topic-courses`.
+// Re-exported here so `knowledge_ml_server::courses::*` callers are unchanged.
+pub use knowledge_ml_core::courses;
 pub mod graphs;
 pub mod json;
 pub mod llm;

@@ -12,7 +12,8 @@
 //! in sync with `src/db/courses-sqlite.ts` (the TS writers) — both run
 //! `CREATE TABLE IF NOT EXISTS`, so column names/types must match what
 //! `knowledge_ml_core::sqlite::load_external_courses` / `load_course_reviews`
-//! select.
+//! select. Shared by `seed-topic-courses` (knowledge-ml-server) and the
+//! `udemy rag-seed` bin (crates/udemy).
 
 use rusqlite::{params, Connection};
 use serde_json::Value;

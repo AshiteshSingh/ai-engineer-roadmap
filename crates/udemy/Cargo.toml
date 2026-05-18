@@ -15,6 +15,10 @@ path = "src/bin/udemy.rs"
 
 [dependencies]
 candle    = { path = "../../../../crates/candle", default-features = false }
+# Shared `courses` SQLite writer (data/courses.db schema + upsert/link),
+# used by the `rag-seed` subcommand so it stays byte-for-byte in sync with
+# the `seed-topic-courses` (knowledge-ml-server) writer.
+knowledge-ml-core = { path = "../ml/core", default-features = false }
 deepseek  = { package = "deepseek-loop", path = "../../../../crates/deepseek-loop", default-features = false, features = ["reqwest-client"] }
 lancedb      = "0.27"
 arrow-array  = "57"
