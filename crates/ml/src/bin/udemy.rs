@@ -303,6 +303,57 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
+
+    /// Unified deep RAG/embeddings scrape across Coursera, DeepLearning.AI,
+    /// and Udemy. Aggressively BFS-crawls Coursera + DeepLearning.AI with
+    /// RAG-focused seeds (hard-filtered to RAG + adjacent LLM/agent lesson
+    /// slugs), runs the Udemy RAG seed best-effort (Cloudflare may block),
+    /// dedups by url across providers, upserts into data/courses.db, then
+    /// regenerates the JSON exports. Respects each site's load via the shared
+    /// per-batch delay + bounded concurrency; for personal/educational
+    /// catalog indexing.
+    #[command(name = "rag-deep-scrape")]
+    RagDeepScrape {
+        /// Stop after this many kept items per web provider.
+        #[arg(long, default_value_t = 120)]
+        max_per_provider: usize,
+
+        /// Max concurrent page fetches (per provider crawl).
+        #[arg(long, default_value_t = 6)]
+        concurrency: usize,
+
+        /// Delay between fetch batches in milliseconds.
+        #[arg(long, default_value_t = 800)]
+        delay_ms: u64,
+
+        /// BFS frontier bound = max_per_provider × this.
+        #[arg(long, default_value_t = 10)]
+        frontier_multiplier: usize,
+
+        /// Max Udemy candidates to scrape per RAG search query.
+        #[arg(long, default_value_t = 20)]
+        udemy_max: usize,
+
+        /// Skip the flaky Udemy/Playwright path entirely.
+        #[arg(long)]
+        skip_udemy: bool,
+
+        /// Dedicated SQLite course store (read by `export-content`).
+        #[arg(long, default_value = "../../data/courses.db")]
+        courses_db: PathBuf,
+
+        /// Knowledge-app root — cwd base for the TS scraper + export-content.
+        #[arg(long, default_value = "../..")]
+        repo_root: PathBuf,
+
+        /// Print the per-provider course→slug tables and exit (no writes).
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Skip the export-content step (leave data/content/*.json stale).
+        #[arg(long)]
+        no_export: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -450,6 +501,32 @@ async fn main() -> Result<()> {
                 seed_frontend,
                 courses_db,
                 dry_run,
+            )
+            .await
+        }
+        Command::RagDeepScrape {
+            max_per_provider,
+            concurrency,
+            delay_ms,
+            frontier_multiplier,
+            udemy_max,
+            skip_udemy,
+            courses_db,
+            repo_root,
+            dry_run,
+            no_export,
+        } => {
+            cmd_rag_deep_scrape(
+                max_per_provider,
+                concurrency,
+                delay_ms,
+                frontier_multiplier,
+                udemy_max,
+                skip_udemy,
+                courses_db,
+                repo_root,
+                dry_run,
+                no_export,
             )
             .await
         }
@@ -833,7 +910,7 @@ async fn cmd_crawl(
     Ok(())
 }
 
-// ── coursera ───────────────────────────────────────────────────────────────────
+// ── shared BFS crawl (Coursera / DeepLearning.AI) ───────────────────────────────
 
 /// Articles a Coursera crawl kept (relevant), with everything needed to emit
 /// JSON, embed into LanceDB, and upsert into courses.db.
@@ -845,40 +922,96 @@ struct KeptArticle {
     discovered_from: String,
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn cmd_coursera(
+/// What differs between the Coursera and DeepLearning.AI BFS crawls: the
+/// provider/source strings, log nouns, and the (identically-typed) index +
+/// page parser functions. Everything else is shared in [`crawl_provider`].
+struct ProviderSpec {
+    provider: &'static str,
+    source: &'static str,
+    item_word: &'static str,
+    index_word: &'static str,
+    parse_index: fn(&str) -> Vec<String>,
+    parse_page: fn(&str, &str) -> Result<(Course, Vec<Chapter>)>,
+}
+
+/// Runtime knobs for one provider crawl. `rag_only` restricts kept items to
+/// the RAG-deep slug set (used by the unified orchestrator); standalone
+/// `coursera`/`deeplearning` pass `false` for byte-identical behavior.
+struct CrawlParams {
     seed_url: String,
-    max_articles: usize,
+    seed_paths: Vec<String>,
+    max_items: usize,
     concurrency: usize,
     delay_ms: u64,
-    output: PathBuf,
-    embed: bool,
-    db: String,
-    embed_url: String,
-    embed_batch_size: usize,
-    seed_frontend: bool,
-    courses_db: PathBuf,
-) -> Result<()> {
-    let start = Instant::now();
-    let conc = concurrency.max(1);
-    let client = Arc::new(UdemyClient::new(&CrawlConfig::default())?);
+    frontier_multiplier: usize,
+    rag_only: bool,
+}
 
+#[derive(Default)]
+struct CrawlCounts {
+    fetched: usize,
+    irrelevant: usize,
+    failed: usize,
+    no_rag: usize,
+    dup: usize,
+}
+
+fn coursera_spec() -> ProviderSpec {
+    ProviderSpec {
+        provider: "Coursera",
+        source: "coursera-article",
+        item_word: "article",
+        index_word: "index",
+        parse_index: parse_articles_index,
+        parse_page: parse_article_html,
+    }
+}
+
+fn deeplearning_spec() -> ProviderSpec {
+    ProviderSpec {
+        provider: "DeepLearning.AI",
+        source: "deeplearning-short-course",
+        item_word: "course",
+        index_word: "catalog",
+        parse_index: deeplearning::parse_courses_index,
+        parse_page: deeplearning::parse_course_html,
+    }
+}
+
+/// Generic BFS crawl shared by the Coursera and DeepLearning.AI paths. Seeds
+/// `seed_paths` first (so a crawl works even if the index markup drifts), then
+/// the index, then BFS-expands bounded by `max_items * frontier_multiplier`.
+/// When `seen` is `Some`, kept URLs are deduped across providers in-run (the
+/// `courses.db` UNIQUE(url) constraint is the durable backstop).
+async fn crawl_provider(
+    spec: &ProviderSpec,
+    params: CrawlParams,
+    client: Arc<UdemyClient>,
+    seen: Option<Arc<Mutex<HashSet<String>>>>,
+) -> Result<(Vec<KeptArticle>, CrawlCounts)> {
+    let conc = params.concurrency.max(1);
     let mut visited: HashSet<String> = HashSet::new();
     let mut queue: VecDeque<String> = VecDeque::new();
 
-    // Seed slugs first so an AI/ML crawl works even if the index markup drifts.
-    for slug in COURSERA_SEED_ARTICLES {
-        let url = format!("https://www.coursera.org/articles/{slug}");
+    for url in &params.seed_paths {
         if visited.insert(url.clone()) {
-            queue.push_back(url);
+            queue.push_back(url.clone());
         }
     }
 
-    eprintln!("Coursera: fetching index {seed_url} ...");
-    match client.fetch_page(&seed_url).await {
+    eprintln!(
+        "{}: fetching {} {} ...",
+        spec.provider, spec.index_word, params.seed_url
+    );
+    match client.fetch_page(&params.seed_url).await {
         FetchResult::Ok(html) => {
-            let found = parse_articles_index(&html);
-            eprintln!("  index → {} article link(s)", found.len());
+            let found = (spec.parse_index)(&html);
+            eprintln!(
+                "  {} → {} {} link(s)",
+                spec.index_word,
+                found.len(),
+                spec.item_word
+            );
             for u in found {
                 if visited.insert(u.clone()) {
                     queue.push_back(u);
@@ -893,14 +1026,15 @@ async fn cmd_coursera(
                 FetchResult::Ok(_) => unreachable!(),
             };
             eprintln!(
-                "  index fetch failed ({label}); continuing with {} seed slug(s)",
+                "  {} fetch failed ({label}); continuing with {} seed slug(s)",
+                spec.index_word,
                 queue.len()
             );
         }
     }
 
     let mut kept: Vec<KeptArticle> = Vec::new();
-    let (mut n_fetched, mut n_irrelevant, mut n_failed) = (0usize, 0usize, 0usize);
+    let mut counts = CrawlCounts::default();
     let sem = Arc::new(Semaphore::new(conc));
 
     'outer: while !queue.is_empty() {
@@ -930,32 +1064,51 @@ async fn cmd_coursera(
             let (url, result) = match handle.await {
                 Ok(t) => t,
                 Err(e) => {
-                    warn!("coursera task panicked: {e}");
-                    n_failed += 1;
+                    warn!("{} task panicked: {e}", spec.provider);
+                    counts.failed += 1;
                     continue;
                 }
             };
             match result {
                 FetchResult::Ok(html) => {
-                    n_fetched += 1;
-                    // BFS: enqueue related articles, bounded so a deep crawl
+                    counts.fetched += 1;
+                    // BFS: enqueue related links, bounded so a deep crawl
                     // can't blow up the frontier.
-                    if visited.len() < max_articles.saturating_mul(6) {
-                        for u in parse_articles_index(&html) {
+                    if visited.len() < params.max_items.saturating_mul(params.frontier_multiplier)
+                    {
+                        for u in (spec.parse_index)(&html) {
                             if visited.insert(u.clone()) {
                                 queue.push_back(u);
                             }
                         }
                     }
-                    match parse_article_html(&html, &url) {
+                    match (spec.parse_page)(&html, &url) {
                         Ok((course, chapters)) => {
                             let text = course.embed_text();
                             if !is_relevant(&text) {
-                                n_irrelevant += 1;
+                                counts.irrelevant += 1;
                                 continue;
                             }
                             let topic_group = classify_topic_group(&text);
-                            let slugs = match_slugs(&text);
+                            let slugs: Vec<(String, f32)> = if params.rag_only {
+                                match_slugs(&text)
+                                    .into_iter()
+                                    .filter(|(s, _)| is_rag_deep_slug(s))
+                                    .collect()
+                            } else {
+                                match_slugs(&text)
+                            };
+                            if params.rag_only && slugs.is_empty() {
+                                counts.no_rag += 1;
+                                continue;
+                            }
+                            // Cross-provider in-run dedup.
+                            if let Some(seen) = &seen {
+                                if !seen.lock().unwrap().insert(course.url.clone()) {
+                                    counts.dup += 1;
+                                    continue;
+                                }
+                            }
                             eprintln!(
                                 "  ✓ [{topic_group}] {} ({} sections)",
                                 course.title,
@@ -966,38 +1119,79 @@ async fn cmd_coursera(
                                 chapters,
                                 topic_group,
                                 slugs,
-                                discovered_from: seed_url.clone(),
+                                discovered_from: params.seed_url.clone(),
                             });
-                            if kept.len() >= max_articles {
-                                eprintln!("  reached --max-articles {max_articles}");
+                            if kept.len() >= params.max_items {
+                                eprintln!(
+                                    "  reached max {} {}(s)",
+                                    params.max_items, spec.item_word
+                                );
                                 break 'outer;
                             }
                         }
                         Err(e) => {
                             warn!("parse error for {url}: {e}");
-                            n_failed += 1;
+                            counts.failed += 1;
                         }
                     }
                 }
                 FetchResult::CloudflareBlocked => {
                     warn!("{url}: Cloudflare blocked");
-                    n_failed += 1;
+                    counts.failed += 1;
                 }
                 FetchResult::HttpError(code, _) => {
                     warn!("{url}: HTTP {code}");
-                    n_failed += 1;
+                    counts.failed += 1;
                 }
                 FetchResult::ConnectionError(e) => {
                     warn!("{url}: {e}");
-                    n_failed += 1;
+                    counts.failed += 1;
                 }
             }
         }
 
-        if delay_ms > 0 {
-            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        if params.delay_ms > 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(params.delay_ms)).await;
         }
     }
+
+    Ok((kept, counts))
+}
+
+// ── coursera ───────────────────────────────────────────────────────────────────
+
+#[allow(clippy::too_many_arguments)]
+async fn cmd_coursera(
+    seed_url: String,
+    max_articles: usize,
+    concurrency: usize,
+    delay_ms: u64,
+    output: PathBuf,
+    embed: bool,
+    db: String,
+    embed_url: String,
+    embed_batch_size: usize,
+    seed_frontend: bool,
+    courses_db: PathBuf,
+) -> Result<()> {
+    let start = Instant::now();
+    let client = Arc::new(UdemyClient::new(&CrawlConfig::default())?);
+    let spec = coursera_spec();
+    let params = CrawlParams {
+        seed_url: seed_url.clone(),
+        seed_paths: COURSERA_SEED_ARTICLES
+            .iter()
+            .map(|s| format!("https://www.coursera.org/articles/{s}"))
+            .collect(),
+        max_items: max_articles,
+        concurrency,
+        delay_ms,
+        frontier_multiplier: 6,
+        rag_only: false,
+    };
+    let (kept, counts) = crawl_provider(&spec, params, client, None).await?;
+    let (n_fetched, n_irrelevant, n_failed) =
+        (counts.fetched, counts.irrelevant, counts.failed);
 
     // ── Emit ExternalCourseJson ─────────────────────────────────────────
     let ext: Vec<ExternalCourseJson> = kept
@@ -1178,144 +1372,23 @@ async fn cmd_deeplearning(
     dry_run: bool,
 ) -> Result<()> {
     let start = Instant::now();
-    let conc = concurrency.max(1);
     let client = Arc::new(UdemyClient::new(&CrawlConfig::default())?);
-
-    let mut visited: HashSet<String> = HashSet::new();
-    let mut queue: VecDeque<String> = VecDeque::new();
-
-    // Seed slugs first so an AI/ML crawl works even if the catalog drifts.
-    for slug in DEEPLEARNING_SEED_COURSES {
-        let url = format!("https://www.deeplearning.ai/courses/{slug}/");
-        if visited.insert(url.clone()) {
-            queue.push_back(url);
-        }
-    }
-
-    eprintln!("DeepLearning.AI: fetching catalog {seed_url} ...");
-    match client.fetch_page(&seed_url).await {
-        FetchResult::Ok(html) => {
-            let found = deeplearning::parse_courses_index(&html);
-            eprintln!("  catalog → {} course link(s)", found.len());
-            for u in found {
-                if visited.insert(u.clone()) {
-                    queue.push_back(u);
-                }
-            }
-        }
-        other => {
-            let label = match &other {
-                FetchResult::CloudflareBlocked => "cloudflare".to_string(),
-                FetchResult::HttpError(c, _) => format!("http {c}"),
-                FetchResult::ConnectionError(e) => format!("conn: {e}"),
-                FetchResult::Ok(_) => unreachable!(),
-            };
-            eprintln!(
-                "  catalog fetch failed ({label}); continuing with {} seed slug(s)",
-                queue.len()
-            );
-        }
-    }
-
-    let mut kept: Vec<KeptArticle> = Vec::new();
-    let (mut n_fetched, mut n_irrelevant, mut n_failed) = (0usize, 0usize, 0usize);
-    let sem = Arc::new(Semaphore::new(conc));
-
-    'outer: while !queue.is_empty() {
-        let mut batch = Vec::new();
-        while batch.len() < conc {
-            match queue.pop_front() {
-                Some(u) => batch.push(u),
-                None => break,
-            }
-        }
-        if batch.is_empty() {
-            break;
-        }
-
-        let mut handles = Vec::new();
-        for url in batch {
-            let sem = Arc::clone(&sem);
-            let client = Arc::clone(&client);
-            handles.push(tokio::spawn(async move {
-                let _permit = sem.acquire().await.unwrap();
-                let r = client.fetch_page(&url).await;
-                (url, r)
-            }));
-        }
-
-        for handle in handles {
-            let (url, result) = match handle.await {
-                Ok(t) => t,
-                Err(e) => {
-                    warn!("deeplearning task panicked: {e}");
-                    n_failed += 1;
-                    continue;
-                }
-            };
-            match result {
-                FetchResult::Ok(html) => {
-                    n_fetched += 1;
-                    // BFS: enqueue related courses, bounded so a deep crawl
-                    // can't blow up the frontier.
-                    if visited.len() < max_courses.saturating_mul(6) {
-                        for u in deeplearning::parse_courses_index(&html) {
-                            if visited.insert(u.clone()) {
-                                queue.push_back(u);
-                            }
-                        }
-                    }
-                    match deeplearning::parse_course_html(&html, &url) {
-                        Ok((course, chapters)) => {
-                            let text = course.embed_text();
-                            if !is_relevant(&text) {
-                                n_irrelevant += 1;
-                                continue;
-                            }
-                            let topic_group = classify_topic_group(&text);
-                            let slugs = match_slugs(&text);
-                            eprintln!(
-                                "  ✓ [{topic_group}] {} ({} sections)",
-                                course.title,
-                                chapters.len()
-                            );
-                            kept.push(KeptArticle {
-                                course,
-                                chapters,
-                                topic_group,
-                                slugs,
-                                discovered_from: seed_url.clone(),
-                            });
-                            if kept.len() >= max_courses {
-                                eprintln!("  reached --max-courses {max_courses}");
-                                break 'outer;
-                            }
-                        }
-                        Err(e) => {
-                            warn!("parse error for {url}: {e}");
-                            n_failed += 1;
-                        }
-                    }
-                }
-                FetchResult::CloudflareBlocked => {
-                    warn!("{url}: Cloudflare blocked");
-                    n_failed += 1;
-                }
-                FetchResult::HttpError(code, _) => {
-                    warn!("{url}: HTTP {code}");
-                    n_failed += 1;
-                }
-                FetchResult::ConnectionError(e) => {
-                    warn!("{url}: {e}");
-                    n_failed += 1;
-                }
-            }
-        }
-
-        if delay_ms > 0 {
-            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
-        }
-    }
+    let spec = deeplearning_spec();
+    let params = CrawlParams {
+        seed_url: seed_url.clone(),
+        seed_paths: DEEPLEARNING_SEED_COURSES
+            .iter()
+            .map(|s| format!("https://www.deeplearning.ai/courses/{s}/"))
+            .collect(),
+        max_items: max_courses,
+        concurrency,
+        delay_ms,
+        frontier_multiplier: 6,
+        rag_only: false,
+    };
+    let (kept, counts) = crawl_provider(&spec, params, client, None).await?;
+    let (n_fetched, n_irrelevant, n_failed) =
+        (counts.fetched, counts.irrelevant, counts.failed);
 
     // ── Dry run: print the course→slug mapping table and exit ───────────
     if dry_run {
@@ -1986,19 +2059,16 @@ fn course_text(c: &serde_json::Value) -> String {
     parts.join(" \n ")
 }
 
-/// Scrape every RAG query, relevance-filter + slug-map against phase-3-rag,
-/// then upsert into `data/courses.db` (or print a table with `--dry-run`).
-fn cmd_rag_seed(
+/// Phase 1+2 of the Udemy RAG seed, shared by `cmd_rag_seed` and the unified
+/// `cmd_rag_deep_scrape`: scrape every [`RAG_SEED_QUERIES`] via the Playwright
+/// subprocess, dedupe by url, relevance-filter, and slug-map against the
+/// RAG-deep slug set. When `seen` is `Some`, urls are deduped across providers
+/// in-run. Returns `(kept, n_irrelevant, n_no_rag)`.
+fn rag_seed_collect(
+    repo_root: &std::path::Path,
     max: usize,
-    courses_db: PathBuf,
-    repo_root: PathBuf,
-    dry_run: bool,
-) -> Result<()> {
-    eprintln!(
-        "RAG seed: {} queries × max {max} candidates → phase-3-rag lessons\n",
-        RAG_SEED_QUERIES.len()
-    );
-
+    seen: Option<&Arc<Mutex<HashSet<String>>>>,
+) -> Result<(Vec<(serde_json::Value, Vec<(String, f32)>)>, usize, usize)> {
     // Phase 1: scrape every RAG query, dedupe by url.
     let mut by_url: HashMap<String, serde_json::Value> = HashMap::new();
     for (i, q) in RAG_SEED_QUERIES.iter().enumerate() {
@@ -2006,11 +2076,17 @@ fn cmd_rag_seed(
         let search_url =
             format!("https://www.udemy.com/courses/search/?q={encoded}&sort=most-reviewed");
         eprintln!("[{}/{}] query: \"{q}\"", i + 1, RAG_SEED_QUERIES.len());
-        match run_ts_scraper(&repo_root, &search_url, max) {
+        match run_ts_scraper(repo_root, &search_url, max) {
             Ok(scraped) => {
                 let mut added = 0usize;
                 for c in scraped {
                     if let Some(u) = c.get("url").and_then(|v| v.as_str()) {
+                        // Cross-provider in-run dedup when sharing a set.
+                        if let Some(seen) = seen {
+                            if !seen.lock().unwrap().insert(u.to_string()) {
+                                continue;
+                            }
+                        }
                         if by_url.insert(u.to_string(), c).is_none() {
                             added += 1;
                         }
@@ -2026,7 +2102,7 @@ fn cmd_rag_seed(
         anyhow::bail!("no courses scraped — Playwright/Cloudflare blocked or pnpm missing");
     }
 
-    // Phase 2: relevance-filter + slug-map (phase-3-rag slugs only).
+    // Phase 2: relevance-filter + slug-map (RAG-deep slugs only).
     let mut kept: Vec<(serde_json::Value, Vec<(String, f32)>)> = Vec::new();
     let (mut n_irrelevant, mut n_no_rag) = (0usize, 0usize);
     for c in by_url.into_values() {
@@ -2037,7 +2113,7 @@ fn cmd_rag_seed(
         }
         let mappings: Vec<(String, f32)> = match_slugs(&text)
             .into_iter()
-            .filter(|(slug, _)| is_phase3_rag_slug(slug))
+            .filter(|(slug, _)| is_rag_deep_slug(slug))
             .collect();
         if mappings.is_empty() {
             n_no_rag += 1;
@@ -2046,8 +2122,27 @@ fn cmd_rag_seed(
         kept.push((c, mappings));
     }
 
+    Ok((kept, n_irrelevant, n_no_rag))
+}
+
+/// Scrape every RAG query, relevance-filter + slug-map against the RAG-deep
+/// slug set, then upsert into `data/courses.db` (or print a table with
+/// `--dry-run`).
+fn cmd_rag_seed(
+    max: usize,
+    courses_db: PathBuf,
+    repo_root: PathBuf,
+    dry_run: bool,
+) -> Result<()> {
     eprintln!(
-        "\nScraped {} unique · kept {} RAG ({} irrelevant, {} no phase-3-rag slug)\n",
+        "RAG seed: {} queries × max {max} candidates → RAG-deep lessons\n",
+        RAG_SEED_QUERIES.len()
+    );
+
+    let (kept, n_irrelevant, n_no_rag) = rag_seed_collect(&repo_root, max, None)?;
+
+    eprintln!(
+        "\nScraped {} unique · kept {} RAG ({} irrelevant, {} no RAG-deep slug)\n",
         kept.len() + n_irrelevant + n_no_rag,
         kept.len(),
         n_irrelevant,
@@ -2089,6 +2184,273 @@ fn cmd_rag_seed(
     eprintln!(
         "Done. Upserted {n_courses} courses, {n_links} lesson links → {}",
         courses_db.display()
+    );
+    Ok(())
+}
+
+/// Pretty-print one provider's kept items as a `title → slug=score` table
+/// (used by the `rag-deep-scrape` `--dry-run`).
+fn print_kept_table(provider: &str, kept: &[KeptArticle]) {
+    eprintln!("\n── {provider} ── ({} kept)", kept.len());
+    for k in kept {
+        let pretty: Vec<String> = k
+            .slugs
+            .iter()
+            .map(|(s, r)| format!("{s}={r:.2}"))
+            .collect();
+        println!(
+            "• [{}] {}\n    {}",
+            k.topic_group,
+            k.course.title,
+            pretty.join("  ")
+        );
+    }
+}
+
+/// Unified deep RAG/embeddings scrape across Coursera, DeepLearning.AI, and
+/// Udemy. Aggressively BFS-crawls Coursera + DeepLearning.AI with RAG-focused
+/// seeds (hard-filtered to the RAG-deep slug set), runs the Udemy RAG seed
+/// best-effort, dedups by url across providers, upserts into
+/// `data/courses.db`, then regenerates the JSON exports (unless `--no-export`
+/// or `--dry-run`).
+#[allow(clippy::too_many_arguments)]
+async fn cmd_rag_deep_scrape(
+    max_per_provider: usize,
+    concurrency: usize,
+    delay_ms: u64,
+    frontier_multiplier: usize,
+    udemy_max: usize,
+    skip_udemy: bool,
+    courses_db: PathBuf,
+    repo_root: PathBuf,
+    dry_run: bool,
+    no_export: bool,
+) -> Result<()> {
+    let start = Instant::now();
+    let seen: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
+    let client = Arc::new(UdemyClient::new(&CrawlConfig::default())?);
+
+    // ── Coursera (RAG-only) ─────────────────────────────────────────────
+    let coursera_spec = coursera_spec();
+    let coursera_params = CrawlParams {
+        seed_url: COURSERA_ARTICLES_INDEX.to_string(),
+        seed_paths: COURSERA_RAG_SEED_ARTICLES
+            .iter()
+            .map(|s| format!("https://www.coursera.org/articles/{s}"))
+            .collect(),
+        max_items: max_per_provider,
+        concurrency,
+        delay_ms,
+        frontier_multiplier,
+        rag_only: true,
+    };
+    let (coursera_kept, coursera_counts) = match crawl_provider(
+        &coursera_spec,
+        coursera_params,
+        client.clone(),
+        Some(seen.clone()),
+    )
+    .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            warn!("coursera crawl failed (continuing): {e:#}");
+            (Vec::new(), CrawlCounts::default())
+        }
+    };
+
+    // ── DeepLearning.AI (RAG-only) ──────────────────────────────────────
+    let dl_spec = deeplearning_spec();
+    let dl_params = CrawlParams {
+        seed_url: DEEPLEARNING_COURSES_INDEX.to_string(),
+        seed_paths: DEEPLEARNING_RAG_SEED_COURSES
+            .iter()
+            .map(|s| format!("https://www.deeplearning.ai/courses/{s}/"))
+            .collect(),
+        max_items: max_per_provider,
+        concurrency,
+        delay_ms,
+        frontier_multiplier,
+        rag_only: true,
+    };
+    let (dl_kept, dl_counts) =
+        match crawl_provider(&dl_spec, dl_params, client.clone(), Some(seen.clone())).await {
+            Ok(v) => v,
+            Err(e) => {
+                warn!("deeplearning crawl failed (continuing): {e:#}");
+                (Vec::new(), CrawlCounts::default())
+            }
+        };
+
+    // ── Udemy (best-effort: Playwright/Cloudflare/pnpm may block) ───────
+    let mut udemy_kept: Vec<(serde_json::Value, Vec<(String, f32)>)> = Vec::new();
+    if skip_udemy {
+        eprintln!("\nUdemy: skipped (--skip-udemy)");
+    } else {
+        match rag_seed_collect(&repo_root, udemy_max, Some(&seen)) {
+            Ok((k, n_irr, n_no)) => {
+                eprintln!(
+                    "\nUdemy: kept {} ({} irrelevant, {} no RAG-deep slug)",
+                    k.len(),
+                    n_irr,
+                    n_no
+                );
+                udemy_kept = k;
+            }
+            Err(e) => warn!("udemy path failed (best-effort): {e:#}"),
+        }
+    }
+
+    // ── Dry-run: print tables, write nothing ────────────────────────────
+    if dry_run {
+        print_kept_table(coursera_spec.provider, &coursera_kept);
+        print_kept_table(dl_spec.provider, &dl_kept);
+        eprintln!("\n── Udemy ── ({} kept)", udemy_kept.len());
+        for (c, mappings) in &udemy_kept {
+            let title = c.get("title").and_then(|v| v.as_str()).unwrap_or("?");
+            let pretty: Vec<String> = mappings
+                .iter()
+                .map(|(s, r)| format!("{s}={r:.2}"))
+                .collect();
+            println!("• {title}\n    {}", pretty.join("  "));
+        }
+        let total = coursera_kept.len() + dl_kept.len() + udemy_kept.len();
+        eprintln!(
+            "\nrag-deep-scrape (dry-run): {total} unique kept (Coursera {} · DeepLearning.AI {} · Udemy {}) · {} cross-provider dup(s) · nothing written",
+            coursera_kept.len(),
+            dl_kept.len(),
+            udemy_kept.len(),
+            coursera_counts.dup + dl_counts.dup
+        );
+        return Ok(());
+    }
+
+    // ── Upsert all three into data/courses.db ───────────────────────────
+    let conn = courses::open(&courses_db)
+        .with_context(|| format!("opening {}", courses_db.display()))?;
+    let (mut n_up, mut n_links) = (0usize, 0usize);
+
+    for k in &coursera_kept {
+        let c = &k.course;
+        let sections: Vec<String> =
+            serde_json::from_str(&c.topics_json).unwrap_or_default();
+        let value = serde_json::json!({
+            "title": c.title,
+            "url": c.url,
+            "description": c.description,
+            "isFree": true,
+            "imageUrl": c.image_url,
+            "language": c.language,
+            "metadata": {
+                "author": c.instructor,
+                "sections": sections,
+                "source": coursera_spec.source,
+            },
+        });
+        match courses::upsert_course(&conn, &value, coursera_spec.provider, k.topic_group) {
+            Ok(id) => {
+                n_up += 1;
+                for (slug, rel) in &k.slugs {
+                    courses::link_lesson_course(&conn, slug, &id, *rel as f64)?;
+                    n_links += 1;
+                }
+            }
+            Err(e) => eprintln!("  coursera upsert failed: {e:#}"),
+        }
+    }
+
+    for k in &dl_kept {
+        let c = &k.course;
+        let sections: Vec<String> =
+            serde_json::from_str(&c.topics_json).unwrap_or_default();
+        let value = serde_json::json!({
+            "title": c.title,
+            "url": c.url,
+            "description": c.description,
+            "level": c.level,
+            "durationHours": c.duration_hours as f64,
+            "isFree": true,
+            "imageUrl": c.image_url,
+            "language": c.language,
+            "metadata": {
+                "author": c.instructor,
+                "sections": sections,
+                "source": dl_spec.source,
+            },
+        });
+        match courses::upsert_course(&conn, &value, dl_spec.provider, k.topic_group) {
+            Ok(id) => {
+                n_up += 1;
+                for (slug, rel) in &k.slugs {
+                    courses::link_lesson_course(&conn, slug, &id, *rel as f64)?;
+                    n_links += 1;
+                }
+            }
+            Err(e) => eprintln!("  deeplearning upsert failed: {e:#}"),
+        }
+    }
+
+    for (c, mappings) in &udemy_kept {
+        let tg = classify_topic_group(&course_text(c));
+        match courses::upsert_course(&conn, c, "Udemy", tg) {
+            Ok(id) => {
+                n_up += 1;
+                for (slug, rel) in mappings {
+                    courses::link_lesson_course(&conn, slug, &id, *rel as f64)?;
+                    n_links += 1;
+                }
+            }
+            Err(e) => eprintln!("  udemy upsert failed: {e:#}"),
+        }
+    }
+
+    eprintln!(
+        "\nUpserted {n_up} course(s), {n_links} lesson link(s) → {}",
+        courses_db.display()
+    );
+
+    // ── Regenerate JSON exports (unless --no-export) ────────────────────
+    if no_export {
+        eprintln!("(--no-export: data/content/*.json not regenerated)");
+    } else {
+        eprintln!(
+            "\nExporting content (cargo run -p aer-ml --release --bin export-content) ..."
+        );
+        let status = std::process::Command::new("cargo")
+            .args([
+                "run",
+                "-p",
+                "aer-ml",
+                "--release",
+                "--bin",
+                "export-content",
+                "--",
+                "--courses-db",
+            ])
+            .arg(&courses_db)
+            .current_dir(repo_root.join("crates/ml"))
+            .status()
+            .context("spawning export-content (is cargo on PATH?)")?;
+        if !status.success() {
+            warn!("export-content exited {}", status.code().unwrap_or(-1));
+        }
+    }
+
+    eprintln!(
+        "\n{}\nrag-deep-scrape: Coursera kept {} (fetched {}, failed {}) · DeepLearning.AI kept {} (fetched {}, failed {}) · Udemy kept {} · {} cross-provider dup(s) · {n_up} upserted · {n_links} links · {:.1}s",
+        "─".repeat(50),
+        coursera_kept.len(),
+        coursera_counts.fetched,
+        coursera_counts.failed,
+        dl_kept.len(),
+        dl_counts.fetched,
+        dl_counts.failed,
+        udemy_kept.len(),
+        coursera_counts.dup + dl_counts.dup,
+        start.elapsed().as_secs_f64()
+    );
+    eprintln!(
+        "Note: /rag reflects these changes only after a Next.js rebuild (npm run build)."
     );
     Ok(())
 }

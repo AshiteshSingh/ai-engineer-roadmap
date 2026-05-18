@@ -92,6 +92,11 @@ path = "src/bin/bkt_server.rs"
 name = "udemy"
 path = "src/bin/udemy.rs"
 
+# ---- Spotify podcast rail seed (/rag) -------------------------------------
+[[bin]]
+name = "spotify-podcasts"
+path = "src/bin/spotify_podcasts.rs"
+
 [dependencies]
 # External monorepo path deps (kept external; 4-up from crates/ml/)
 candle = { path = "../../../../crates/candle", default-features = false }

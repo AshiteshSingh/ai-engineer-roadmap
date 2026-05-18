@@ -44,6 +44,7 @@
     "prep:rust": "cd crates/ml && cargo run -p aer-ml --release --bin gen-app-prep --",
     "seed:courses": "cd crates/ml && cargo run -p aer-ml --release --bin seed-topic-courses --",
     "seed:deeplearning": "cd crates/ml && cargo run -p aer-ml --release --bin udemy -- deeplearning --seed-frontend",
+    "seed:rag-podcasts": "cd crates/ml && cargo run -p aer-ml --release --bin spotify-podcasts --",
     "audio:meta": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-meta --",
     "audio:gate:scan": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --all",
     "audio:gate:check": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --json --slug",
