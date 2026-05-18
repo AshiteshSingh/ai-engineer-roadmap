@@ -16,9 +16,11 @@ use serde::Deserialize;
 use tokio::sync::Semaphore;
 use tracing::{info, warn};
 
+use knowledge_ml_core::courses;
 use udemy::crawler::{CrawlConfig, FetchResult, UdemyClient};
 use udemy::keywords::{
-    classify_topic_group, is_relevant, match_slugs, should_follow_topic, SEED_TOPICS,
+    classify_topic_group, is_phase3_rag_slug, is_relevant, match_slugs, should_follow_topic,
+    RAG_SEED_QUERIES, SEED_TOPICS,
 };
 use udemy::scraper::{load_courses_json, parse_course_html};
 use udemy::types::{
@@ -168,6 +170,27 @@ enum Command {
         #[arg(long)]
         no_write: bool,
     },
+
+    /// RAG-focused seed: scrape Udemy for every phase-3-rag lesson's courses
+    /// via the Playwright subprocess, relevance-filter + slug-map them, and
+    /// upsert into data/courses.db so they render on /rag lesson pages.
+    RagSeed {
+        /// Max candidates to scrape per RAG search query.
+        #[arg(long, default_value_t = 15)]
+        max: usize,
+
+        /// Dedicated SQLite course store (read by `export-content`).
+        #[arg(long, default_value = "../../data/courses.db")]
+        courses_db: PathBuf,
+
+        /// Knowledge-app root — cwd for the TS scraper subprocess.
+        #[arg(long, default_value = "../..")]
+        repo_root: PathBuf,
+
+        /// Print the course→slug mapping table and exit (no DB writes).
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -254,6 +277,12 @@ async fn main() -> Result<()> {
             top,
             embed_url,
         } => cmd_search(query, db, top, embed_url).await,
+        Command::RagSeed {
+            max,
+            courses_db,
+            repo_root,
+            dry_run,
+        } => cmd_rag_seed(max, courses_db, repo_root, dry_run),
         Command::Chapters { action } => match action {
             ChapterAction::Ingest {
                 json,
@@ -1038,6 +1067,187 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
+
+// ── rag-seed ───────────────────────────────────────────────────────────────────
+
+/// Run `scripts/fetch-udemy-search.ts` (Playwright, Cloudflare-bypassing) for
+/// one search URL and return its `courses` array. Mirrors the proven
+/// subprocess pattern in `knowledge-ml-server`'s `seed-topic-courses` bin.
+fn run_ts_scraper(
+    repo_root: &std::path::Path,
+    search_url: &str,
+    max: usize,
+) -> Result<Vec<serde_json::Value>> {
+    eprintln!(
+        "  $ pnpm tsx scripts/fetch-udemy-search.ts \"{search_url}\" --max {max}  (cwd={})",
+        repo_root.display()
+    );
+    let out = std::process::Command::new("pnpm")
+        .args([
+            "tsx",
+            "scripts/fetch-udemy-search.ts",
+            search_url,
+            "--max",
+            &max.to_string(),
+        ])
+        .current_dir(repo_root)
+        .output()
+        .context("spawning fetch-udemy-search.ts (is pnpm on PATH?)")?;
+
+    if !out.stderr.is_empty() {
+        eprint!("{}", String::from_utf8_lossy(&out.stderr));
+    }
+    if !out.status.success() {
+        anyhow::bail!(
+            "fetch-udemy-search.ts exited {}; see stderr above.",
+            out.status.code().unwrap_or(-1)
+        );
+    }
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let last = stdout
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .next_back()
+        .ok_or_else(|| anyhow::anyhow!("scraper returned no stdout"))?;
+    let payload: serde_json::Value =
+        serde_json::from_str(last).context("scraper stdout was not JSON")?;
+    Ok(payload
+        .get("courses")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default())
+}
+
+/// Title + description + subtitle + "what you'll learn" — the text the
+/// keyword relevance/slug-mapping logic scores against.
+fn course_text(c: &serde_json::Value) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(t) = c.get("title").and_then(|v| v.as_str()) {
+        parts.push(t.to_string());
+    }
+    if let Some(d) = c.get("description").and_then(|v| v.as_str()) {
+        parts.push(d.to_string());
+    }
+    if let Some(meta) = c.get("metadata") {
+        if let Some(s) = meta.get("subtitle").and_then(|v| v.as_str()) {
+            parts.push(s.to_string());
+        }
+        if let Some(arr) = meta.get("whatYoullLearn").and_then(|v| v.as_array()) {
+            for it in arr.iter().filter_map(|v| v.as_str()) {
+                parts.push(it.to_string());
+            }
+        }
+    }
+    parts.join(" \n ")
+}
+
+/// Scrape every RAG query, relevance-filter + slug-map against phase-3-rag,
+/// then upsert into `data/courses.db` (or print a table with `--dry-run`).
+fn cmd_rag_seed(
+    max: usize,
+    courses_db: PathBuf,
+    repo_root: PathBuf,
+    dry_run: bool,
+) -> Result<()> {
+    eprintln!(
+        "RAG seed: {} queries × max {max} candidates → phase-3-rag lessons\n",
+        RAG_SEED_QUERIES.len()
+    );
+
+    // Phase 1: scrape every RAG query, dedupe by url.
+    let mut by_url: HashMap<String, serde_json::Value> = HashMap::new();
+    for (i, q) in RAG_SEED_QUERIES.iter().enumerate() {
+        let encoded = q.replace(' ', "+");
+        let search_url =
+            format!("https://www.udemy.com/courses/search/?q={encoded}&sort=most-reviewed");
+        eprintln!("[{}/{}] query: \"{q}\"", i + 1, RAG_SEED_QUERIES.len());
+        match run_ts_scraper(&repo_root, &search_url, max) {
+            Ok(scraped) => {
+                let mut added = 0usize;
+                for c in scraped {
+                    if let Some(u) = c.get("url").and_then(|v| v.as_str()) {
+                        if by_url.insert(u.to_string(), c).is_none() {
+                            added += 1;
+                        }
+                    }
+                }
+                eprintln!("  +{added} new (unique total {})", by_url.len());
+            }
+            Err(e) => eprintln!("  scrape failed for \"{q}\": {e:#}"),
+        }
+    }
+
+    if by_url.is_empty() {
+        anyhow::bail!("no courses scraped — Playwright/Cloudflare blocked or pnpm missing");
+    }
+
+    // Phase 2: relevance-filter + slug-map (phase-3-rag slugs only).
+    let mut kept: Vec<(serde_json::Value, Vec<(String, f32)>)> = Vec::new();
+    let (mut n_irrelevant, mut n_no_rag) = (0usize, 0usize);
+    for c in by_url.into_values() {
+        let text = course_text(&c);
+        if !is_relevant(&text) {
+            n_irrelevant += 1;
+            continue;
+        }
+        let mappings: Vec<(String, f32)> = match_slugs(&text)
+            .into_iter()
+            .filter(|(slug, _)| is_phase3_rag_slug(slug))
+            .collect();
+        if mappings.is_empty() {
+            n_no_rag += 1;
+            continue;
+        }
+        kept.push((c, mappings));
+    }
+
+    eprintln!(
+        "\nScraped {} unique · kept {} RAG ({} irrelevant, {} no phase-3-rag slug)\n",
+        kept.len() + n_irrelevant + n_no_rag,
+        kept.len(),
+        n_irrelevant,
+        n_no_rag
+    );
+
+    if dry_run {
+        for (c, mappings) in &kept {
+            let title = c.get("title").and_then(|v| v.as_str()).unwrap_or("?");
+            let pretty: Vec<String> = mappings
+                .iter()
+                .map(|(s, r)| format!("{s}={r:.2}"))
+                .collect();
+            println!("• {title}\n    {}", pretty.join("  "));
+        }
+        eprintln!("\n(dry-run: nothing written to {})", courses_db.display());
+        return Ok(());
+    }
+
+    // Phase 3: persist via the shared `courses` writer (data/courses.db).
+    let conn = courses::open(&courses_db)
+        .with_context(|| format!("opening {}", courses_db.display()))?;
+    let (mut n_courses, mut n_links) = (0usize, 0usize);
+    for (c, mappings) in &kept {
+        let id = match courses::upsert_course(&conn, c, "Udemy", "RAG & Vector Search") {
+            Ok(id) => id,
+            Err(e) => {
+                eprintln!("  upsert failed: {e:#}");
+                continue;
+            }
+        };
+        n_courses += 1;
+        for (slug, rel) in mappings {
+            courses::link_lesson_course(&conn, slug, &id, *rel as f64)?;
+            n_links += 1;
+        }
+    }
+
+    eprintln!(
+        "Done. Upserted {n_courses} courses, {n_links} lesson links → {}",
+        courses_db.display()
+    );
+    Ok(())
+}
 
 // ── chapters ───────────────────────────────────────────────────────────────────
 

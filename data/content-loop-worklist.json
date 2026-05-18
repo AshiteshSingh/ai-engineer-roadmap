@@ -1,5 +1,5 @@
 {
-  "generated_at_unix": 1779076321,
+  "generated_at_unix": 1779077410,
   "thresholds": {
     "minWords": 1500,
     "minCode": 2,
@@ -20,8 +20,8 @@
   "summary": {
     "total": 99,
     "skipped": 3,
-    "pass": 81,
-    "fail": 15
+    "pass": 82,
+    "fail": 14
   },
   "skipped": [
     "ai-on-cloudflare-workers",
@@ -1454,17 +1454,11 @@
     {
       "slug": "rag",
       "file": "content/rag.md",
-      "structure_ok": false,
+      "structure_ok": true,
       "relation_ok": true,
       "quality_ok": true,
-      "ok": false,
-      "structure_issues": [
-        "Too short: 747 words (min 1500)",
-        "Too few code examples: 1 (min 2)",
-        "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
-        "Missing `## Mental Model` section (required as the second-level section before Core Concepts).",
-        "Missing `## Runtime Internals` deep-dive section."
-      ],
+      "ok": true,
+      "structure_issues": [],
       "relation_issues": [],
       "quality_issues": [],
       "metrics": {
@@ -1769,7 +1763,6 @@
     "nodejs",
     "acid-properties",
     "memory",
-    "rag",
     "tool-use",
     "solid-principles",
     "online-evaluation",

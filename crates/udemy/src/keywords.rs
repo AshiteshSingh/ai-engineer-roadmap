@@ -490,6 +490,74 @@ pub const SEED_TOPICS: &[&str] = &[
     "web-accessibility",
 ];
 
+/// The 10 lesson slugs that make up the `phase-3-rag` category rendered at
+/// `/rag` (see `lib/articles.ts`). `udemy rag-seed` links scraped courses
+/// only to slugs in this set, so a RAG crawl never pollutes unrelated
+/// frontend/ML lesson rails.
+pub const PHASE3_RAG_SLUGS: &[&str] = &[
+    "vectorize-rag",
+    "embeddings",
+    "embedding-models",
+    "vector-databases",
+    "lancedb",
+    "chunking-strategies",
+    "retrieval-strategies",
+    "rag",
+    "advanced-rag",
+    "rag-evaluation",
+];
+
+/// Returns true if `slug` is one of the `phase-3-rag` lesson slugs.
+pub fn is_phase3_rag_slug(slug: &str) -> bool {
+    PHASE3_RAG_SLUGS.contains(&slug)
+}
+
+/// Udemy search queries that surface RAG / embeddings courses. `udemy
+/// rag-seed` turns each into
+/// `https://www.udemy.com/courses/search/?q=<urlencoded>&sort=most-reviewed`,
+/// scrapes it via the Playwright subprocess, then relevance-filters and
+/// slug-maps the results against [`PHASE3_RAG_SLUGS`].
+pub const RAG_SEED_QUERIES: &[&str] = &[
+    "retrieval augmented generation",
+    "rag llm",
+    "langchain rag",
+    "llamaindex",
+    "vector database",
+    "embeddings nlp",
+    "semantic search",
+    "rag evaluation",
+    "chunking strategies",
+    "pinecone",
+    "chromadb",
+    "lancedb",
+];
+
+// ── Coursera articles crawl ─────────────────────────────────────────────────
+
+/// Default starting point for the Coursera articles BFS crawl
+/// (`udemy coursera`). Article links discovered here (and on each article's
+/// "related articles" rail) are followed and relevance-filtered exactly like
+/// Udemy courses, via [`is_relevant`] / [`match_slugs`].
+pub const COURSERA_ARTICLES_INDEX: &str = "https://www.coursera.org/articles";
+
+/// Seed article slugs to enqueue alongside the index, so a crawl still has
+/// AI/ML entry points even if the index markup changes. Turned into
+/// `https://www.coursera.org/articles/<slug>` by the `coursera` subcommand.
+pub const COURSERA_SEED_ARTICLES: &[&str] = &[
+    "embedding-model",
+    "what-is-machine-learning",
+    "what-is-deep-learning",
+    "natural-language-processing",
+    "what-is-rag",
+    "vector-database",
+    "large-language-models",
+    "what-is-prompt-engineering",
+    "generative-ai",
+    "machine-learning-models",
+    "neural-network",
+    "transformer-model",
+];
+
 type SlugEntry = (&'static str, &'static [&'static str]);
 
 /// Maps each lesson slug to the keywords that indicate a course belongs there.
@@ -586,6 +654,40 @@ pub const SLUG_KEYWORDS: &[SlugEntry] = &[
             "cosine similarity",
             "semantic similarity",
             "vector embedding",
+        ],
+    ),
+    (
+        "rag",
+        &[
+            "rag",
+            "retrieval augmented",
+            "retrieval-augmented",
+            "rag pipeline",
+            "rag system",
+            "rag application",
+            "grounded generation",
+        ],
+    ),
+    (
+        "lancedb",
+        &[
+            "lancedb",
+            "lance db",
+            "lance vector",
+            "embedded vector database",
+        ],
+    ),
+    (
+        "vectorize-rag",
+        &[
+            "vectorize",
+            "build a rag",
+            "rag from scratch",
+            "end-to-end rag",
+            "rag tutorial",
+            "document q&a",
+            "chat with your data",
+            "chat with documents",
         ],
     ),
     (
@@ -1182,5 +1284,52 @@ mod tests {
     #[test]
     fn should_follow_accessibility_topic() {
         assert!(should_follow_topic("web-accessibility"));
+    }
+
+    // ── phase-3-rag slug coverage ──────────────────────────────────────────
+
+    #[test]
+    fn match_slugs_rag() {
+        let results =
+            match_slugs("Build a production RAG pipeline: retrieval-augmented generation system");
+        let slugs: Vec<&str> = results.iter().map(|(s, _)| s.as_str()).collect();
+        assert!(slugs.contains(&"rag"), "expected rag in {slugs:?}");
+    }
+
+    #[test]
+    fn match_slugs_lancedb() {
+        let results = match_slugs("LanceDB: an embedded vector database for AI apps");
+        let slugs: Vec<&str> = results.iter().map(|(s, _)| s.as_str()).collect();
+        assert!(slugs.contains(&"lancedb"), "expected lancedb in {slugs:?}");
+    }
+
+    #[test]
+    fn match_slugs_vectorize_rag() {
+        let results =
+            match_slugs("Build a RAG from scratch: an end-to-end RAG tutorial — chat with your data");
+        let slugs: Vec<&str> = results.iter().map(|(s, _)| s.as_str()).collect();
+        assert!(
+            slugs.contains(&"vectorize-rag"),
+            "expected vectorize-rag in {slugs:?}"
+        );
+    }
+
+    #[test]
+    fn phase3_rag_slugs_has_ten_and_membership() {
+        assert_eq!(PHASE3_RAG_SLUGS.len(), 10);
+        assert!(is_phase3_rag_slug("rag"));
+        assert!(is_phase3_rag_slug("lancedb"));
+        assert!(is_phase3_rag_slug("vectorize-rag"));
+        assert!(!is_phase3_rag_slug("css-theory"));
+    }
+
+    #[test]
+    fn every_phase3_rag_slug_has_keyword_mappings() {
+        for slug in PHASE3_RAG_SLUGS {
+            assert!(
+                SLUG_KEYWORDS.iter().any(|(s, _)| s == slug),
+                "no SLUG_KEYWORDS entry for phase-3-rag slug {slug:?}"
+            );
+        }
     }
 }

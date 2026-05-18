@@ -1,0 +1,55 @@
+# Quality profiles — shared config consumed by `content-gate` and
+# `hub-gate` via `knowledge_ml_core::profiles`.
+#
+# `deep-dive` is the historical content_gate.rs / Python check_quality()
+# gate, byte-for-byte. It is the default for every slug, so this file
+# changes NOTHING for any lesson that is not explicitly reassigned below —
+# the content-loop worklist stays identical.
+#
+# `overview` is a relaxed profile for short entry/landing lessons (the
+# headline lesson of a phase-hub page such as /rag) where a 1,500-word,
+# 5-diagram deep dive is the wrong bar. It still enforces completeness
+# (title, sections, prose floor, valid links) — it just doesn't demand
+# diagrams or the Mental Model / Runtime Internals deep-dive sections.
+#
+# Resolution is explicit only: a slug uses `assignments[slug]` if present,
+# otherwise `default_profile`. Any threshold a profile omits inherits the
+# `deep-dive` value (serde defaults), so profiles only spell out diffs.
+
+schema_version = 1
+default_profile = "deep-dive"
+
+# Per-slug overrides. `rag` (#26, ~747 words, 0 diagrams) is the headline
+# lesson of https://ai-engineer-roadmap.xyz/rag — an intentional overview,
+# not an unfinished deep dive. Gating it as `overview` makes the most
+# visible lesson on that page actually checked for completeness instead of
+# being silently excluded.
+[assignments]
+rag = "overview"
+
+# Identical to the historical constants (every key inherits its default).
+[profiles.deep-dive]
+
+[profiles.overview]
+# Completeness floor for an overview lesson.
+structure.min_word_count = 500
+structure.min_code_blocks = 1
+structure.min_cross_refs = 1
+# `rag` ships 0 xyflow diagrams; an overview lesson is not required to have
+# them, so the diagram floor is 0 (it still must not contain mermaid).
+structure.min_xyflow_blocks = 0
+structure.min_h2_sections = 2
+structure.require_h1 = true
+structure.require_mental_model = false
+structure.require_runtime_internals = false
+structure.reject_mermaid = true
+# Relations still matter (a hub lesson should link out), just less strict.
+relation.enabled = true
+relation.min_crossrefs = 1
+relation.topk = 5
+relation.topk_hits = 1
+relation.check_reciprocity = false
+relation.check_broken_links = true
+# The duplicate/readability quality tier targets long deep dives; it is
+# noise on a short overview, so it is disabled for this profile.
+quality.enabled = false

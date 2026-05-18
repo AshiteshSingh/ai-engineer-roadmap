@@ -151,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
             eprintln!("  skip (LLM returned unknown url): {url}");
             continue;
         };
-        let course_id = courses::upsert_course(&conn, course, &args.topic_group)?;
+        let course_id = courses::upsert_course(&conn, course, "Udemy", &args.topic_group)?;
         let relevance = r.get("relevance").and_then(Value::as_f64).unwrap_or(0.5);
         courses::link_lesson_course(&conn, &args.slug, &course_id, relevance)?;
         saved += 1;

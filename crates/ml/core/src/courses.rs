@@ -124,10 +124,13 @@ pub fn slim_metadata(course: &Value) -> Value {
 }
 
 /// Upsert one scraped course (conflict on `url`), returning its row id.
-/// Mirrors the Python `UPSERT_COURSE_SQL` column-for-column.
+/// Mirrors the Python `UPSERT_COURSE_SQL` column-for-column. `provider` is
+/// bound (not hardcoded) so non-Udemy sources — e.g. the `udemy coursera`
+/// crawl, which passes `"Coursera"` — share this writer unchanged.
 pub fn upsert_course(
     conn: &Connection,
     course: &Value,
+    provider: &str,
     topic_group: &str,
 ) -> anyhow::Result<String> {
     let c = course.as_object().cloned().unwrap_or_default();
@@ -151,8 +154,8 @@ pub fn upsert_course(
             duration_hours, is_free, enrolled, image_url, language, topic_group,
             metadata, created_at, updated_at
          ) VALUES (
-            ?1, ?2, ?3, 'Udemy', ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13,
-            ?14, datetime('now'), datetime('now')
+            ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
+            ?15, datetime('now'), datetime('now')
          )
          ON CONFLICT(url) DO UPDATE SET
             title = excluded.title,
@@ -174,6 +177,7 @@ pub fn upsert_course(
             id,
             title,
             url,
+            provider,
             description,
             level,
             rating,
@@ -243,20 +247,38 @@ mod tests {
             }
         });
 
-        let id = upsert_course(&conn, &course, "Communication Skills").unwrap();
+        let id = upsert_course(&conn, &course, "Udemy", "Communication Skills").unwrap();
         link_lesson_course(&conn, "public-speaking", &id, 0.9).unwrap();
 
         // Re-upsert same url → same id (conflict path).
-        let id2 = upsert_course(&conn, &course, "Communication Skills").unwrap();
+        let id2 = upsert_course(&conn, &course, "Udemy", "Communication Skills").unwrap();
         assert_eq!(id, id2);
 
-        let (desc_len, meta): (usize, String) = conn
+        // A non-Udemy provider (e.g. the Coursera crawl) is stored verbatim.
+        let coursera = json!({
+            "title": "What Is an Embedding Model?",
+            "url": "https://www.coursera.org/articles/embedding-model",
+            "isFree": true,
+            "metadata": {}
+        });
+        let cid = upsert_course(&conn, &coursera, "Coursera", "RAG & Vector Search").unwrap();
+        let cprov: String = conn
             .query_row(
-                "SELECT length(description), metadata FROM external_courses WHERE id = ?1",
-                [&id],
-                |r| Ok((r.get::<_, i64>(0)? as usize, r.get(1)?)),
+                "SELECT provider FROM external_courses WHERE id = ?1",
+                [&cid],
+                |r| r.get(0),
             )
             .unwrap();
+        assert_eq!(cprov, "Coursera");
+
+        let (desc_len, meta, prov): (usize, String, String) = conn
+            .query_row(
+                "SELECT length(description), metadata, provider FROM external_courses WHERE id = ?1",
+                [&id],
+                |r| Ok((r.get::<_, i64>(0)? as usize, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(prov, "Udemy", "provider is bound, not hardcoded");
         assert_eq!(desc_len, 1500, "description truncated to 1500 chars");
         let m: Value = serde_json::from_str(&meta).unwrap();
         assert!(m.get("requirements").is_none());

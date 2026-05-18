@@ -6,6 +6,8 @@ import { Topbar } from "@/components/topbar";
 import { Footer } from "@/components/footer";
 import { PhaseHero } from "@/components/phase-hub/PhaseHero";
 import { PhaseBrowser } from "@/components/phase-hub/PhaseBrowser";
+import { ReferencesSection } from "@/components/references-section";
+import { PHASE_HUB_REFERENCES } from "@/lib/references";
 
 export interface PhaseHubProps {
   /** Category slug to render (e.g. "phase-3-rag", "phase-5-evals"). */
@@ -65,6 +67,11 @@ export async function PhaseHub({ slug, audio = false }: PhaseHubProps) {
     "--cat-to": meta.gradient[1],
   } as CSSProperties;
 
+  // Static phase-level "further reading" links (page chrome, not lesson
+  // content). Empty for phases without an entry ⇒ section renders nothing ⇒
+  // those routes (e.g. /evals) stay byte-identical.
+  const references = PHASE_HUB_REFERENCES[slug] ?? [];
+
   return (
     <div style={gradientVars}>
       <Topbar lessonCount={total} />
@@ -85,6 +92,10 @@ export async function PhaseHub({ slug, audio = false }: PhaseHubProps) {
         icon={meta.icon}
         category={category}
       />
+
+      {references.length > 0 ? (
+        <ReferencesSection references={references} contained />
+      ) : null}
 
       <Footer wordCount={wordCount} />
     </div>

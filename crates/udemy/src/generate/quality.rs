@@ -1,5 +1,15 @@
 //! Article quality gate — byte-faithful port of the Python `check_quality`
 //! in backend/knowledge_agent/article_generate_graph.py (lines 235-279).
+//!
+//! NOTE: the canonical source for these structure thresholds is now
+//! `crates/ml/quality-profiles.toml` `[profiles.deep-dive]`, enforced by
+//! `knowledge_ml_core::checker`. This file is an intentional standalone
+//! re-implementation (crates/udemy is a separate workspace and must not
+//! pull the ML dependency tree for ~90 lines of string logic). Drift
+//! between the two is caught by the ml-core test
+//! `checker::scan::tests::deep_dive_structure_issue_strings_unchanged`,
+//! which mirrors this module's `issue_order_matches_python_exactly`
+//! fixture and expected strings. Keep them in lockstep.
 
 use std::sync::LazyLock;
 

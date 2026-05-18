@@ -11,6 +11,8 @@ import { CategoryProgress } from "@/components/category-progress";
 import { RelatedLessons } from "@/components/related-lessons";
 import { ExternalCourses } from "@/components/external-courses";
 import { LangGraphExtra } from "@/components/langgraph-extra";
+import { ReferencesSection } from "@/components/references-section";
+import { LESSON_REFERENCES } from "@/lib/references";
 import { PageAnalytics } from "@/components/page-analytics";
 import { AudioPlayer } from "@/components/audio-player";
 import type { CategoryMeta } from "@/lib/data";
@@ -123,6 +125,12 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           ) : (
             <ExternalCourses courses={courses} />
           )}
+
+          {/* References & further reading — only lessons with an entry
+              (e.g. embeddings) render this; all others stay byte-identical. */}
+          {LESSON_REFERENCES[slug] ? (
+            <ReferencesSection references={LESSON_REFERENCES[slug]} />
+          ) : null}
 
           {/* Prev/Next */}
           <ArticleNav
