@@ -10,13 +10,13 @@ const sql = neon(process.env.DATABASE_URL);
 const slug = "whiteshield-senior-full-stack-product-engineer";
 const enhancement = readFileSync("/tmp/prep-enhance/enhancement.md", "utf8");
 
-const [current] = await sql`SELECT ai_interview_questions FROM applications WHERE slug = ${slug}`;
+const [current] = await sql`SELECT interview_questions FROM applications WHERE slug = ${slug}`;
 if (!current) {
   console.error("row not found");
   process.exit(1);
 }
 
-const before = current.ai_interview_questions ?? "";
+const before = current.interview_questions ?? "";
 const tag = "<!-- PROJECT_DEEP_DIVES -->";
 
 let next;
@@ -26,7 +26,7 @@ if (before.includes(tag)) {
   next = before.trimEnd() + "\n\n" + tag + "\n" + enhancement;
 }
 
-await sql`UPDATE applications SET ai_interview_questions = ${next}, updated_at = now() WHERE slug = ${slug}`;
+await sql`UPDATE applications SET interview_questions = ${next}, updated_at = now() WHERE slug = ${slug}`;
 
-const [after] = await sql`SELECT length(ai_interview_questions) as len FROM applications WHERE slug = ${slug}`;
+const [after] = await sql`SELECT length(interview_questions) as len FROM applications WHERE slug = ${slug}`;
 console.log(`before=${before.length} after=${after.len}`);

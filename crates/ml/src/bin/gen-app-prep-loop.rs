@@ -66,7 +66,7 @@ fn build_prompt(art_abs: &str) -> String {
 Keep these fields EXACTLY as they are: slug, company, position, url, status, \
 jobDescription.\n\n\
 2. From its \"jobDescription\" (plus company/position), generate:\n\n\
-   - \"aiInterviewQuestions\": GitHub-flavored Markdown, high-signal, specific \
+   - \"interviewQuestions\": GitHub-flavored Markdown, high-signal, specific \
 to the JD. It MUST contain exactly these four level-2 headings, in order:\n\
        ## Technical screen likely topics\n\
        ## System design scenarios\n\
@@ -74,7 +74,7 @@ to the JD. It MUST contain exactly these four level-2 headings, in order:\n\
        ## Questions to ask them\n\
      (bulleted, concrete, no padding; ~6-10 technical topics, 2-3 \
 system-design prompts, 4-6 behavioral themes, 5 questions). No top-level # H1.\n\n\
-   - \"aiTechStack\": a JSON STRING (the array JSON-encoded as a string, NOT a \
+   - \"techStack\": a JSON STRING (the array JSON-encoded as a string, NOT a \
 nested array) of 8-20 objects, each {{\"tag\": kebab-case-id, \"label\": \
 \"Human Name\", \"category\": one of EXACTLY \\\"Databases & Storage\\\" | \
 \\\"Backend Frameworks\\\" | \\\"Frontend Frameworks\\\" | \\\"Cloud & \
@@ -83,7 +83,7 @@ Communication\\\", \"relevance\": \"primary\" | \"secondary\"}}. Skip soft \
 skills/seniority. Merge synonyms.\n\n\
 3. Use the Write tool to overwrite {art_abs} with a single JSON object having \
 EXACTLY these keys: slug, company, position, url, status, jobDescription, \
-aiInterviewQuestions, aiTechStack, generatedAt\n\
+interviewQuestions, techStack, generatedAt\n\
    - slug/company/position/url/status/jobDescription: copied verbatim from \
 step 1\n\
    - generatedAt: the current UTC time in ISO-8601 (e.g. 2026-05-18T12:34:56Z)\n\
@@ -93,35 +93,35 @@ Do ONLY this. After the Write succeeds, stop."
 }
 
 /// Read + strictly validate the artifact. Returns
-/// `(jobDescription, aiInterviewQuestions, aiTechStack-json-string)`.
+/// `(jobDescription, interviewQuestions, techStack-json-string)`.
 fn validate(path: &Path) -> anyhow::Result<(String, String, String)> {
     let raw = std::fs::read_to_string(path)
         .with_context(|| format!("reading {}", path.display()))?;
     let v: Value = serde_json::from_str(&raw).context("artifact is not valid JSON")?;
 
     let iq = v
-        .get("aiInterviewQuestions")
+        .get("interviewQuestions")
         .and_then(Value::as_str)
         .unwrap_or("");
     anyhow::ensure!(
         iq.trim().chars().count() >= 200,
-        "aiInterviewQuestions too short/empty ({} chars)",
+        "interviewQuestions too short/empty ({} chars)",
         iq.trim().chars().count()
     );
     let sections = iq.lines().filter(|l| l.starts_with("## ")).count();
     anyhow::ensure!(sections >= 4, "expected ≥4 '## ' sections, found {sections}");
 
     let ts_raw = v
-        .get("aiTechStack")
+        .get("techStack")
         .and_then(Value::as_str)
-        .context("aiTechStack must be a JSON string")?;
+        .context("techStack must be a JSON string")?;
     let arr = serde_json::from_str::<Value>(ts_raw)
-        .context("aiTechStack is not parseable JSON")?;
+        .context("techStack is not parseable JSON")?;
     let arr = arr
         .as_array()
         .cloned()
         .filter(|a| !a.is_empty())
-        .context("aiTechStack must parse to a non-empty array")?;
+        .context("techStack must parse to a non-empty array")?;
     for t in &arr {
         let tag = t.get("tag").and_then(Value::as_str).unwrap_or("");
         let label = t.get("label").and_then(Value::as_str).unwrap_or("");
@@ -213,7 +213,7 @@ async fn main() -> anyhow::Result<()> {
         .map(Vec::len)
         .unwrap_or(0);
     println!(
-        "==> artifact valid: aiInterviewQuestions={} chars, aiTechStack={badges} badges",
+        "==> artifact valid: interviewQuestions={} chars, techStack={badges} badges",
         iq.len()
     );
 
@@ -235,7 +235,7 @@ async fn main() -> anyhow::Result<()> {
 
     let rows = sqlx::query(
         "SELECT id::text AS id, user_id, job_description, \
-         length(coalesce(ai_interview_questions,'')) AS iq_len \
+         length(coalesce(interview_questions,'')) AS iq_len \
          FROM applications WHERE slug = $1",
     )
     .bind(&args.slug)
@@ -269,7 +269,7 @@ async fn main() -> anyhow::Result<()> {
         .map_or(true, |s| s.trim().is_empty())
         && !jd.trim().is_empty();
     println!(
-        "==> Neon row id={id}: before aiInterviewQuestions={before_len} chars{}",
+        "==> Neon row id={id}: before interviewQuestions={before_len} chars{}",
         if backfill_jd {
             " (will backfill jobDescription)"
         } else {
@@ -279,8 +279,8 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::query(
         "UPDATE applications \
-         SET ai_interview_questions = $1, \
-             ai_tech_stack = $2, \
+         SET interview_questions = $1, \
+             tech_stack = $2, \
              job_description = CASE WHEN $3 THEN $4 ELSE job_description END, \
              updated_at = now() \
          WHERE id = $5::uuid",
@@ -295,15 +295,15 @@ async fn main() -> anyhow::Result<()> {
     .context("UPDATE applications")?;
 
     let after: i32 = sqlx::query_scalar(
-        "SELECT length(coalesce(ai_interview_questions,'')) FROM applications WHERE id = $1::uuid",
+        "SELECT length(coalesce(interview_questions,'')) FROM applications WHERE id = $1::uuid",
     )
     .bind(&id)
     .fetch_one(&pool)
     .await?;
 
     println!(
-        "✓ Neon updated: id={id} slug={} — aiInterviewQuestions now {after} chars, \
-         aiTechStack {badges} badges. The owner's live /applications/{}/prep now \
+        "✓ Neon updated: id={id} slug={} — interviewQuestions now {after} chars, \
+         techStack {badges} badges. The owner's live /applications/{}/prep now \
          renders this generated prep.",
         args.slug, args.slug
     );

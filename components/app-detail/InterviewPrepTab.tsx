@@ -10,12 +10,10 @@ import type { TabBaseProps } from "./types";
 import { MermaidFlow } from "@/components/mermaid-flow";
 import s from "./InterviewPrepTab.module.css";
 
-const POLL_INTERVAL = 4_000;
-
 export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [prepContent, setPrepContent] = useState(app.aiInterviewQuestions ?? null);
+  const [prepContent, setPrepContent] = useState(app.interviewQuestions ?? null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = useCallback(() => {
@@ -28,36 +26,22 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
   useEffect(() => () => stopPolling(), [stopPolling]);
 
   useEffect(() => {
-    if (app.aiInterviewQuestions) {
-      setPrepContent(app.aiInterviewQuestions);
+    if (app.interviewQuestions) {
+      setPrepContent(app.interviewQuestions);
       setRunning(false);
       stopPolling();
     }
-  }, [app.aiInterviewQuestions, stopPolling]);
+  }, [app.interviewQuestions, stopPolling]);
 
   const startPipeline = async () => {
-    setRunning(true);
-    setError(null);
-
-    try {
-      const res = await fetch(`/api/applications/${app.slug}/prep`, { method: "POST" });
-      const data = await res.json() as { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Failed to start pipeline");
-
-      pollRef.current = setInterval(async () => {
-        try {
-          const pollRes = await fetch(`/api/applications/${app.slug}/prep`);
-          const pollData = await pollRes.json() as { hasInterview?: boolean };
-          if (pollData.hasInterview) {
-            stopPolling();
-            window.location.reload();
-          }
-        } catch {}
-      }, POLL_INTERVAL);
-    } catch (e) {
-      setRunning(false);
-      setError(e instanceof Error ? e.message : "Failed to start pipeline");
-    }
+    // The runtime prep route + knowledge-server were removed. Prep is now
+    // generated offline by the Rust pipeline (writes the Neon row):
+    //   pnpm prep:loop -- --slug <slug>     (or prep:rust / prep:owner:rust)
+    setRunning(false);
+    stopPolling();
+    setError(
+      `Interview prep is generated offline now — run \`pnpm prep:loop -- --slug ${app.slug}\` (writes to Neon), then refresh.`,
+    );
   };
 
   if (!prepContent) {

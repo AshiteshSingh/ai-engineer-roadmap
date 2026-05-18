@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS course_reviews (
   instructor_clarity_score      integer CHECK (instructor_clarity_score BETWEEN 0 AND 10),
   curriculum_fit_score          integer CHECK (curriculum_fit_score BETWEEN 0 AND 10),
   prerequisites_score           integer CHECK (prerequisites_score BETWEEN 0 AND 10),
-  ai_domain_relevance_score     integer CHECK (ai_domain_relevance_score BETWEEN 0 AND 10),
+  domain_relevance_score     integer CHECK (domain_relevance_score BETWEEN 0 AND 10),
   community_health_score        integer CHECK (community_health_score BETWEEN 0 AND 10),
   value_proposition_score       integer CHECK (value_proposition_score BETWEEN 0 AND 10),
   -- Aggregated

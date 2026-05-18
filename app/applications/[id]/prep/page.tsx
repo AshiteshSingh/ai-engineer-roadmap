@@ -425,7 +425,7 @@ function PrepPageInner() {
     return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
   }, [scrollKey]);
 
-  const content = app?.aiInterviewQuestions;
+  const content = app?.interviewQuestions;
   const processed = useMemo(() => content ? groupCodeBlocks(content) : null, [content]);
 
   // Owner-only tailored prep. The API only ever sends `ownerPrep` to the owner

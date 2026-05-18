@@ -54,7 +54,7 @@ pnpm seed                    # seed 108 lessons from content/*.md
 pnpm dev                     # → http://localhost:3006  🎉
 ```
 
-That's the full read-only app — search, audio, knowledge graph, and analytics all work without a backend. For AI features (chat, article / flashcard / course-review generation), also run the [LangGraph backend](#langgraph-backend).
+That's the full app — no separate backend server. Chat calls DeepSeek directly from the Next route (set `DEEPSEEK_API_KEY`); article / prep / flashcard / course-review generation are offline Rust bins (see [AI generation](#ai-generation-rust-bins)).
 
 ## 🧱 Stack
 
@@ -129,24 +129,29 @@ pnpm backend:test              # cargo test (knowledge-server + audio-guide)
 pnpm test:e2e                  # smoke the running server
 ```
 
-### LangGraph backend (Rust)
+### AI generation (Rust bins)
+
+There is **no long-running backend server**. Chat is a direct DeepSeek call in
+`app/api/chat/route.ts` (via `lib/chat-llm.ts` — 1:1 port of the old Rust
+`chat` prompt; needs `DEEPSEEK_API_KEY` in the Next env / Vercel). All other AI
+generation runs offline as one-shot `aer-ml` bins that write Neon / SQLite:
 
 ```bash
-# RAG chat needs the candle embed server for vector search:
-#   cd crates/candle && cargo run --release --bin embed-server --features server
-pnpm backend:rust:index        # one-time: build data/lancedb from knowledge.db
-pnpm backend:rust              # serve POST /runs/wait on :7860
+pnpm prep:loop -- --slug <slug>     # interview prep (deepseek-loop agent → Neon)
+pnpm prep:rust  / prep:owner:rust   # prep variants (static artifact / owner)
+pnpm prep:memorize -- --slug <slug> # flashcards → concepts + applications row
+pnpm review:courses [--dry-run]     # course_review → data/courses.db
+pnpm generate:rust -- --slug <s>    # article generation
 ```
 
-Env: `DEEPSEEK_API_KEY` (or `LLM_*`), `EMBED_URL`, `KNOWLEDGE_DB`, `LANCEDB_PATH`,
-`BACKEND_AUTH_TOKEN`, `PORT`. Set `BACKEND_URL` + `BACKEND_AUTH_TOKEN` in the
-Vercel environment so `/api/chat` and the prep / memorize routes reach the server.
+Env for the bins: `DEEPSEEK_API_KEY` (monorepo-root `.env`) and, for the ones
+that persist, `DATABASE_URL` (auto-exported by the npm scripts).
 Course data is scraped/reviewed into `data/courses.db` and surfaced to the
 frontend as JSON via `pnpm export:content` (Rust → `data/content/*.json`).
 
 ### Local prep generation (DB-backed)
 
-The application **/prep** page reads `aiInterviewQuestions` from Neon. In prod
+The application **/prep** page reads `interviewQuestions` from Neon. In prod
 that DB-backed path is dormant (no Rust backend is deployed; the public page
 falls back to the committed `data/app-prep/<slug>.json` seed). To regenerate
 *real* prep and push it into the row — which, since `DATABASE_URL` is the
@@ -163,10 +168,10 @@ pnpm prep:loop -- --slug <slug> --no-db    # regenerate + validate only
 a `deepseek-loop` agent **in-process** (`deepseek::run`, only the builtin
 `Read`/`Write` tools, `AcceptEdits`) that reads the job description from
 `data/app-prep/<slug>.json` and rewrites the artifact's prep fields; (2)
-validates the result in Rust — exactly 4 `## ` sections, `aiTechStack` a JSON
+validates the result in Rust — exactly 4 `## ` sections, `techStack` a JSON
 string whose every `category` ∈ `app_prep::CATEGORIES`, valid `relevance`; (3)
 connects to Neon over Postgres (`sqlx`) and updates the `applications` row
-(`aiInterviewQuestions`/`aiTechStack`, plus `jobDescription` backfill if the
+(`interviewQuestions`/`techStack`, plus `jobDescription` backfill if the
 row had none), then reads back to confirm. It mutates the **live** row — not a
 dry run; the agent step and the validation gate must both pass first, so Neon
 is untouched on failure.
@@ -181,11 +186,9 @@ exists as the seed-loader / public-render contract test.)
 ### Environment
 
 ```env
-DATABASE_URL=             # Neon connection string (also used by backend container)
+DATABASE_URL=             # Neon connection string
 OPENAI_API_KEY=
-DEEPSEEK_API_KEY=
-BACKEND_URL=            # http://127.0.0.1:7860 locally; workers.dev URL in prod
-BACKEND_AUTH_TOKEN=     # bearer token shared between Next.js and backend
+DEEPSEEK_API_KEY=         # required by the Next runtime for /api/chat + the AI bins
 NEXT_PUBLIC_DATA_SOURCE=  # "db" | "fs"
 NEXT_PUBLIC_R2_DOMAIN=    # audio CDN domain
 R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET_NAME=

@@ -431,11 +431,11 @@ export const applications = pgTable(
     status: applicationStatusEnum("status").notNull().default("saved"),
     notes: text("notes"),
     jobDescription: text("job_description"),
-    aiInterviewQuestions: text("ai_interview_questions"),
-    aiTechStack: text("ai_tech_stack"),
+    interviewQuestions: text("interview_questions"),
+    techStack: text("tech_stack"),
     techDismissedTags: text("tech_dismissed_tags"),
-    aiInterviewers: text("ai_interviewers"),
-    aiMemorizeCategories: text("ai_memorize_categories"),
+    interviewers: text("interviewers"),
+    memorizeCategories: text("memorize_categories"),
     // Soft FK into lead-gen's companies.key (see @ai-apps/company-intel).
     // Populated by resolveCompanyKey() on create/update; null when no match.
     leadgenCompanyKey: text("leadgen_company_key"),

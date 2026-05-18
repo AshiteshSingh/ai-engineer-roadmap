@@ -111,7 +111,7 @@ export function JobDescriptionTab({
       </Card>
 
       {/* AI Interview Prep */}
-      {app.aiInterviewQuestions && (
+      {app.interviewQuestions && (
         <Card mb="5">
           <Heading size="4" mb="4">Interview Prep</Heading>
           <Box className="interview-prep-md">
@@ -179,7 +179,7 @@ export function JobDescriptionTab({
                 td: ({ children }) => <td>{children}</td>,
               }}
             >
-              {app.aiInterviewQuestions}
+              {app.interviewQuestions}
             </ReactMarkdown>
           </Box>
         </Card>

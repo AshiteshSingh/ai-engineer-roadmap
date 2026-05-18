@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS course_reviews (
   instructor_clarity_score    INTEGER,
   curriculum_fit_score        INTEGER,
   prerequisites_score         INTEGER,
-  ai_domain_relevance_score   INTEGER,
+  domain_relevance_score   INTEGER,
   community_health_score      INTEGER,
   value_proposition_score     INTEGER,
   aggregate_score             REAL,

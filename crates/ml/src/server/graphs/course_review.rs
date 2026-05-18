@@ -29,7 +29,7 @@ fn experts() -> Vec<(&'static str, PromptFn, f64)> {
         ("instructor_clarity_score", prompts::instructor_clarity, FAST_TEMP),
         ("curriculum_fit_score", prompts::curriculum_fit, FAST_TEMP),
         ("prerequisites_score", prompts::prerequisites, FAST_TEMP),
-        ("ai_domain_relevance_score", prompts::ai_domain_relevance, REASONER_TEMP),
+        ("domain_relevance_score", prompts::domain_relevance, REASONER_TEMP),
         ("community_health_score", prompts::community_health, FAST_TEMP),
         ("value_proposition_score", prompts::value_proposition, FAST_TEMP),
     ]

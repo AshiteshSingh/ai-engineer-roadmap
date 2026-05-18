@@ -28,10 +28,10 @@ const CATEGORY_COLORS: Record<string, string> = {
   "API & Communication": "indigo",
 };
 
-function parseTechStack(aiTechStack: string | null): TechBadge[] {
-  if (!aiTechStack) return [];
+function parseTechStack(techStack: string | null): TechBadge[] {
+  if (!techStack) return [];
   try {
-    const parsed = JSON.parse(aiTechStack);
+    const parsed = JSON.parse(techStack);
     if (Array.isArray(parsed)) return parsed;
     return [];
   } catch {
@@ -116,11 +116,11 @@ No markdown fences, no explanation — just the JSON object.`;
 export async function generateMemorizeContent(app: {
   company: string;
   position: string;
-  aiTechStack: string | null;
+  techStack: string | null;
   techDismissedTags: string | null;
 }): Promise<MemorizeCategory[]> {
   const techs = filterDismissed(
-    parseTechStack(app.aiTechStack),
+    parseTechStack(app.techStack),
     app.techDismissedTags,
   );
 

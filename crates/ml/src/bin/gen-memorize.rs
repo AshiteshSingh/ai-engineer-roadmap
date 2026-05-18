@@ -1,0 +1,231 @@
+//! `gen-memorize` — full-Rust replacement for the deleted
+//! `POST /api/applications/[id]/memorize/generate` route + the
+//! knowledge-server `memorize_generate` graph.
+//!
+//! Resolves an `applications` row by slug, runs `memorize::run` in-process
+//! (plain DeepSeek orchestration — no server), then writes the same two
+//! places the old route did: upserts each item into `concepts` and stores
+//! the categories JSON in `applications.memorize_categories` (Neon, sqlx).
+//!
+//!   DEEPSEEK_API_KEY=… DATABASE_URL=… \
+//!     cargo run -p aer-ml --release --bin gen-memorize -- --slug <slug>
+//!
+//! Mirrors the sqlx/`sanitize_pg_url` pattern from `gen-app-prep-loop.rs`.
+
+use aer_ml::server::{graphs::memorize, llm};
+use anyhow::Context;
+use clap::Parser;
+use serde_json::{json, Value};
+use sqlx::postgres::PgPoolOptions;
+use sqlx::Row;
+use tracing_subscriber::EnvFilter;
+
+#[derive(Parser)]
+#[command(name = "gen-memorize")]
+struct Args {
+    /// Application slug.
+    #[arg(long, default_value = "european-central-bank-ssm-cockpit-developer")]
+    slug: String,
+    /// Disambiguate when several `applications` rows share the slug.
+    #[arg(long)]
+    user_id: Option<String>,
+    /// Regenerate even if `memorize_categories` is already set.
+    #[arg(long)]
+    force: bool,
+    /// Neon connection string (defaults to `$DATABASE_URL`).
+    #[arg(long)]
+    database_url: Option<String>,
+    /// Generate + print only; skip the Neon writes.
+    #[arg(long)]
+    no_db: bool,
+}
+
+/// sqlx-postgres rejects libpq-only query params (`channel_binding`); Neon
+/// needs TLS but channel binding is optional. (Same as gen-app-prep-loop.)
+fn sanitize_pg_url(url: &str) -> String {
+    match url.split_once('?') {
+        Some((base, _)) => format!("{base}?sslmode=require"),
+        None => url.to_string(),
+    }
+}
+
+fn parse_tech_stack(s: Option<&str>) -> Vec<Value> {
+    s.and_then(|s| serde_json::from_str::<Value>(s).ok())
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default()
+}
+
+fn filter_dismissed(techs: Vec<Value>, dismissed: Option<&str>) -> Vec<Value> {
+    let set: std::collections::HashSet<String> = dismissed
+        .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .map(|t| t.to_lowercase())
+        .collect();
+    if set.is_empty() {
+        return techs;
+    }
+    techs
+        .into_iter()
+        .filter(|t| {
+            let tag = t.get("tag").and_then(Value::as_str).unwrap_or("");
+            !set.contains(&tag.to_lowercase())
+        })
+        .collect()
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with_writer(std::io::stderr)
+        .init();
+    let args = Args::parse();
+
+    let db_url = args
+        .database_url
+        .clone()
+        .or_else(|| std::env::var("DATABASE_URL").ok())
+        .context("DATABASE_URL not set and --database-url not given")?;
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&sanitize_pg_url(&db_url))
+        .await
+        .context("connecting to Neon Postgres")?;
+
+    let rows = sqlx::query(
+        "SELECT id::text AS id, user_id, company, position, tech_stack, \
+         tech_dismissed_tags, memorize_categories \
+         FROM applications WHERE slug = $1",
+    )
+    .bind(&args.slug)
+    .fetch_all(&pool)
+    .await?;
+    anyhow::ensure!(!rows.is_empty(), "no applications row for slug {:?}", args.slug);
+
+    let row = if rows.len() > 1 {
+        let uid = args.user_id.clone().ok_or_else(|| {
+            for r in &rows {
+                eprintln!(
+                    "  user-id={} id={}",
+                    r.get::<String, _>("user_id"),
+                    r.get::<String, _>("id"),
+                );
+            }
+            anyhow::anyhow!("{} rows match slug {:?}; pass --user-id", rows.len(), args.slug)
+        })?;
+        rows.into_iter()
+            .find(|r| r.get::<String, _>("user_id") == uid)
+            .ok_or_else(|| anyhow::anyhow!("no row for slug {:?} user-id {:?}", args.slug, uid))?
+    } else {
+        rows.into_iter().next().unwrap()
+    };
+
+    let id: String = row.get("id");
+    let company: String = row.get("company");
+    let position: String = row.get("position");
+    let tech_stack: Option<String> = row.get("tech_stack");
+    let dismissed: Option<String> = row.get("tech_dismissed_tags");
+    let existing: Option<String> = row.get("memorize_categories");
+
+    if existing.as_deref().map_or(false, |s| !s.trim().is_empty()) && !args.force {
+        println!("memorize_categories already set for {} — use --force to regenerate.", args.slug);
+        return Ok(());
+    }
+
+    let techs = filter_dismissed(parse_tech_stack(tech_stack.as_deref()), dismissed.as_deref());
+    anyhow::ensure!(
+        !techs.is_empty(),
+        "no tech stack for {:?} (run prep first / all dismissed)",
+        args.slug
+    );
+    println!("==> {} — {position} @ {company}: {} techs", args.slug, techs.len());
+
+    let cfg = llm::LlmConfig::from_env();
+    let client = llm::reqwest_client(&cfg);
+    let result = memorize::run(
+        json!({ "company": company, "position": position, "techs": techs }),
+        &client,
+        &cfg.model,
+        cfg.temperature,
+    )
+    .await
+    .context("memorize::run")?;
+
+    let categories = result
+        .get("categories")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let item_count: usize = categories
+        .iter()
+        .filter_map(|c| c.get("items").and_then(Value::as_array))
+        .map(Vec::len)
+        .sum();
+    anyhow::ensure!(
+        !categories.is_empty() && item_count > 0,
+        "memorize produced no items"
+    );
+    println!(
+        "==> generated {} categories, {item_count} items",
+        categories.len()
+    );
+
+    if args.no_db {
+        println!("{}", serde_json::to_string_pretty(&Value::Array(categories))?);
+        println!("--no-db: skipping Neon writes.");
+        return Ok(());
+    }
+
+    // Mirror the old route: upsert each item into `concepts`, then store the
+    // categories JSON on the applications row.
+    let mut upserts = 0usize;
+    for cat in &categories {
+        let items = cat.get("items").and_then(Value::as_array).cloned().unwrap_or_default();
+        for item in &items {
+            let item_id = item.get("id").and_then(Value::as_str).unwrap_or("");
+            if item_id.is_empty() {
+                continue;
+            }
+            let name = format!("app:{id}:{item_id}");
+            let description = item.get("description").and_then(Value::as_str).unwrap_or("");
+            let metadata = json!({
+                "term": item.get("term").cloned().unwrap_or(Value::Null),
+                "details": item.get("details").cloned().unwrap_or(Value::Null),
+                "context": item.get("context").cloned().unwrap_or(Value::Null),
+                "relatedItems": item.get("relatedItems").cloned().unwrap_or(Value::Null),
+                "mnemonicHint": item.get("mnemonicHint").cloned().unwrap_or(Value::Null),
+            })
+            .to_string();
+            sqlx::query(
+                "INSERT INTO concepts (name, description, concept_type, metadata) \
+                 VALUES ($1, $2, 'skill', $3::jsonb) \
+                 ON CONFLICT (name) DO UPDATE SET \
+                   description = EXCLUDED.description, metadata = EXCLUDED.metadata",
+            )
+            .bind(&name)
+            .bind(description)
+            .bind(&metadata)
+            .execute(&pool)
+            .await
+            .with_context(|| format!("upsert concept {name}"))?;
+            upserts += 1;
+        }
+    }
+
+    sqlx::query(
+        "UPDATE applications SET memorize_categories = $1, updated_at = now() \
+         WHERE id = $2::uuid",
+    )
+    .bind(serde_json::to_string(&Value::Array(categories.clone()))?)
+    .bind(&id)
+    .execute(&pool)
+    .await
+    .context("UPDATE applications.memorize_categories")?;
+
+    println!(
+        "✓ Neon updated: id={id} slug={} — {} concepts upserted, memorize_categories set ({} categories)",
+        args.slug, upserts, categories.len()
+    );
+    Ok(())
+}

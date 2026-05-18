@@ -30,11 +30,11 @@ export async function GET(
 
   // Try authenticated lookup first, then public fallback
   const col = UUID_RE.test(appId) ? applications.id : applications.slug;
-  let app: { id: string; aiMemorizeCategories: string | null } | undefined;
+  let app: { id: string; memorizeCategories: string | null } | undefined;
 
   if (session && isOwner(session)) {
     [app] = await db
-      .select({ id: applications.id, aiMemorizeCategories: applications.aiMemorizeCategories })
+      .select({ id: applications.id, memorizeCategories: applications.memorizeCategories })
       .from(applications)
       .where(whereApp(appId, session.user.id));
   }
@@ -42,7 +42,7 @@ export async function GET(
   if (!app) {
     // Public fallback
     [app] = await db
-      .select({ id: applications.id, aiMemorizeCategories: applications.aiMemorizeCategories })
+      .select({ id: applications.id, memorizeCategories: applications.memorizeCategories })
       .from(applications)
       .where(and(eq(col, appId), eq(applications.public, true)));
   }
@@ -52,8 +52,8 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const generated = !!app.aiMemorizeCategories;
-  const categories = generated ? JSON.parse(app.aiMemorizeCategories!) : [];
+  const generated = !!app.memorizeCategories;
+  const categories = generated ? JSON.parse(app.memorizeCategories!) : [];
 
   // Query mastery for app-scoped concepts (only for authenticated users)
   const mastery: Record<

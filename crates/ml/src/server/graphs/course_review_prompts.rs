@@ -129,7 +129,7 @@ Output ONLY a JSON object — no preamble, no commentary outside the JSON:\n\n{S
     )
 }
 
-pub fn ai_domain_relevance(course_info: &str) -> String {
+pub fn domain_relevance(course_info: &str) -> String {
     format!(
         "You are an AI/ML Domain Relevance expert reviewing an online course.\n\n\
 COURSE:\n{course_info}\n\n\
@@ -195,7 +195,7 @@ Compute a weighted aggregate score using these weights:\n\
 - instructor_clarity: 10%\n\
 - curriculum_fit: 8%\n\
 - prerequisites: 8%\n\
-- ai_domain_relevance: 15%\n\
+- domain_relevance: 15%\n\
 - community_health: 4%\n\
 - value_proposition: 4%\n\n\
 Weights sum to 100%. Apply them to the 1–10 scores from the expert summaries.\n\n\
@@ -226,7 +226,7 @@ mod tests {
     fn aggregator_has_weights_and_thresholds() {
         let a = aggregator("CINFO", "SUMMARY");
         assert!(a.contains("EXPERT SCORES:\nSUMMARY"));
-        assert!(a.contains("ai_domain_relevance: 15%"));
+        assert!(a.contains("domain_relevance: 15%"));
         assert!(a.contains("\"aggregate_score\": <float rounded to 1 decimal>"));
     }
 }

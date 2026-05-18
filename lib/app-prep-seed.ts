@@ -19,8 +19,8 @@ interface PrepArtifact {
   url: string | null;
   status: string;
   jobDescription: string | null;
-  aiInterviewQuestions: string | null;
-  aiTechStack: string | null;
+  interviewQuestions: string | null;
+  techStack: string | null;
   generatedAt: string;
 }
 
@@ -77,12 +77,12 @@ export function getAppPrepSeed(idOrSlug: string): AppData | null {
       status: (a.status as AppData["status"]) ?? "saved",
       notes: null,
       jobDescription: a.jobDescription ?? null,
-      aiInterviewQuestions: a.aiInterviewQuestions ?? null,
+      interviewQuestions: a.interviewQuestions ?? null,
       // Owner-only: never sourced from the public seed. The API attaches it
       // from getOwnerPrepSeed() for the owner only; null everywhere else.
       ownerPrep: null,
-      aiTechStack: a.aiTechStack ?? null,
-      aiInterviewers: null,
+      techStack: a.techStack ?? null,
+      interviewers: null,
       techDismissedTags: null,
       appliedAt: null,
       createdAt: a.generatedAt,

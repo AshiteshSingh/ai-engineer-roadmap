@@ -121,8 +121,8 @@ function parseSavedTechStack(raw: string | null | undefined): TechBadge[] | null
 }
 
 export function TechStackTab({ app, isAdmin }: TabBaseProps) {
-  const hasLlmTech = !!parseSavedTechStack(app.aiTechStack);
-  const techs = parseSavedTechStack(app.aiTechStack) ?? extractTechFromDescription(app.jobDescription);
+  const hasLlmTech = !!parseSavedTechStack(app.techStack);
+  const techs = parseSavedTechStack(app.techStack) ?? extractTechFromDescription(app.jobDescription);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);

@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS course_reviews (
   instructor_clarity_score    INTEGER,
   curriculum_fit_score        INTEGER,
   prerequisites_score         INTEGER,
-  ai_domain_relevance_score   INTEGER,
+  domain_relevance_score   INTEGER,
   community_health_score      INTEGER,
   value_proposition_score     INTEGER,
   aggregate_score             REAL,
@@ -238,7 +238,7 @@ export interface CourseReviewWrite {
   instructor_clarity_score: number;
   curriculum_fit_score: number;
   prerequisites_score: number;
-  ai_domain_relevance_score: number;
+  domain_relevance_score: number;
   community_health_score: number;
   value_proposition_score: number;
   aggregate_score: number;
@@ -259,7 +259,7 @@ export function upsertCourseReview(
          id, course_id, pedagogy_score, technical_accuracy_score,
          content_depth_score, practical_application_score,
          instructor_clarity_score, curriculum_fit_score, prerequisites_score,
-         ai_domain_relevance_score, community_health_score,
+         domain_relevance_score, community_health_score,
          value_proposition_score, aggregate_score, verdict, summary,
          expert_details, model_version, reviewed_at
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
@@ -271,7 +271,7 @@ export function upsertCourseReview(
          instructor_clarity_score    = excluded.instructor_clarity_score,
          curriculum_fit_score        = excluded.curriculum_fit_score,
          prerequisites_score         = excluded.prerequisites_score,
-         ai_domain_relevance_score   = excluded.ai_domain_relevance_score,
+         domain_relevance_score   = excluded.domain_relevance_score,
          community_health_score      = excluded.community_health_score,
          value_proposition_score     = excluded.value_proposition_score,
          aggregate_score             = excluded.aggregate_score,
@@ -291,7 +291,7 @@ export function upsertCourseReview(
       r.instructor_clarity_score,
       r.curriculum_fit_score,
       r.prerequisites_score,
-      r.ai_domain_relevance_score,
+      r.domain_relevance_score,
       r.community_health_score,
       r.value_proposition_score,
       r.aggregate_score,

@@ -8,7 +8,7 @@ import s from "./OwnerDeepDives.module.css";
 
 /**
  * Owner-only "Deep dive" card on the prep page. The link is resolved from the
- * code registry in lib/owner.ts (NOT the regenerated aiInterviewQuestions), so
+ * code registry in lib/owner.ts (NOT the regenerated interviewQuestions), so
  * prep regeneration can never wipe it. The caller gates rendering on owner
  * status; this component additionally renders nothing when there are no
  * deep-dives for the slug. All styling is in OwnerDeepDives.module.css — no

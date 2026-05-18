@@ -14,13 +14,13 @@ export interface AppData {
   status: ApplicationStatus;
   notes: string | null;
   jobDescription: string | null;
-  aiInterviewQuestions: string | null;
+  interviewQuestions: string | null;
   // Owner-only, regen-proof tailored prep. Populated by the API ONLY when the
   // requester is the owner (data/app-prep/<slug>.owner.json); null for the
   // public seed and every non-owner response. Never overwritten by gen-app-prep.
   ownerPrep: string | null;
-  aiTechStack: string | null;
-  aiInterviewers: string | null;
+  techStack: string | null;
+  interviewers: string | null;
   techDismissedTags: string | null;
   appliedAt: string | null;
   createdAt: string;

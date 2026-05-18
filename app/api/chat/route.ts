@@ -4,7 +4,7 @@ import { chatMessages } from "@/src/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { searchContent } from "@/lib/actions/search";
 import { deepSearch } from "@/lib/actions/deep-search";
-import { chat } from "@/src/lib/backend-client";
+import { generateChat } from "@/lib/chat-llm";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -51,16 +51,15 @@ export async function POST(req: NextRequest) {
 
   let assistantContent: string;
   try {
-    const result = await chat({
+    assistantContent = await generateChat({
       message,
       history: history.map((m) => ({ role: m.role, content: m.content })),
       contextSnippets: snippets,
     });
-    assistantContent = result.response;
   } catch (err) {
     return NextResponse.json(
       {
-        error: "LangGraph chat failed",
+        error: "chat generation failed",
         details: err instanceof Error ? err.message : String(err),
       },
       { status: 502 },

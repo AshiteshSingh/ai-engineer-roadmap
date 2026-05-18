@@ -27,7 +27,7 @@ interface AppData {
   slug: string;
   company: string;
   position: string;
-  aiTechStack: string | null;
+  techStack: string | null;
 }
 
 function MemorizePageInner() {
@@ -70,25 +70,17 @@ function MemorizePageInner() {
   }, [params.id, router]);
 
   const handleGenerate = useCallback(async () => {
-    if (!params.id) return;
-    setGenerating(true);
-    try {
-      const res = await fetch(`/api/applications/${params.id}/memorize/generate`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Generation failed");
-      }
-      const data = await res.json();
-      setCategories(data.categories || []);
-      setGenerated(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed");
-    } finally {
-      setGenerating(false);
-    }
-  }, [params.id]);
+    // The runtime generate route + knowledge-server were removed. Flashcards
+    // are now produced offline by the Rust pipeline:
+    //   pnpm prep:memorize -- --slug <slug>
+    setGenerating(false);
+    setCategories([]);
+    setError(
+      `Flashcards are generated offline now — run \`pnpm prep:memorize -- --slug ${
+        app?.slug ?? params.id
+      }\` (writes to Neon), then refresh.`,
+    );
+  }, [app?.slug, params.id]);
 
   const handleRate = useCallback(
     (itemId: string, isCorrect: boolean) => {
@@ -178,7 +170,7 @@ function MemorizePageInner() {
               <Text size="2" color="gray" align="center">
                 Create spaced-repetition flashcards from the tech stack in your {app.position} application at {app.company}.
               </Text>
-              {!app.aiTechStack && (
+              {!app.techStack && (
                 <Text size="2" color="red" align="center">
                   Generate a study plan first to populate the tech stack.
                 </Text>
@@ -186,7 +178,7 @@ function MemorizePageInner() {
               <Button
                 size="3"
                 color="violet"
-                disabled={generating || !app.aiTechStack}
+                disabled={generating || !app.techStack}
                 onClick={handleGenerate}
                 className={styles.fullBtn}
               >

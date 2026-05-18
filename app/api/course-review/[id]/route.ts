@@ -49,7 +49,7 @@ export async function POST(
     instructor_clarity_score: num("instructor_clarity_score"),
     curriculum_fit_score: num("curriculum_fit_score"),
     prerequisites_score: num("prerequisites_score"),
-    ai_domain_relevance_score: num("ai_domain_relevance_score"),
+    domain_relevance_score: num("domain_relevance_score"),
     community_health_score: num("community_health_score"),
     value_proposition_score: num("value_proposition_score"),
     aggregate_score: num("aggregate_score"),

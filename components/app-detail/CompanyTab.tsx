@@ -36,12 +36,12 @@ interface Company {
   services: string | null;
   service_taxonomy: string | null;
   score: number;
-  ai_tier: number;
-  ai_classification_reason: string | null;
+  tier: number;
+  classification_reason: string | null;
   deep_analysis: string | null;
   github_url: string | null;
   github_org: string | null;
-  github_ai_score: number | null;
+  github_score: number | null;
   github_hiring_score: number | null;
   github_activity_score: number | null;
   linkedin_url: string | null;
@@ -75,7 +75,7 @@ const CATEGORY_COLOR: Record<string, "gray" | "cyan" | "orange" | "green" | "vio
   staffing: "green",
 };
 
-const AI_TIER_LABEL: Record<number, { label: string; color: "gray" | "blue" | "violet" }> = {
+const TIER_LABEL: Record<number, { label: string; color: "gray" | "blue" | "violet" }> = {
   0: { label: "Not AI", color: "gray" },
   1: { label: "AI-First", color: "blue" },
   2: { label: "AI-Native", color: "violet" },
@@ -154,7 +154,7 @@ export function CompanyTab({ app }: TabBaseProps) {
   const { company, contacts } = data.intel;
   const services = parseJsonArray(company.services);
   const taxonomy = parseJsonArray(company.service_taxonomy);
-  const aiTier = AI_TIER_LABEL[company.ai_tier] ?? AI_TIER_LABEL[0];
+  const tier = TIER_LABEL[company.tier] ?? TIER_LABEL[0];
 
   return (
     <>
@@ -176,7 +176,7 @@ export function CompanyTab({ app }: TabBaseProps) {
               <Badge color={CATEGORY_COLOR[company.category.toLowerCase()] ?? "gray"} variant="soft">
                 {company.category.toLowerCase()}
               </Badge>
-              <Badge color={aiTier.color} variant="soft">{aiTier.label}</Badge>
+              <Badge color={tier.color} variant="soft">{tier.label}</Badge>
               <Badge color="gray" variant="soft">
                 score {company.score.toFixed(2)}
               </Badge>
@@ -251,12 +251,12 @@ export function CompanyTab({ app }: TabBaseProps) {
         </Card>
       ) : null}
 
-      {(company.github_ai_score != null || company.github_hiring_score != null) ? (
+      {(company.github_score != null || company.github_hiring_score != null) ? (
         <Card mb="5">
           <Heading size="4" mb="3">Signals</Heading>
           <Flex gap="4" wrap="wrap">
-            {company.github_ai_score != null ? (
-              <Signal label="GitHub AI adoption" value={company.github_ai_score} />
+            {company.github_score != null ? (
+              <Signal label="GitHub AI adoption" value={company.github_score} />
             ) : null}
             {company.github_hiring_score != null ? (
               <Signal label="GitHub hiring" value={company.github_hiring_score} />

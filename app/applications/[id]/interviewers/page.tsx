@@ -75,7 +75,7 @@ function InterviewersPageInner() {
   );
 
   const startEditing = () => {
-    setDraft(app?.aiInterviewers ?? "");
+    setDraft(app?.interviewers ?? "");
     setEditing(true);
   };
 
@@ -91,7 +91,7 @@ function InterviewersPageInner() {
       const res = await fetch(`/api/applications/${app.slug}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ aiInterviewers: draft }),
+        body: JSON.stringify({ interviewers: draft }),
       });
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();
@@ -205,7 +205,7 @@ function InterviewersPageInner() {
                     color="cyan"
                     onClick={startEditing}
                   >
-                    {app.aiInterviewers ? "Edit" : "Add"}
+                    {app.interviewers ? "Edit" : "Add"}
                   </Button>
                 )}
               </Flex>
@@ -243,7 +243,7 @@ function InterviewersPageInner() {
                     </Button>
                   </Flex>
                 </Box>
-              ) : app.aiInterviewers ? (
+              ) : app.interviewers ? (
                 <Box className="interview-prep-md">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -365,7 +365,7 @@ function InterviewersPageInner() {
                       ),
                     }}
                   >
-                    {app.aiInterviewers}
+                    {app.interviewers}
                   </ReactMarkdown>
                 </Box>
               ) : (

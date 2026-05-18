@@ -34,9 +34,10 @@ const APP_DATA_KEYS = [
   "status",
   "notes",
   "jobDescription",
-  "aiInterviewQuestions",
-  "aiTechStack",
-  "aiInterviewers",
+  "interviewQuestions",
+  "ownerPrep",
+  "techStack",
+  "interviewers",
   "techDismissedTags",
   "appliedAt",
   "createdAt",
@@ -88,15 +89,15 @@ check("ecb slug resolves to an AppData-shaped object", () => {
 check("interview questions + tech stack are usable", () => {
   const app = getAppPrepSeed(ECB_SLUG) as AppData;
   assert(
-    typeof app.aiInterviewQuestions === "string" &&
-      app.aiInterviewQuestions.length > 500,
-    "aiInterviewQuestions should be substantial markdown",
+    typeof app.interviewQuestions === "string" &&
+      app.interviewQuestions.length > 500,
+    "interviewQuestions should be substantial markdown",
   );
   assert(
-    typeof app.aiTechStack === "string",
-    "aiTechStack must be a JSON string (matches the DB column)",
+    typeof app.techStack === "string",
+    "techStack must be a JSON string (matches the DB column)",
   );
-  const techs = JSON.parse(app.aiTechStack as string) as Array<{
+  const techs = JSON.parse(app.techStack as string) as Array<{
     tag: string;
     label: string;
     category: string;
@@ -119,7 +120,7 @@ check("interview questions + tech stack are usable", () => {
 check("reshape fills DB-absent fields as null + timestamps from generatedAt", () => {
   const app = getAppPrepSeed(ECB_SLUG) as AppData;
   assertEq(app.notes, null, "notes");
-  assertEq(app.aiInterviewers, null, "aiInterviewers");
+  assertEq(app.interviewers, null, "interviewers");
   assertEq(app.techDismissedTags, null, "techDismissedTags");
   assertEq(app.appliedAt, null, "appliedAt");
   assertEq(app.createdAt, app.updatedAt, "createdAt === updatedAt");

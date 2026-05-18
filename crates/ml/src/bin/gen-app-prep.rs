@@ -12,7 +12,7 @@
 //! `--jd`/`--jd-file` is given we synthesize a realistic role brief from the
 //! company + position with one LLM call and feed that in ("title only" input).
 //! Output: `<out-dir>/<slug>.json` with the fields the prep page's seed loader
-//! reshapes into `AppData` (`aiTechStack` is a JSON **string**, matching the DB
+//! reshapes into `AppData` (`techStack` is a JSON **string**, matching the DB
 //! column and `JSON.stringify(result.tech_stack)` in the prep API route).
 
 use std::path::PathBuf;
@@ -167,8 +167,8 @@ invent confidential details or fabricate a job ID.";
         "url": args.url,
         "status": "saved",
         "jobDescription": jd,
-        "aiInterviewQuestions": interview,
-        "aiTechStack": serde_json::to_string(&tech_stack)?,
+        "interviewQuestions": interview,
+        "techStack": serde_json::to_string(&tech_stack)?,
         "generatedAt": chrono::Utc::now().to_rfc3339(),
     });
 

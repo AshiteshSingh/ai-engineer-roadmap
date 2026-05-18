@@ -2286,7 +2286,7 @@ async function main() {
   // Save categories to application row
   await db
     .update(schema.applications)
-    .set({ aiMemorizeCategories: JSON.stringify(categories) })
+    .set({ memorizeCategories: JSON.stringify(categories) })
     .where(eq(schema.applications.id, APP_ID));
 
   console.log("  ✓ Saved categories to application row\n");

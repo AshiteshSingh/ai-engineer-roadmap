@@ -38,31 +38,31 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // generated value in the DB still wins (the `||` short-circuits).
   const seed = getAppPrepSeed(id);
   const withSeedPrep = <
-    T extends { aiInterviewQuestions: string | null; aiTechStack: string | null },
+    T extends { interviewQuestions: string | null; techStack: string | null },
   >(
     row: T,
   ): T =>
     seed
       ? {
           ...row,
-          aiInterviewQuestions:
-            row.aiInterviewQuestions || seed.aiInterviewQuestions,
-          aiTechStack: row.aiTechStack || seed.aiTechStack,
+          interviewQuestions:
+            row.interviewQuestions || seed.interviewQuestions,
+          techStack: row.techStack || seed.techStack,
         }
       : row;
 
   // Concealment: non-owners must not even see links to owner-only routes
   // (e.g. /module-federation) in publicly-served prep markdown. The owner
   // branch below returns full content untouched.
-  const conceal = <T extends { aiInterviewQuestions: string | null }>(
+  const conceal = <T extends { interviewQuestions: string | null }>(
     row: T,
   ): T =>
     owner
       ? row
       : {
           ...row,
-          aiInterviewQuestions: stripOwnerOnlyMarkdownLines(
-            row.aiInterviewQuestions,
+          interviewQuestions: stripOwnerOnlyMarkdownLines(
+            row.interviewQuestions,
           ),
         };
 
@@ -93,7 +93,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const [session, { id }] = await Promise.all([getSession(), params]);
   if (!session || !isOwner(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await req.json();
-  const { company, position, url, status, slug, notes, appliedAt, jobDescription, aiInterviewQuestions, aiTechStack, aiInterviewers, techDismissedTags } = body;
+  const { company, position, url, status, slug, notes, appliedAt, jobDescription, interviewQuestions, techStack, interviewers, techDismissedTags } = body;
 
   const [row] = await db
     .update(applications)
@@ -105,9 +105,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ...(slug !== undefined && { slug }),
       ...(notes !== undefined && { notes }),
       ...(jobDescription !== undefined && { jobDescription }),
-      ...(aiInterviewQuestions !== undefined && { aiInterviewQuestions }),
-      ...(aiTechStack !== undefined && { aiTechStack }),
-      ...(aiInterviewers !== undefined && { aiInterviewers }),
+      ...(interviewQuestions !== undefined && { interviewQuestions }),
+      ...(techStack !== undefined && { techStack }),
+      ...(interviewers !== undefined && { interviewers }),
       ...(techDismissedTags !== undefined && { techDismissedTags }),
       ...(appliedAt !== undefined && { appliedAt: appliedAt ? new Date(appliedAt) : null }),
       updatedAt: new Date(),
