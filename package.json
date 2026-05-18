@@ -40,6 +40,7 @@
     "email:test": "tsx --env-file=.env.local scripts/test-send-email.ts",
     "ml:audio-guide": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-guide",
     "generate:rust": "cd crates/ml && cargo run -p aer-ml --release --bin gen-article --",
+    "prep:rust": "cd crates/ml && cargo run -p aer-ml --release --bin gen-app-prep --",
     "seed:courses": "cd crates/ml && cargo run -p aer-ml --release --bin seed-topic-courses --",
     "seed:deeplearning": "cd crates/ml && cargo run -p aer-ml --release --bin udemy -- deeplearning --seed-frontend",
     "audio:meta": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-meta --",

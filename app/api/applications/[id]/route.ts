@@ -5,6 +5,7 @@ import { isOwner } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications } from "@/src/db/schema";
 import { eq, and, or } from "drizzle-orm";
+import { getAppPrepSeed } from "@/lib/app-prep-seed";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,6 +37,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .where(and(eq(col, id), eq(applications.public, true)));
 
   if (publicRow) return NextResponse.json(publicRow);
+
+  // Static committed prep artifact (Rust `gen-app-prep` → data/app-prep/).
+  const seed = getAppPrepSeed(id);
+  if (seed) return NextResponse.json(seed);
 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({ error: "Not found" }, { status: 404 });

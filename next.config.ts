@@ -4,7 +4,7 @@ import path from "path";
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
   outputFileTracingIncludes: {
-    "/*": ["./data/content/**", "./data/audio/**"],
+    "/*": ["./data/content/**", "./data/audio/**", "./data/app-prep/**"],
   },
   // The tracing root is the monorepo, where a background loop continuously
   // rebuilds the Rust crates' multi-GB `target/` dir. Never trace any Rust
