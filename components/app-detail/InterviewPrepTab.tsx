@@ -142,6 +142,20 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
               <strong className={s.mdStrong}>{children}</strong>
             ),
             em: ({ children }) => <em>{children}</em>,
+            a: ({ href, children }) => {
+              const external = href?.startsWith("http");
+              return (
+                <a
+                  href={href}
+                  style={{ color: "var(--violet-11)", textDecoration: "underline" }}
+                  {...(external
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                >
+                  {children}
+                </a>
+              );
+            },
             ul: ({ children }) => (
               <ul className={s.mdList}>{children}</ul>
             ),

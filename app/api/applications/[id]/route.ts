@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { isOwner } from "@/lib/owner";
+import { isOwner, stripOwnerOnlyMarkdownLines } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications } from "@/src/db/schema";
 import { eq, and, or } from "drizzle-orm";
@@ -20,6 +20,7 @@ async function getSession() {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const [session, { id }] = await Promise.all([getSession(), params]);
+  const owner = !!session && isOwner(session);
 
   // Committed Rust prep artifact (gen-app-prep → data/app-prep/<slug>.json) is
   // the source of truth for seeded slugs: overlaid onto a DB row that has no
@@ -40,7 +41,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         }
       : row;
 
-  if (session && isOwner(session)) {
+  // Concealment: non-owners must not even see links to owner-only routes
+  // (e.g. /module-federation) in publicly-served prep markdown. The owner
+  // branch below returns full content untouched.
+  const conceal = <T extends { aiInterviewQuestions: string | null }>(
+    row: T,
+  ): T =>
+    owner
+      ? row
+      : {
+          ...row,
+          aiInterviewQuestions: stripOwnerOnlyMarkdownLines(
+            row.aiInterviewQuestions,
+          ),
+        };
+
+  if (owner) {
     const [row] = await db
       .select()
       .from(applications)
@@ -55,9 +71,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .from(applications)
     .where(and(eq(col, id), eq(applications.public, true)));
 
-  if (publicRow) return NextResponse.json(withSeedPrep(publicRow));
+  if (publicRow) return NextResponse.json(conceal(withSeedPrep(publicRow)));
 
-  if (seed) return NextResponse.json(seed);
+  if (seed) return NextResponse.json(conceal(seed));
 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({ error: "Not found" }, { status: 404 });

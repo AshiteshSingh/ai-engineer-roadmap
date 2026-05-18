@@ -60,6 +60,9 @@ path = "src/bin/gen-article.rs"
 name = "gen-app-prep"
 path = "src/bin/gen-app-prep.rs"
 [[bin]]
+name = "gen-topic"
+path = "src/bin/gen-topic.rs"
+[[bin]]
 name = "seed-topic-courses"
 path = "src/bin/seed-topic-courses.rs"
 
