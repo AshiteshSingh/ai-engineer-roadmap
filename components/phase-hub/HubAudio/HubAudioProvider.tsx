@@ -86,6 +86,38 @@ export function HubAudioProvider({
   const activeSlug =
     state.lessonIdx >= 0 ? lessons[state.lessonIdx]?.slug ?? null : null;
 
+  // Derive the Audible-style resume snapshot. Per-chapter durations aren't in
+  // QueueLesson, so estimate the in-lesson offset proportionally — the bar
+  // advances one chapter-step at a time, which reads fine for narration.
+  const resumeInfo = React.useMemo<ResumeInfo | null>(() => {
+    if (!savedPos || lessons.length === 0 || totalSecs <= 0) return null;
+    const idx = lessons.findIndex((l) => l.slug === savedPos.slug);
+    if (idx < 0) return null;
+    const lesson = lessons[idx];
+    const chapterCount = lesson.chapters.length;
+    const chapterIdx = Math.max(
+      0,
+      Math.min(savedPos.chapterIdx, Math.max(0, chapterCount - 1)),
+    );
+    const before = lessons
+      .slice(0, idx)
+      .reduce((s, l) => s + l.durationSecs, 0);
+    const within =
+      chapterCount > 0 ? lesson.durationSecs * (chapterIdx / chapterCount) : 0;
+    const elapsed = before + within;
+    const percent = Math.max(
+      0,
+      Math.min(100, Math.round((elapsed / totalSecs) * 100)),
+    );
+    return {
+      lessonTitle: lesson.title,
+      chapterIdx,
+      chapterCount,
+      percent,
+      remainingSecs: Math.max(0, totalSecs - elapsed),
+    };
+  }, [lessons, savedPos, totalSecs]);
+
   const value = React.useMemo<HubAudioContextValue>(
     () => ({
       activeSlug,
@@ -96,6 +128,7 @@ export function HubAudioProvider({
       hasAudio: lessons.length > 0,
       totalSecs,
       savedPos,
+      resumeInfo,
     }),
     [
       activeSlug,
@@ -105,6 +138,7 @@ export function HubAudioProvider({
       lessons.length,
       totalSecs,
       savedPos,
+      resumeInfo,
     ],
   );
 
