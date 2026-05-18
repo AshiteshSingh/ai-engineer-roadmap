@@ -6,7 +6,12 @@
 import * as React from "react";
 import { PhaseControls } from "@/components/phase-hub/PhaseControls";
 import { LessonGrid } from "@/components/phase-hub/LessonGrid";
-import { HubAudioProvider, PhasePlayAll } from "@/components/phase-hub/HubAudio";
+import {
+  HubAudioProvider,
+  PhasePlayAll,
+  useHubAudio,
+} from "@/components/phase-hub/HubAudio";
+import { cx } from "@/components/ui";
 import { DEFAULT_PHASE_FILTER_STATE } from "@/components/phase-hub/types";
 import type {
   Lesson,
@@ -30,6 +35,19 @@ export interface PhaseBrowserProps {
   gradient?: [string, string];
   icon?: string;
   category?: string;
+}
+
+// Layout shell that reserves bottom space while the docked speech player
+// is mounted. Renders inside HubAudioProvider so it can read play status;
+// when audio is off there's no provider and useHubAudio() degrades to the
+// idle FALLBACK → no docked class → audio-off hubs stay byte-identical.
+function HubLayoutShell({ children }: { children: React.ReactNode }) {
+  const { status } = useHubAudio();
+  return (
+    <div className={cx(styles.layout, status !== "idle" && styles.layoutDocked)}>
+      {children}
+    </div>
+  );
 }
 
 export function PhaseBrowser({
@@ -56,7 +74,7 @@ export function PhaseBrowser({
   );
 
   const inner = (
-    <div className={styles.layout}>
+    <HubLayoutShell>
       <PhaseControls
         state={state}
         facets={facets}
@@ -71,7 +89,7 @@ export function PhaseBrowser({
         heading={heading}
         audioBySlug={audioBySlug}
       />
-    </div>
+    </HubLayoutShell>
   );
 
   // No provider element when audio is off → other hubs stay byte-identical.

@@ -1,15 +1,16 @@
 /* ================================================================
    AUDIO PLAYER  —  Audible-inspired bottom bar
-   Total bar height = .audioSeekWrap (16) + .audioPlayerInner (56) = 72px.
-   .audioChaptersPanel { bottom } MUST equal that total — update together.
-   (mobile: 14 + 50 = 64px)
+   Total bar height = .audioSeekWrap (16) + .audioPlayerInner (56) = 72px
+   (mobile: 14 + 50 = 64px). That total is now the --player-bar-h /
+   --player-bar-h-compact token; .audioChaptersPanel { bottom } derives
+   from it (no longer hand-synced). Layering uses --z-* tiers.
    ================================================================ */
 .audioPlayer {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: var(--z-dock);
   display: flex;
   flex-direction: column;
   /* dark glass + subtle per-phase ambient wash from --cat-from */
@@ -202,11 +203,11 @@
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 55;
+  z-index: var(--z-scrim);
 }
 .audioChaptersPanel {
   position: fixed;
-  bottom: 72px; /* == total bar height (16 + 56) — keep in sync */
+  bottom: var(--player-bar-h); /* derived — sits exactly on the bar */
   left: 0;
   right: 0;
   max-height: 50vh;
@@ -217,7 +218,7 @@
   border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
   padding: var(--space-4);
   overflow-y: auto;
-  z-index: 56;
+  z-index: var(--z-modal);
   animation: slide-up 0.25s ease; /* @keyframes slide-up — app/styles/motion.css (global) */
 }
 .audioChaptersHandle {
@@ -288,7 +289,7 @@
     height: 14px;
   }
   .audioChaptersPanel {
-    bottom: 64px; /* == 14 + 50 — keep in sync */
+    bottom: var(--player-bar-h-compact); /* derived — sits on the bar */
   }
   .audioCover {
     width: 40px;
