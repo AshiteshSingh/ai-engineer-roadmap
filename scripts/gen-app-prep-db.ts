@@ -53,9 +53,15 @@ interface PrepArtifact {
   aiTechStack?: string | null;
 }
 
-/** Read + validate the committed artifact. Throws (via die) on bad shape so
+interface LoadedPrep {
+  jobDescription: string; // "" when the artifact has none
+  aiInterviewQuestions: string;
+  aiTechStack: string; // JSON string (array)
+}
+
+/** Read + validate the committed artifact. Exits (via die) on bad shape so
  *  Neon is never written from a malformed/LLM-broken file. */
-function loadArtifact(slug: string): Required<PrepArtifact> {
+function loadArtifact(slug: string): LoadedPrep {
   const file = path.join(process.cwd(), "data", "app-prep", `${slug}.json`);
   if (!fs.existsSync(file)) {
     die(`No artifact at data/app-prep/${slug}.json — run \`pnpm prep:loop ${slug}\` first.`);
@@ -90,7 +96,7 @@ function loadArtifact(slug: string): Required<PrepArtifact> {
   }
 
   return {
-    jobDescription: a.jobDescription?.trim() ? a.jobDescription : "",
+    jobDescription: a.jobDescription?.trim() ? (a.jobDescription as string) : "",
     aiInterviewQuestions: a.aiInterviewQuestions as string,
     aiTechStack: tsRaw,
   };

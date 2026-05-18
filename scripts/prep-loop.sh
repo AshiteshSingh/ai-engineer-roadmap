@@ -77,7 +77,7 @@ echo "==> deepseek-loop: regenerating $ART"
 cd "$LOOP_CRATE"
 printf '%s' "$PROMPT" | cargo run -q --features cli --release --bin deepseek-loop -- \
   --model deepseek-v4-pro \
-  --permission-mode acceptEdits \
+  --permission-mode accept-edits \
   --allowed-tools Read,Write \
   --max-turns 6 \
   --max-budget-usd 0.30 \
