@@ -1063,28 +1063,65 @@ fn parse_course_duration_hours(s: &str) -> f64 {
 }
 
 /// "51,236 already enrolled" → 51236.
+///
+/// Coursera's React DOM concatenates sibling elements without separators, so a
+/// preceding number can abut the enrollment count ("…week**18**51,236
+/// enrolled"). To avoid storing a misleading inflated value we take the LAST
+/// numeric token before the marker and require canonical thousands grouping —
+/// an ambiguous capture yields `None` (stored as unknown) rather than a wrong
+/// large number.
 fn extract_enrolled(body: &str) -> Option<u32> {
     let lower = body.to_lowercase();
     for marker in [" already enrolled", " enrolled", " learners", " students"] {
-        if let Some(idx) = lower.find(marker) {
-            let before = lower[..idx].trim_end();
-            let num: String = before
-                .chars()
-                .rev()
-                .take_while(|c| c.is_ascii_digit() || *c == ',')
-                .collect::<String>()
-                .chars()
-                .rev()
-                .collect();
-            let cleaned: String = num.chars().filter(|c| c.is_ascii_digit()).collect();
-            if let Ok(n) = cleaned.parse::<u32>() {
-                if n > 0 {
-                    return Some(n);
-                }
+        let Some(idx) = lower.find(marker) else {
+            continue;
+        };
+        let start = idx.saturating_sub(32);
+        let window = &lower[start..idx];
+        let mut tokens: Vec<String> = Vec::new();
+        let mut cur = String::new();
+        for ch in window.chars() {
+            if ch.is_ascii_digit() || ch == ',' {
+                cur.push(ch);
+            } else if !cur.is_empty() {
+                tokens.push(std::mem::take(&mut cur));
             }
+        }
+        if !cur.is_empty() {
+            tokens.push(cur);
+        }
+        if let Some(n) = tokens.last().and_then(|t| valid_grouped_count(t)) {
+            return Some(n);
         }
     }
     None
+}
+
+/// Parse a count that Coursera renders with canonical thousands grouping
+/// (`51,236`, `1,234,567`). Rejects malformed groupings (`1851,236`) and bare
+/// runs ≥1000 (Coursera always comma-groups those) so DOM-concatenation
+/// corruption becomes `None`, not a wrong number.
+fn valid_grouped_count(tok: &str) -> Option<u32> {
+    let tok = tok.trim_matches(',');
+    if tok.is_empty() {
+        return None;
+    }
+    let n: u32 = tok.replace(',', "").parse().ok()?;
+    if n == 0 || n > 20_000_000 {
+        return None;
+    }
+    if tok.contains(',') {
+        let parts: Vec<&str> = tok.split(',').collect();
+        if parts[0].is_empty() || parts[0].len() > 3 {
+            return None;
+        }
+        if parts[1..].iter().any(|p| p.len() != 3) {
+            return None;
+        }
+    } else if n >= 1000 {
+        return None;
+    }
+    Some(n)
 }
 
 /// Canonicalise a level string; empty when unrecognised so the fallback chain
@@ -1403,6 +1440,26 @@ mod tests {
         let urls = parse_articles_index(html);
         assert!(urls.iter().any(|u| u.contains("/articles/what-is-rag")));
         assert!(!urls.iter().any(|u| u.contains("/learn/")));
+    }
+
+    #[test]
+    fn extract_enrolled_rejects_dom_concatenation() {
+        // Clean / space-separated → correct.
+        assert_eq!(extract_enrolled("51,236 already enrolled"), Some(51236));
+        assert_eq!(
+            extract_enrolled("a week 18 51,236 already enrolled"),
+            Some(51236)
+        );
+        assert_eq!(
+            extract_enrolled("Top Instructor1,234,567 learners"),
+            Some(1234567)
+        );
+        // Concatenated with no separator (malformed grouping) → unknown, not wrong.
+        assert_eq!(extract_enrolled("week1851,236 already enrolled"), None);
+        // Bare ≥1000 run (Coursera always comma-groups those) → unknown.
+        assert_eq!(extract_enrolled("41855 already enrolled"), None);
+        // No marker → None.
+        assert_eq!(extract_enrolled("4.8 193 reviews"), None);
     }
 
     #[test]
