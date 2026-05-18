@@ -144,6 +144,29 @@ Vercel environment so `/api/chat` and the prep / memorize routes reach the serve
 Course data is scraped/reviewed into `data/courses.db` and surfaced to the
 frontend as JSON via `pnpm export:content` (Rust → `data/content/*.json`).
 
+### Local prep generation (DB-backed)
+
+The application **/prep** page reads `aiInterviewQuestions` from Neon. In prod
+that DB-backed path is dormant (no Rust backend is deployed; the public page
+falls back to the committed `data/app-prep/<slug>.json` seed). To generate
+*real* prep into the row locally — which, since `DATABASE_URL` is the shared
+Neon, also updates the live owner view:
+
+```bash
+pnpm backend:rust:local        # terminal 1 — knowledge-server on :7860,
+                               # DeepSeek key auto-exported from monorepo .env
+pnpm prep:db --slug european-central-bank-ssm-cockpit-developer   # terminal 2
+```
+
+`backend:rust:local` reads `DEEPSEEK_API_KEY` from the monorepo-root
+`/Users/vadimnicolai/Public/ai-apps/.env` (the Rust server does **not** load
+`.env*`) and leaves `LLM_BASE_URL`/`BACKEND_AUTH_TOKEN` unset → DeepSeek cloud
++ open auth. `pnpm prep:db` resolves the `applications` row by slug, runs
+`app_prep` over the local server (`BACKEND_URL` defaults to
+`http://127.0.0.1:7860`), and writes `aiInterviewQuestions`/`aiTechStack`
+(plus `jobDescription` from the committed artifact if the row had none) back
+to Neon. It mutates the live row — not a dry run.
+
 ### Environment
 
 ```env
