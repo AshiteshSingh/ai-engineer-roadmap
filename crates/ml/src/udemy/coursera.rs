@@ -424,10 +424,12 @@ pub fn parse_course_html(html: &str, url: &str) -> Result<(Course, Vec<Chapter>)
 
     let rating = f.rating.filter(|r| *r > 0.0).unwrap_or(0.0);
     let review_count = f.review_count.unwrap_or(0);
-    let num_students = f
-        .num_students
-        .or_else(|| extract_enrolled(&full_text))
-        .unwrap_or(0);
+    // Enrollment is only taken from structured data (`__NEXT_DATA__`
+    // enrollmentCount). Coursera JSON-LD carries no enrollment and the
+    // rendered DOM concatenates sibling numbers ("97% liked", module counts)
+    // around the "enrolled" label, so a text scan yields wrong values — we
+    // store unknown (0) rather than a misleading number.
+    let num_students = f.num_students.unwrap_or(0);
 
     let sections = if f.sections.is_empty() {
         extract_sections(&doc)
@@ -1062,68 +1064,6 @@ fn parse_course_duration_hours(s: &str) -> f64 {
     0.0
 }
 
-/// "51,236 already enrolled" → 51236.
-///
-/// Coursera's React DOM concatenates sibling elements without separators, so a
-/// preceding number can abut the enrollment count ("…week**18**51,236
-/// enrolled"). To avoid storing a misleading inflated value we take the LAST
-/// numeric token before the marker and require canonical thousands grouping —
-/// an ambiguous capture yields `None` (stored as unknown) rather than a wrong
-/// large number.
-fn extract_enrolled(body: &str) -> Option<u32> {
-    let lower = body.to_lowercase();
-    for marker in [" already enrolled", " enrolled", " learners", " students"] {
-        let Some(idx) = lower.find(marker) else {
-            continue;
-        };
-        let start = idx.saturating_sub(32);
-        let window = &lower[start..idx];
-        let mut tokens: Vec<String> = Vec::new();
-        let mut cur = String::new();
-        for ch in window.chars() {
-            if ch.is_ascii_digit() || ch == ',' {
-                cur.push(ch);
-            } else if !cur.is_empty() {
-                tokens.push(std::mem::take(&mut cur));
-            }
-        }
-        if !cur.is_empty() {
-            tokens.push(cur);
-        }
-        if let Some(n) = tokens.last().and_then(|t| valid_grouped_count(t)) {
-            return Some(n);
-        }
-    }
-    None
-}
-
-/// Parse a count that Coursera renders with canonical thousands grouping
-/// (`51,236`, `1,234,567`). Rejects malformed groupings (`1851,236`) and bare
-/// runs ≥1000 (Coursera always comma-groups those) so DOM-concatenation
-/// corruption becomes `None`, not a wrong number.
-fn valid_grouped_count(tok: &str) -> Option<u32> {
-    let tok = tok.trim_matches(',');
-    if tok.is_empty() {
-        return None;
-    }
-    let n: u32 = tok.replace(',', "").parse().ok()?;
-    if n == 0 || n > 20_000_000 {
-        return None;
-    }
-    if tok.contains(',') {
-        let parts: Vec<&str> = tok.split(',').collect();
-        if parts[0].is_empty() || parts[0].len() > 3 {
-            return None;
-        }
-        if parts[1..].iter().any(|p| p.len() != 3) {
-            return None;
-        }
-    } else if n >= 1000 {
-        return None;
-    }
-    Some(n)
-}
-
 /// Canonicalise a level string; empty when unrecognised so the fallback chain
 /// continues.
 fn normalise_level(s: &str) -> String {
@@ -1367,7 +1307,11 @@ mod tests {
         assert_eq!(c.level, "Intermediate");
         assert!((c.rating - 4.8).abs() < 1e-4, "rating {}", c.rating);
         assert_eq!(c.review_count, 193);
-        assert_eq!(c.num_students, 51236);
+        // Coursera JSON-LD carries no enrollment and the DOM "enrolled" text is
+        // unreliable, so it's deliberately unknown (0) here. The reliable
+        // structured path (__NEXT_DATA__ enrollmentCount) is covered by
+        // `parse_course_next_data_fallback`.
+        assert_eq!(c.num_students, 0);
         assert!((c.duration_hours - 30.0).abs() < 1e-4, "dur {}", c.duration_hours);
         assert_eq!(c.category, "Course");
         assert_eq!(c.price, "Free Trial");
@@ -1440,26 +1384,6 @@ mod tests {
         let urls = parse_articles_index(html);
         assert!(urls.iter().any(|u| u.contains("/articles/what-is-rag")));
         assert!(!urls.iter().any(|u| u.contains("/learn/")));
-    }
-
-    #[test]
-    fn extract_enrolled_rejects_dom_concatenation() {
-        // Clean / space-separated → correct.
-        assert_eq!(extract_enrolled("51,236 already enrolled"), Some(51236));
-        assert_eq!(
-            extract_enrolled("a week 18 51,236 already enrolled"),
-            Some(51236)
-        );
-        assert_eq!(
-            extract_enrolled("Top Instructor1,234,567 learners"),
-            Some(1234567)
-        );
-        // Concatenated with no separator (malformed grouping) → unknown, not wrong.
-        assert_eq!(extract_enrolled("week1851,236 already enrolled"), None);
-        // Bare ≥1000 run (Coursera always comma-groups those) → unknown.
-        assert_eq!(extract_enrolled("41855 already enrolled"), None);
-        // No marker → None.
-        assert_eq!(extract_enrolled("4.8 193 reviews"), None);
     }
 
     #[test]
