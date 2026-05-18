@@ -586,6 +586,87 @@ pub const DEEPLEARNING_SEED_COURSES: &[&str] = &[
     "preprocessing-unstructured-data-for-llm-applications",
 ];
 
+// ── Unified RAG/embeddings deep scrape ──────────────────────────────────────
+
+/// RAG/embeddings-focused Coursera article slugs for the unified
+/// `udemy rag-deep-scrape` orchestrator. Turned into
+/// `https://www.coursera.org/articles/<slug>` and crawled with the RAG-only
+/// slug filter. Intentionally separate from [`COURSERA_SEED_ARTICLES`] so the
+/// standalone `coursera` subcommand is unaffected. Not every slug is
+/// guaranteed live — the crawler logs misses and continues, and BFS expands
+/// from the articles index plus whatever resolves.
+pub const COURSERA_RAG_SEED_ARTICLES: &[&str] = &[
+    "what-is-rag",
+    "retrieval-augmented-generation",
+    "what-are-embeddings",
+    "embedding-model",
+    "vector-database",
+    "semantic-search",
+    "langchain",
+    "llamaindex",
+    "vector-embeddings",
+    "chunking",
+    "reranking",
+    "pinecone",
+    "cosine-similarity",
+    "nearest-neighbor-search",
+    "knowledge-graph-rag",
+];
+
+/// RAG/embeddings-focused DeepLearning.AI short-course slugs for the unified
+/// `udemy rag-deep-scrape` orchestrator. Turned into
+/// `https://www.deeplearning.ai/courses/<slug>/` and crawled with the RAG-only
+/// slug filter. Intentionally separate from [`DEEPLEARNING_SEED_COURSES`] so
+/// the standalone `deeplearning` subcommand is unaffected.
+pub const DEEPLEARNING_RAG_SEED_COURSES: &[&str] = &[
+    "large-language-models-with-semantic-search",
+    "building-and-evaluating-advanced-rag",
+    "vector-databases-embeddings-applications",
+    "knowledge-graphs-rag",
+    "advanced-retrieval-for-ai-with-chroma",
+    "preprocessing-unstructured-data-for-llm-applications",
+    "langchain-chat-with-your-data",
+    "building-applications-with-vector-databases",
+    "embedding-models-from-architecture-to-implementation",
+    "retrieval-optimization-tokenization-to-vector-quantization",
+    "multimodal-rag-chat-with-videos",
+    "building-agentic-rag-with-llamaindex",
+];
+
+/// Lesson slugs the unified `udemy rag-deep-scrape` orchestrator links scraped
+/// courses to: the full `phase-3-rag` set (mirrors [`PHASE3_RAG_SLUGS`]) plus
+/// closely-adjacent LLM / agent / framework slugs (LangChain/LangGraph,
+/// function-calling, agent architectures, transformers/LLM). Broader than
+/// [`PHASE3_RAG_SLUGS`] by design — a deep RAG crawl keeps
+/// LangChain/LlamaIndex/agent content too — but still excludes unrelated
+/// ML/MLOps/frontend rails. Kept as an explicit superset (guarded by a unit
+/// test) so the standalone `coursera`/`deeplearning` subcommands, which use
+/// the broad unfiltered [`match_slugs`], are unaffected.
+pub const RAG_DEEP_SLUGS: &[&str] = &[
+    // phase-3-rag (must stay a superset of PHASE3_RAG_SLUGS — see test)
+    "vectorize-rag",
+    "embeddings",
+    "embedding-models",
+    "vector-databases",
+    "lancedb",
+    "chunking-strategies",
+    "retrieval-strategies",
+    "rag",
+    "advanced-rag",
+    "rag-evaluation",
+    // adjacent LLM / agents / frameworks
+    "langgraph",
+    "function-calling",
+    "agent-architectures",
+    "transformers-nlp",
+];
+
+/// Returns true if `slug` is in the RAG-deep set (phase-3-rag + adjacent
+/// LLM/agent slugs). Used by the `rag-deep-scrape` orchestrator's hard filter.
+pub fn is_rag_deep_slug(slug: &str) -> bool {
+    RAG_DEEP_SLUGS.contains(&slug)
+}
+
 type SlugEntry = (&'static str, &'static [&'static str]);
 
 /// Maps each lesson slug to the keywords that indicate a course belongs there.
@@ -1357,6 +1438,59 @@ mod tests {
             assert!(
                 SLUG_KEYWORDS.iter().any(|(s, _)| s == slug),
                 "no SLUG_KEYWORDS entry for phase-3-rag slug {slug:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn rag_deep_seed_lists_non_empty() {
+        assert!(!COURSERA_RAG_SEED_ARTICLES.is_empty());
+        assert!(!DEEPLEARNING_RAG_SEED_COURSES.is_empty());
+        assert!(!RAG_DEEP_SLUGS.is_empty());
+    }
+
+    #[test]
+    fn rag_deep_slugs_superset_of_phase3() {
+        for slug in PHASE3_RAG_SLUGS {
+            assert!(
+                is_rag_deep_slug(slug),
+                "RAG_DEEP_SLUGS must contain every phase-3-rag slug; missing {slug:?}"
+            );
+        }
+        // Adjacent LLM/agent slugs are included; unrelated rails are not.
+        assert!(is_rag_deep_slug("langgraph"));
+        assert!(is_rag_deep_slug("agent-architectures"));
+        assert!(!is_rag_deep_slug("css-theory"));
+        assert!(!is_rag_deep_slug("mlops"));
+    }
+
+    #[test]
+    fn every_rag_deep_slug_has_keyword_mappings() {
+        for slug in RAG_DEEP_SLUGS {
+            assert!(
+                SLUG_KEYWORDS.iter().any(|(s, _)| s == slug),
+                "no SLUG_KEYWORDS entry for RAG-deep slug {slug:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn rag_terms_map_to_rag_deep_slug() {
+        // Guards against over-filtering: representative RAG/embeddings phrases
+        // must yield at least one slug that survives the is_rag_deep_slug gate.
+        for text in [
+            "a course on vector database and similarity search",
+            "learn text-embedding and sentence transformer models",
+            "retrieval augmented generation rag pipeline tutorial",
+        ] {
+            let kept: Vec<_> = match_slugs(text)
+                .into_iter()
+                .filter(|(s, _)| is_rag_deep_slug(s))
+                .collect();
+            assert!(
+                !kept.is_empty(),
+                "expected a RAG-deep slug for {text:?}, got {:?}",
+                match_slugs(text)
             );
         }
     }
