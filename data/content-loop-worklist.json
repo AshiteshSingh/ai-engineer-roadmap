@@ -1,5 +1,5 @@
 {
-  "generated_at_unix": 1778928648,
+  "generated_at_unix": 1779076321,
   "thresholds": {
     "minWords": 1500,
     "minCode": 2,
@@ -14,47 +14,28 @@
     ],
     "qTechMin": 0.01,
     "qProsePerXyflow": 200,
-    "qualityEnabled": true
+    "qualityEnabled": false
   },
   "warnings": [],
   "summary": {
-    "total": 76,
-    "skipped": 5,
-    "pass": 71,
-    "fail": 0
+    "total": 99,
+    "skipped": 3,
+    "pass": 81,
+    "fail": 15
   },
   "skipped": [
     "ai-on-cloudflare-workers",
     "workers-ai-models",
-    "vectorize-rag",
-    "langgraph-d1-checkpointing",
-    "langmem-vectorize-memory"
+    "vectorize-rag"
   ],
-  "excluded_non_ai": [
-    "acid-properties",
-    "ci-cd",
-    "docker",
-    "foreign-keys",
-    "gcp",
-    "kubernetes",
-    "langgraph-lead-gen",
-    "memory",
-    "microservices",
-    "nodejs",
-    "online-evaluation",
-    "postgresql-joins",
-    "public-speaking",
-    "rag",
-    "solid-principles",
-    "tool-use"
-  ],
+  "excluded_non_ai": [],
   "lessons": [
     {
       "slug": "acid-properties",
       "file": "content/acid-properties.md",
       "structure_ok": false,
       "relation_ok": false,
-      "quality_ok": false,
+      "quality_ok": true,
       "ok": false,
       "structure_issues": [
         "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
@@ -63,11 +44,9 @@
       ],
       "relation_issues": [
         "Relations: add reciprocal link back to /postgresql-joins (referenced from /postgresql-joins's Related/Prerequisite section)",
-        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /solid-principles, /postgresql-joins, /online-evaluation, /continual-learning"
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /langgraph-d1-checkpointing, /solid-principles, /postgresql-joins, /online-evaluation"
       ],
-      "quality_issues": [
-        "Q2: technical-term density 0.0050 < 0.010 (filler / not substantive)"
-      ],
+      "quality_issues": [],
       "metrics": {
         "wordCount": 2013,
         "codeBlocks": 9,
@@ -225,23 +204,6 @@
         "wordCount": 9032,
         "codeBlocks": 42,
         "crossRefs": 17,
-        "xyflowBlocks": 5
-      }
-    },
-    {
-      "slug": "roadmap",
-      "file": "content/roadmap.md",
-      "structure_ok": true,
-      "relation_ok": true,
-      "quality_ok": true,
-      "ok": true,
-      "structure_issues": [],
-      "relation_issues": [],
-      "quality_issues": [],
-      "metrics": {
-        "wordCount": 7058,
-        "codeBlocks": 8,
-        "crossRefs": 276,
         "xyflowBlocks": 5
       }
     },
@@ -759,16 +721,13 @@
       "file": "content/foreign-keys.md",
       "structure_ok": false,
       "relation_ok": true,
-      "quality_ok": false,
+      "quality_ok": true,
       "ok": false,
       "structure_issues": [
         "Missing `## Runtime Internals` deep-dive section."
       ],
       "relation_issues": [],
-      "quality_issues": [
-        "Q2: technical-term density 0.0031 < 0.010 (filler / not substantive)",
-        "Q3: 145 prose words per xyflow (min 200) — add explanation, not just diagrams"
-      ],
+      "quality_issues": [],
       "metrics": {
         "wordCount": 3757,
         "codeBlocks": 28,
@@ -808,7 +767,7 @@
       ],
       "relation_issues": [
         "Relations: only 0 cross-refs (min 3 for a connected lesson)",
-        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /kubernetes, /docker, /microservices, /edge-deployment, /nodejs"
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /kubernetes, /docker, /langgraph-deployment, /microservices, /edge-deployment"
       ],
       "quality_issues": [],
       "metrics": {
@@ -929,6 +888,59 @@
       }
     },
     {
+      "slug": "lancedb",
+      "file": "content/lancedb.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 3076,
+        "codeBlocks": 24,
+        "crossRefs": 4,
+        "xyflowBlocks": 6
+      }
+    },
+    {
+      "slug": "langchain-fundamentals",
+      "file": "content/langchain-fundamentals.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 1751,
+        "codeBlocks": 6,
+        "crossRefs": 17,
+        "xyflowBlocks": 5
+      }
+    },
+    {
+      "slug": "langchain-tools-retrievers",
+      "file": "content/langchain-tools-retrievers.md",
+      "structure_ok": true,
+      "relation_ok": false,
+      "quality_ok": true,
+      "ok": false,
+      "structure_issues": [],
+      "relation_issues": [
+        "Relations: only 1/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /memory-architectures, /few-shot-chain-of-thought, /structured-output, /pretraining-data"
+      ],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 1562,
+        "codeBlocks": 7,
+        "crossRefs": 17,
+        "xyflowBlocks": 5
+      }
+    },
+    {
       "slug": "langgraph",
       "file": "content/langgraph.md",
       "structure_ok": true,
@@ -939,10 +951,61 @@
       "relation_issues": [],
       "quality_issues": [],
       "metrics": {
-        "wordCount": 3641,
+        "wordCount": 3640,
         "codeBlocks": 30,
         "crossRefs": 21,
         "xyflowBlocks": 7
+      }
+    },
+    {
+      "slug": "langgraph-d1-checkpointing",
+      "file": "content/langgraph-d1-checkpointing.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 1638,
+        "codeBlocks": 6,
+        "crossRefs": 13,
+        "xyflowBlocks": 5
+      }
+    },
+    {
+      "slug": "langgraph-deployment",
+      "file": "content/langgraph-deployment.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 1743,
+        "codeBlocks": 6,
+        "crossRefs": 21,
+        "xyflowBlocks": 5
+      }
+    },
+    {
+      "slug": "langgraph-human-in-the-loop",
+      "file": "content/langgraph-human-in-the-loop.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 1686,
+        "codeBlocks": 6,
+        "crossRefs": 13,
+        "xyflowBlocks": 5
       }
     },
     {
@@ -963,6 +1026,23 @@
       }
     },
     {
+      "slug": "langgraph-multi-agent",
+      "file": "content/langgraph-multi-agent.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 1614,
+        "codeBlocks": 6,
+        "crossRefs": 16,
+        "xyflowBlocks": 5
+      }
+    },
+    {
       "slug": "langgraph-red-teaming",
       "file": "content/langgraph-red-teaming.md",
       "structure_ok": true,
@@ -976,6 +1056,40 @@
         "wordCount": 6221,
         "codeBlocks": 31,
         "crossRefs": 7,
+        "xyflowBlocks": 5
+      }
+    },
+    {
+      "slug": "langgraph-streaming-observability",
+      "file": "content/langgraph-streaming-observability.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 1511,
+        "codeBlocks": 6,
+        "crossRefs": 13,
+        "xyflowBlocks": 5
+      }
+    },
+    {
+      "slug": "langmem-vectorize-memory",
+      "file": "content/langmem-vectorize-memory.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 1552,
+        "codeBlocks": 6,
+        "crossRefs": 17,
         "xyflowBlocks": 5
       }
     },
@@ -1161,7 +1275,7 @@
       ],
       "relation_issues": [
         "Relations: only 0 cross-refs (min 3 for a connected lesson)",
-        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /function-calling, /docker, /structured-output, /kubernetes, /agent-sdks"
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /function-calling, /langchain-fundamentals, /langgraph-deployment, /docker, /structured-output"
       ],
       "quality_issues": [],
       "metrics": {
@@ -1214,14 +1328,11 @@
       "file": "content/postgresql-joins.md",
       "structure_ok": true,
       "relation_ok": true,
-      "quality_ok": false,
-      "ok": false,
+      "quality_ok": true,
+      "ok": true,
       "structure_issues": [],
       "relation_issues": [],
-      "quality_issues": [
-        "Q2: technical-term density 0.0080 < 0.010 (filler / not substantive)",
-        "Q3: 128 prose words per xyflow (min 200) — add explanation, not just diagrams"
-      ],
+      "quality_issues": [],
       "metrics": {
         "wordCount": 2548,
         "codeBlocks": 33,
@@ -1319,7 +1430,7 @@
       "file": "content/public-speaking.md",
       "structure_ok": false,
       "relation_ok": false,
-      "quality_ok": false,
+      "quality_ok": true,
       "ok": false,
       "structure_issues": [
         "Too few code examples: 0 (min 2)",
@@ -1330,12 +1441,9 @@
       ],
       "relation_issues": [
         "Relations: only 0 cross-refs (min 3 for a connected lesson)",
-        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /structured-output, /production-patterns, /context-engineering, /roadmap"
+        "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /structured-output, /production-patterns, /context-engineering, /system-prompts"
       ],
-      "quality_issues": [
-        "Q2: Flesch-Kincaid 6.6 outside [10,22]",
-        "Q2: technical-term density 0.0045 < 0.010 (filler / not substantive)"
-      ],
+      "quality_issues": [],
       "metrics": {
         "wordCount": 2010,
         "codeBlocks": 0,
@@ -1348,7 +1456,7 @@
       "file": "content/rag.md",
       "structure_ok": false,
       "relation_ok": true,
-      "quality_ok": false,
+      "quality_ok": true,
       "ok": false,
       "structure_issues": [
         "Too short: 747 words (min 1500)",
@@ -1358,9 +1466,7 @@
         "Missing `## Runtime Internals` deep-dive section."
       ],
       "relation_issues": [],
-      "quality_issues": [
-        "Q2: Flesch-Kincaid 9.8 outside [10,22]"
-      ],
+      "quality_issues": [],
       "metrics": {
         "wordCount": 747,
         "codeBlocks": 1,
@@ -1437,6 +1543,23 @@
       }
     },
     {
+      "slug": "roadmap",
+      "file": "content/roadmap.md",
+      "structure_ok": true,
+      "relation_ok": true,
+      "quality_ok": true,
+      "ok": true,
+      "structure_issues": [],
+      "relation_issues": [],
+      "quality_issues": [],
+      "metrics": {
+        "wordCount": 7128,
+        "codeBlocks": 8,
+        "crossRefs": 276,
+        "xyflowBlocks": 5
+      }
+    },
+    {
       "slug": "scaling-laws",
       "file": "content/scaling-laws.md",
       "structure_ok": true,
@@ -1492,7 +1615,7 @@
       "file": "content/solid-principles.md",
       "structure_ok": false,
       "relation_ok": false,
-      "quality_ok": false,
+      "quality_ok": true,
       "ok": false,
       "structure_issues": [
         "Too few xyflow diagrams: 0 (min 5). Use ```xyflow JSON fences, not ```mermaid.",
@@ -1502,9 +1625,7 @@
       "relation_issues": [
         "Relations: only 0/5 top-similar lessons cross-referenced (min 2): missing high-similarity links to /prompt-engineering-fundamentals, /ai-for-code, /system-prompts, /function-calling, /memory"
       ],
-      "quality_issues": [
-        "Q2: technical-term density 0.0083 < 0.010 (filler / not substantive)"
-      ],
+      "quality_issues": [],
       "metrics": {
         "wordCount": 2225,
         "codeBlocks": 12,
@@ -1568,7 +1689,7 @@
       "file": "content/tool-use.md",
       "structure_ok": false,
       "relation_ok": true,
-      "quality_ok": false,
+      "quality_ok": true,
       "ok": false,
       "structure_issues": [
         "Too short: 830 words (min 1500)",
@@ -1578,9 +1699,7 @@
         "Missing `## Runtime Internals` deep-dive section."
       ],
       "relation_issues": [],
-      "quality_issues": [
-        "Q2: Flesch-Kincaid 9.6 outside [10,22]"
-      ],
+      "quality_issues": [],
       "metrics": {
         "wordCount": 830,
         "codeBlocks": 1,
@@ -1616,9 +1735,9 @@
       "relation_issues": [],
       "quality_issues": [],
       "metrics": {
-        "wordCount": 5907,
+        "wordCount": 5827,
         "codeBlocks": 19,
-        "crossRefs": 13,
+        "crossRefs": 14,
         "xyflowBlocks": 5
       }
     },
@@ -1640,5 +1759,21 @@
       }
     }
   ],
-  "worklist": []
+  "worklist": [
+    "public-speaking",
+    "ci-cd",
+    "docker",
+    "gcp",
+    "kubernetes",
+    "microservices",
+    "nodejs",
+    "acid-properties",
+    "memory",
+    "rag",
+    "tool-use",
+    "solid-principles",
+    "online-evaluation",
+    "foreign-keys",
+    "langchain-tools-retrievers"
+  ]
 }

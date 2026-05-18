@@ -180,6 +180,13 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
   const voiceRef = React.useRef<SpeechSynthesisVoice | null>(null);
   const genRef = React.useRef(0); // bumped on every intentional interruption
   const statusRef = React.useRef<SpeechState["status"]>("idle");
+  // Consecutive immediate utterance failures. In a browser with no working
+  // TTS engine (headless, muted, unsupported voice) speak() fires onerror
+  // almost instantly; without backpressure advance() would recurse through
+  // the WHOLE queue in one tick and end at idle, unmounting the player. After
+  // two straight failures we stop auto-advancing and stay mounted as a
+  // read-along instead. Reset once an utterance actually starts.
+  const failRef = React.useRef(0);
 
   React.useEffect(() => {
     if (!supported) return;
@@ -235,9 +242,13 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
     const { li, ci, si } = posRef.current;
     const lesson = L[li];
     if (!lesson) {
-      // End of the whole phase.
-      setStatus("idle");
-      posRef.current = { li: -1, ci: 0, si: 0 };
+      // Reached the end of the phase. Stay mounted on the final chapter —
+      // do NOT reset to "idle" (that unmounts the player and looks like
+      // nothing ever played, e.g. when the cascade drained instantly).
+      const lastLi = Math.max(0, L.length - 1);
+      const lastCi = Math.max(0, (L[lastLi]?.chapters.length ?? 1) - 1);
+      posRef.current = { li: lastLi, ci: lastCi, si: 0 };
+      setStatus("paused");
       sync();
       return;
     }
@@ -266,12 +277,24 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
       sync();
       speakCurrent();
     };
+    u.onstart = () => {
+      failRef.current = 0; // real speech began
+    };
     u.onend = advance;
     u.onerror = (e) => {
       if (myGen !== genRef.current) return;
       // Intentional cancels surface as interrupted/canceled — ignore them.
       const err = (e as SpeechSynthesisErrorEvent).error;
       if (err === "interrupted" || err === "canceled") return;
+      // No working TTS engine: don't drain the queue to idle — halt the
+      // cascade after two straight failures and stay mounted as a
+      // read-along (status stays non-idle so the player remains visible).
+      failRef.current += 1;
+      if (failRef.current >= 2) {
+        setStatus("paused");
+        sync();
+        return;
+      }
       advance();
     };
     try {
@@ -285,8 +308,15 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
   const jump = React.useCallback(
     (li: number, ci: number) => {
       const L = lessonsRef.current;
-      if (!L.length) return;
+      if (!L.length) {
+        if (process.env.NODE_ENV !== "production")
+          console.warn(
+            "[hub-audio] play requested but no narratable lessons (empty queue)",
+          );
+        return;
+      }
       genRef.current++;
+      failRef.current = 0;
       if (supported) {
         try {
           window.speechSynthesis.cancel();
@@ -302,14 +332,12 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
         si: 0,
       };
       persist();
-      if (supported) {
-        setStatus("playing");
-        speakCurrent();
-      } else {
-        // No SpeechSynthesis → mount a manual, read-along transcript.
-        setStatus("paused");
-        sync();
-      }
+      // Mount the player IMMEDIATELY and independently of speech outcome:
+      // status goes non-idle + sync() before any utterance, so the dock can
+      // never fail to appear (or vanish) because of TTS timing/errors.
+      setStatus("playing");
+      sync();
+      if (supported) speakCurrent();
     },
     [supported, persist, speakCurrent, sync],
   );
@@ -406,6 +434,22 @@ export function useSpeechQueue(metas: AudioMeta[]): SpeechQueue {
     }),
     [supported, jump, sync, speakCurrent],
   );
+
+  // If the user pressed play before the post-mount feature-detect flipped
+  // `supported` true, the player is already mounted ("playing") but no
+  // utterance was queued. Start it the moment speech becomes available.
+  React.useEffect(() => {
+    if (
+      supported &&
+      statusRef.current === "playing" &&
+      posRef.current.li >= 0 &&
+      typeof window !== "undefined" &&
+      "speechSynthesis" in window &&
+      !window.speechSynthesis.speaking
+    ) {
+      speakCurrent();
+    }
+  }, [supported, speakCurrent]);
 
   // Restore saved rate once.
   React.useEffect(() => {
