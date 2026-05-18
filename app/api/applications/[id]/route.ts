@@ -6,6 +6,7 @@ import { db } from "@/src/db";
 import { applications } from "@/src/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { getAppPrepSeed, getOwnerPrepSeed } from "@/lib/app-prep-seed";
+import { fetchWorkerPrep } from "@/lib/prep-worker";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,7 +37,32 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // the source of truth for seeded slugs: overlaid onto a DB row that has no
   // generated prep yet, and used standalone when no row exists. A real
   // generated value in the DB still wins (the `||` short-circuits).
-  const seed = getAppPrepSeed(id);
+  // Prep source: the prep-worker (services/prep-worker — LangGraph + Workers
+  // AI + D1, on-demand + cached) generates the public prep. The committed
+  // data/app-prep/<slug>.json remains the fallback (and supplies
+  // company/position/JD to seed the worker). Worker output, when available,
+  // overlays the seed's interviewQuestions/techStack/jobDescription so the
+  // rest of the merge/conceal/gating logic below is byte-for-byte unchanged.
+  // Owner prep stays on getOwnerPrepSeed (committed, regen-proof) — the
+  // worker's owner endpoint is built+verified but wiring it needs a
+  // slug→evidence registry (separate follow-up); gating is unaffected.
+  const baseSeed = getAppPrepSeed(id);
+  let seed = baseSeed;
+  if (baseSeed) {
+    const w = await fetchWorkerPrep(id, {
+      company: baseSeed.company,
+      position: baseSeed.position,
+      jobDescription: baseSeed.jobDescription,
+    });
+    if (w && w.interviewQuestions) {
+      seed = {
+        ...baseSeed,
+        jobDescription: w.jobDescription ?? baseSeed.jobDescription,
+        interviewQuestions: w.interviewQuestions,
+        techStack: w.techStack ?? baseSeed.techStack,
+      };
+    }
+  }
   const withSeedPrep = <
     T extends { interviewQuestions: string | null; techStack: string | null },
   >(
