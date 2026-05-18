@@ -43,6 +43,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 walkdir    = "2"
 clap       = { version = "4", features = ["derive"] }
 rusqlite   = { version = "0.32", features = ["bundled"] }
+toml       = "0.8"
 
 # UUID v4 for external_courses primary keys (SQLite has no gen_random_uuid();
 # minted host-side by the shared `courses` module)
