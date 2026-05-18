@@ -194,6 +194,8 @@ mod tests {
 
     #[test]
     fn ecb_slug_matches_route() {
+        // The default-slug path for the shipped artifact must equal the live
+        // route segment exactly, or the seed loader never matches.
         assert_eq!(
             to_slug("European Central Bank-SSM Cockpit Developer"),
             "european-central-bank-ssm-cockpit-developer"
@@ -203,5 +205,24 @@ mod tests {
     #[test]
     fn collapses_and_trims_separators() {
         assert_eq!(to_slug("  Foo / Bar  -- Baz!! "), "foo-bar-baz");
+    }
+
+    /// Each case is the expected output of `lib/slug.ts::toSlug` on the input,
+    /// pinning byte-for-byte parity with the TypeScript implementation.
+    #[test]
+    fn parity_with_lib_slug_ts() {
+        // Drops every char outside [a-z0-9\s-]; '.', '#', '&', '/', '!' go.
+        assert_eq!(to_slug("C# & .NET / Node.js!"), "c-net-nodejs");
+        // ASCII digits survive ([a-z0-9]).
+        assert_eq!(to_slug("Web3 / API v2"), "web3-api-v2");
+        // Non-ASCII letters are stripped (JS regex `a-z` is ASCII-only).
+        assert_eq!(to_slug("Café Münchën"), "caf-m-nch-n");
+        // Pre-existing dashes are kept, then `-+` collapses and ends trim.
+        assert_eq!(to_slug("---a---b---"), "a-b");
+        // All-stripped / whitespace-only inputs yield the empty slug.
+        assert_eq!(to_slug("!!!"), "");
+        assert_eq!(to_slug("   "), "");
+        // Mixed case is lowercased; tabs/newlines are whitespace separators.
+        assert_eq!(to_slug("Foo\tBar\nBaz"), "foo-bar-baz");
     }
 }

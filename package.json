@@ -25,6 +25,7 @@
     "backend:rust": "cd crates/ml && cargo run -p aer-ml --release --bin knowledge-server",
     "backend:rust:index": "cd crates/ml && cargo run -p aer-ml --release --bin knowledge-index",
     "backend:test": "cd crates/ml && cargo test -p aer-ml",
+    "test:app-prep": "tsx scripts/test-app-prep-seed.ts",
     "test:e2e": "tsx --env-file=.env.local scripts/test-backend-e2e.ts",
     "test:e2e:live": "tsx --env-file=.env.local scripts/test-backend-e2e.ts --live",
     "generate": "tsx --env-file=.env.local scripts/generate-article.ts",
