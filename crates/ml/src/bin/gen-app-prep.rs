@@ -215,8 +215,9 @@ mod tests {
         assert_eq!(to_slug("C# & .NET / Node.js!"), "c-net-nodejs");
         // ASCII digits survive ([a-z0-9]).
         assert_eq!(to_slug("Web3 / API v2"), "web3-api-v2");
-        // Non-ASCII letters are stripped (JS regex `a-z` is ASCII-only).
-        assert_eq!(to_slug("Café Münchën"), "caf-m-nch-n");
+        // Non-ASCII letters are stripped (JS regex `a-z` is ASCII-only) with
+        // NO separator inserted, so the surviving letters close up.
+        assert_eq!(to_slug("Café Münchën"), "caf-mnchn");
         // Pre-existing dashes are kept, then `-+` collapses and ends trim.
         assert_eq!(to_slug("---a---b---"), "a-b");
         // All-stripped / whitespace-only inputs yield the empty slug.
