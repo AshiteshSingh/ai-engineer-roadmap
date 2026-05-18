@@ -17,13 +17,16 @@ use tokio::sync::Semaphore;
 use tracing::{info, warn};
 
 use aer_ml::content::courses;
-use aer_ml::udemy::coursera::{parse_article_html, parse_articles_index};
+use aer_ml::udemy::coursera::{
+    parse_article_html, parse_articles_index, parse_coursera_links, parse_coursera_page,
+};
 use aer_ml::udemy::crawler::{CrawlConfig, FetchResult, UdemyClient};
 use aer_ml::udemy::deeplearning;
 use aer_ml::udemy::keywords::{
     classify_topic_group, is_rag_deep_slug, is_relevant, match_slugs, should_follow_topic,
-    COURSERA_ARTICLES_INDEX, COURSERA_RAG_SEED_ARTICLES, COURSERA_SEED_ARTICLES,
-    DEEPLEARNING_COURSES_INDEX, DEEPLEARNING_RAG_SEED_COURSES, DEEPLEARNING_SEED_COURSES,
+    COURSERA_ARTICLES_INDEX, COURSERA_RAG_SEED_ARTICLES, COURSERA_RAG_SEED_COURSES,
+    COURSERA_SEED_ARTICLES, DEEPLEARNING_COURSES_INDEX, DEEPLEARNING_RAG_SEED_COURSES,
+    DEEPLEARNING_SEED_COURSES,
     RAG_SEED_QUERIES, SEED_TOPICS,
 };
 use aer_ml::udemy::scraper::{load_courses_json, parse_course_html};
@@ -353,6 +356,12 @@ enum Command {
         /// Skip the export-content step (leave data/content/*.json stale).
         #[arg(long)]
         no_export: bool,
+
+        /// Extra explicit seed URL(s) to start the Coursera crawl from
+        /// (repeatable). A `coursera.org/learn/<slug>` URL also becomes the
+        /// crawl's index page so its recommendations rail is followed.
+        #[arg(long = "seed")]
+        seed: Vec<String>,
     },
 }
 
@@ -515,6 +524,7 @@ async fn main() -> Result<()> {
             repo_root,
             dry_run,
             no_export,
+            seed,
         } => {
             cmd_rag_deep_scrape(
                 max_per_provider,
@@ -527,6 +537,7 @@ async fn main() -> Result<()> {
                 repo_root,
                 dry_run,
                 no_export,
+                seed,
             )
             .await
         }
@@ -956,7 +967,22 @@ struct CrawlCounts {
     dup: usize,
 }
 
+/// Dual Coursera spec — discovers + parses BOTH `/articles/` and `/learn/`
+/// pages. Used ONLY by the unified `rag-deep-scrape`.
 fn coursera_spec() -> ProviderSpec {
+    ProviderSpec {
+        provider: "Coursera",
+        source: "coursera-article",
+        item_word: "page",
+        index_word: "index",
+        parse_index: parse_coursera_links,
+        parse_page: parse_coursera_page,
+    }
+}
+
+/// Article-only Coursera spec — used by the standalone `coursera` subcommand
+/// so its crawl is provably byte-identical to the pre-Phase-2 behavior.
+fn coursera_spec_articles_only() -> ProviderSpec {
     ProviderSpec {
         provider: "Coursera",
         source: "coursera-article",
@@ -1176,7 +1202,7 @@ async fn cmd_coursera(
 ) -> Result<()> {
     let start = Instant::now();
     let client = Arc::new(UdemyClient::new(&CrawlConfig::default())?);
-    let spec = coursera_spec();
+    let spec = coursera_spec_articles_only();
     let params = CrawlParams {
         seed_url: seed_url.clone(),
         seed_paths: COURSERA_SEED_ARTICLES
@@ -2225,19 +2251,35 @@ async fn cmd_rag_deep_scrape(
     repo_root: PathBuf,
     dry_run: bool,
     no_export: bool,
+    seed: Vec<String>,
 ) -> Result<()> {
     let start = Instant::now();
     let seen: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
     let client = Arc::new(UdemyClient::new(&CrawlConfig::default())?);
 
     // ── Coursera (RAG-only) ─────────────────────────────────────────────
+    // Seeds = RAG article slugs ++ RAG /learn course slugs ++ explicit --seed
+    // URLs (verbatim). A /learn/ --seed also becomes the index page so its
+    // recommendations rail is parsed immediately.
     let coursera_spec = coursera_spec();
-    let coursera_params = CrawlParams {
-        seed_url: COURSERA_ARTICLES_INDEX.to_string(),
-        seed_paths: COURSERA_RAG_SEED_ARTICLES
+    let mut coursera_seed_paths: Vec<String> = COURSERA_RAG_SEED_ARTICLES
+        .iter()
+        .map(|s| format!("https://www.coursera.org/articles/{s}"))
+        .collect();
+    coursera_seed_paths.extend(
+        COURSERA_RAG_SEED_COURSES
             .iter()
-            .map(|s| format!("https://www.coursera.org/articles/{s}"))
-            .collect(),
+            .map(|s| format!("https://www.coursera.org/learn/{s}")),
+    );
+    coursera_seed_paths.extend(seed.iter().cloned());
+    let coursera_index = seed
+        .iter()
+        .find(|u| u.contains("coursera.org/learn/"))
+        .cloned()
+        .unwrap_or_else(|| COURSERA_ARTICLES_INDEX.to_string());
+    let coursera_params = CrawlParams {
+        seed_url: coursera_index,
+        seed_paths: coursera_seed_paths,
         max_items: max_per_provider,
         concurrency,
         delay_ms,
@@ -2334,17 +2376,29 @@ async fn cmd_rag_deep_scrape(
         let c = &k.course;
         let sections: Vec<String> =
             serde_json::from_str(&c.topics_json).unwrap_or_default();
+        // /articles/ → free blog post; /learn/ → Free-Trial/subscription course.
+        let is_article = c.url.contains("/articles/");
+        let source = if is_article {
+            "coursera-article"
+        } else {
+            "coursera-course"
+        };
         let value = serde_json::json!({
             "title": c.title,
             "url": c.url,
             "description": c.description,
-            "isFree": true,
+            "level": c.level,
+            "rating": c.rating,
+            "reviewCount": c.review_count,
+            "durationHours": c.duration_hours as f64,
+            "enrolled": c.num_students,
+            "isFree": is_article,
             "imageUrl": c.image_url,
             "language": c.language,
             "metadata": {
                 "author": c.instructor,
                 "sections": sections,
-                "source": coursera_spec.source,
+                "source": source,
             },
         });
         match courses::upsert_course(&conn, &value, coursera_spec.provider, k.topic_group) {
