@@ -41,6 +41,7 @@
     "ml:audio-guide": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-guide",
     "generate:rust": "cd crates/ml && cargo run -p aer-ml --release --bin gen-article --",
     "seed:courses": "cd crates/ml && cargo run -p aer-ml --release --bin seed-topic-courses --",
+    "seed:deeplearning": "cd crates/ml && cargo run -p aer-ml --release --bin udemy -- deeplearning --seed-frontend",
     "audio:meta": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-meta --",
     "audio:gate:scan": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --all",
     "audio:gate:check": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --json --slug",

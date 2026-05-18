@@ -558,6 +558,34 @@ pub const COURSERA_SEED_ARTICLES: &[&str] = &[
     "transformer-model",
 ];
 
+// ── DeepLearning.AI short-courses crawl ─────────────────────────────────────
+
+/// Default starting point for the DeepLearning.AI short-courses BFS crawl
+/// (`udemy deeplearning`). Course links discovered here (and on each course's
+/// "related courses" rail) are followed and relevance-filtered exactly like
+/// Coursera articles, via [`is_relevant`] / [`match_slugs`] — so a course can
+/// attach to ANY matching lesson rail, not just phase-3-rag.
+pub const DEEPLEARNING_COURSES_INDEX: &str = "https://www.deeplearning.ai/courses/";
+
+/// Seed course slugs enqueued alongside the index so an AI/ML crawl still has
+/// entry points if the catalog markup changes. Turned into
+/// `https://www.deeplearning.ai/courses/<slug>/` by the `deeplearning`
+/// subcommand. Mirrors [`COURSERA_SEED_ARTICLES`].
+pub const DEEPLEARNING_SEED_COURSES: &[&str] = &[
+    "chatgpt-prompt-engineering-for-developers",
+    "langchain-for-llm-application-development",
+    "building-systems-with-the-chatgpt-api",
+    "finetuning-large-language-models",
+    "large-language-models-with-semantic-search",
+    "building-and-evaluating-advanced-rag",
+    "functions-tools-agents-langchain",
+    "vector-databases-embeddings-applications",
+    "knowledge-graphs-rag",
+    "ai-agents-in-langgraph",
+    "advanced-retrieval-for-ai-with-chroma",
+    "preprocessing-unstructured-data-for-llm-applications",
+];
+
 type SlugEntry = (&'static str, &'static [&'static str]);
 
 /// Maps each lesson slug to the keywords that indicate a course belongs there.

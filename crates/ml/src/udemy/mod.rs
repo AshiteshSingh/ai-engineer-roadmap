@@ -1,5 +1,6 @@
 pub mod coursera;
 pub mod crawler;
+pub mod deeplearning;
 pub mod embed;
 pub mod generate;
 pub mod keywords;

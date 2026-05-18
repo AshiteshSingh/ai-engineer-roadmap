@@ -19,9 +19,11 @@ use tracing::{info, warn};
 use aer_ml::content::courses;
 use aer_ml::udemy::coursera::{parse_article_html, parse_articles_index};
 use aer_ml::udemy::crawler::{CrawlConfig, FetchResult, UdemyClient};
+use aer_ml::udemy::deeplearning;
 use aer_ml::udemy::keywords::{
     classify_topic_group, is_phase3_rag_slug, is_relevant, match_slugs, should_follow_topic,
-    COURSERA_SEED_ARTICLES, RAG_SEED_QUERIES, SEED_TOPICS,
+    COURSERA_SEED_ARTICLES, DEEPLEARNING_COURSES_INDEX, DEEPLEARNING_SEED_COURSES,
+    RAG_SEED_QUERIES, SEED_TOPICS,
 };
 use aer_ml::udemy::scraper::{load_courses_json, parse_course_html};
 use aer_ml::udemy::types::{
@@ -243,6 +245,63 @@ enum Command {
         #[arg(long, default_value = "../../data/courses.db")]
         courses_db: PathBuf,
     },
+
+    /// BFS-crawl DeepLearning.AI /courses/* pages from the short-courses
+    /// catalog (+ seed slugs), relevance-filter them, and emit
+    /// ExternalCourseJson with provider="DeepLearning.AI". Mapped across ALL
+    /// topic rails (broad `match_slugs`, like the Coursera crawl). Optionally
+    /// embed into the LanceDB corpus (--embed) and/or upsert into
+    /// data/courses.db for the frontend (--seed-frontend).
+    #[command(name = "deeplearning")]
+    DeepLearning {
+        /// Short-courses catalog URL to start the crawl from.
+        #[arg(long, default_value = DEEPLEARNING_COURSES_INDEX)]
+        seed_url: String,
+
+        /// Stop after this many courses have been parsed.
+        #[arg(long, default_value_t = 60)]
+        max_courses: usize,
+
+        /// Max concurrent course-page fetches.
+        #[arg(long, default_value_t = 6)]
+        concurrency: usize,
+
+        /// Delay between fetch batches in milliseconds.
+        #[arg(long, default_value_t = 800)]
+        delay_ms: u64,
+
+        /// Output JSON file (ExternalCourseJson[]).
+        #[arg(long, default_value = "./data/deeplearning-courses.json")]
+        output: PathBuf,
+
+        /// Also embed + store courses (and their sections) in LanceDB.
+        #[arg(long)]
+        embed: bool,
+
+        /// LanceDB path (only used with --embed).
+        #[arg(long, default_value = "./lance-db")]
+        db: String,
+
+        /// Embed server URL (only used with --embed).
+        #[arg(long, default_value = "http://localhost:9999")]
+        embed_url: String,
+
+        /// Batch size for embedding.
+        #[arg(long, default_value_t = 8)]
+        embed_batch: usize,
+
+        /// Also upsert into data/courses.db (provider=DeepLearning.AI) + link.
+        #[arg(long)]
+        seed_frontend: bool,
+
+        /// Dedicated SQLite course store (read by `export-content`).
+        #[arg(long, default_value = "../../data/courses.db")]
+        courses_db: PathBuf,
+
+        /// Print the course→slug mapping table and exit (no writes).
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -360,6 +419,36 @@ async fn main() -> Result<()> {
                 embed_batch,
                 seed_frontend,
                 courses_db,
+            )
+            .await
+        }
+        Command::DeepLearning {
+            seed_url,
+            max_courses,
+            concurrency,
+            delay_ms,
+            output,
+            embed,
+            db,
+            embed_url,
+            embed_batch,
+            seed_frontend,
+            courses_db,
+            dry_run,
+        } => {
+            cmd_deeplearning(
+                seed_url,
+                max_courses,
+                concurrency,
+                delay_ms,
+                output,
+                embed,
+                db,
+                embed_url,
+                embed_batch,
+                seed_frontend,
+                courses_db,
+                dry_run,
             )
             .await
         }
@@ -1060,6 +1149,356 @@ async fn cmd_coursera(
 
     eprintln!(
         "\n{}\nCoursera: fetched {n_fetched} · kept {} · irrelevant {n_irrelevant} · failed {n_failed} · {:.1}s",
+        "─".repeat(50),
+        kept.len(),
+        start.elapsed().as_secs_f64()
+    );
+    Ok(())
+}
+
+// ── deeplearning ────────────────────────────────────────────────────────────────
+
+/// BFS-crawl DeepLearning.AI short courses (mirrors [`cmd_coursera`], with a
+/// __NEXT_DATA__/JSON-LD `Course` parser, provider="DeepLearning.AI", and
+/// broad `match_slugs` so a course can land on any matching lesson rail).
+#[allow(clippy::too_many_arguments)]
+async fn cmd_deeplearning(
+    seed_url: String,
+    max_courses: usize,
+    concurrency: usize,
+    delay_ms: u64,
+    output: PathBuf,
+    embed: bool,
+    db: String,
+    embed_url: String,
+    embed_batch_size: usize,
+    seed_frontend: bool,
+    courses_db: PathBuf,
+    dry_run: bool,
+) -> Result<()> {
+    let start = Instant::now();
+    let conc = concurrency.max(1);
+    let client = Arc::new(UdemyClient::new(&CrawlConfig::default())?);
+
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut queue: VecDeque<String> = VecDeque::new();
+
+    // Seed slugs first so an AI/ML crawl works even if the catalog drifts.
+    for slug in DEEPLEARNING_SEED_COURSES {
+        let url = format!("https://www.deeplearning.ai/courses/{slug}/");
+        if visited.insert(url.clone()) {
+            queue.push_back(url);
+        }
+    }
+
+    eprintln!("DeepLearning.AI: fetching catalog {seed_url} ...");
+    match client.fetch_page(&seed_url).await {
+        FetchResult::Ok(html) => {
+            let found = deeplearning::parse_courses_index(&html);
+            eprintln!("  catalog → {} course link(s)", found.len());
+            for u in found {
+                if visited.insert(u.clone()) {
+                    queue.push_back(u);
+                }
+            }
+        }
+        other => {
+            let label = match &other {
+                FetchResult::CloudflareBlocked => "cloudflare".to_string(),
+                FetchResult::HttpError(c, _) => format!("http {c}"),
+                FetchResult::ConnectionError(e) => format!("conn: {e}"),
+                FetchResult::Ok(_) => unreachable!(),
+            };
+            eprintln!(
+                "  catalog fetch failed ({label}); continuing with {} seed slug(s)",
+                queue.len()
+            );
+        }
+    }
+
+    let mut kept: Vec<KeptArticle> = Vec::new();
+    let (mut n_fetched, mut n_irrelevant, mut n_failed) = (0usize, 0usize, 0usize);
+    let sem = Arc::new(Semaphore::new(conc));
+
+    'outer: while !queue.is_empty() {
+        let mut batch = Vec::new();
+        while batch.len() < conc {
+            match queue.pop_front() {
+                Some(u) => batch.push(u),
+                None => break,
+            }
+        }
+        if batch.is_empty() {
+            break;
+        }
+
+        let mut handles = Vec::new();
+        for url in batch {
+            let sem = Arc::clone(&sem);
+            let client = Arc::clone(&client);
+            handles.push(tokio::spawn(async move {
+                let _permit = sem.acquire().await.unwrap();
+                let r = client.fetch_page(&url).await;
+                (url, r)
+            }));
+        }
+
+        for handle in handles {
+            let (url, result) = match handle.await {
+                Ok(t) => t,
+                Err(e) => {
+                    warn!("deeplearning task panicked: {e}");
+                    n_failed += 1;
+                    continue;
+                }
+            };
+            match result {
+                FetchResult::Ok(html) => {
+                    n_fetched += 1;
+                    // BFS: enqueue related courses, bounded so a deep crawl
+                    // can't blow up the frontier.
+                    if visited.len() < max_courses.saturating_mul(6) {
+                        for u in deeplearning::parse_courses_index(&html) {
+                            if visited.insert(u.clone()) {
+                                queue.push_back(u);
+                            }
+                        }
+                    }
+                    match deeplearning::parse_course_html(&html, &url) {
+                        Ok((course, chapters)) => {
+                            let text = course.embed_text();
+                            if !is_relevant(&text) {
+                                n_irrelevant += 1;
+                                continue;
+                            }
+                            let topic_group = classify_topic_group(&text);
+                            let slugs = match_slugs(&text);
+                            eprintln!(
+                                "  ✓ [{topic_group}] {} ({} sections)",
+                                course.title,
+                                chapters.len()
+                            );
+                            kept.push(KeptArticle {
+                                course,
+                                chapters,
+                                topic_group,
+                                slugs,
+                                discovered_from: seed_url.clone(),
+                            });
+                            if kept.len() >= max_courses {
+                                eprintln!("  reached --max-courses {max_courses}");
+                                break 'outer;
+                            }
+                        }
+                        Err(e) => {
+                            warn!("parse error for {url}: {e}");
+                            n_failed += 1;
+                        }
+                    }
+                }
+                FetchResult::CloudflareBlocked => {
+                    warn!("{url}: Cloudflare blocked");
+                    n_failed += 1;
+                }
+                FetchResult::HttpError(code, _) => {
+                    warn!("{url}: HTTP {code}");
+                    n_failed += 1;
+                }
+                FetchResult::ConnectionError(e) => {
+                    warn!("{url}: {e}");
+                    n_failed += 1;
+                }
+            }
+        }
+
+        if delay_ms > 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        }
+    }
+
+    // ── Dry run: print the course→slug mapping table and exit ───────────
+    if dry_run {
+        for k in &kept {
+            let pretty: Vec<String> = k
+                .slugs
+                .iter()
+                .map(|(s, r)| format!("{s}={r:.2}"))
+                .collect();
+            println!("• [{}] {}\n    {}", k.topic_group, k.course.title, pretty.join("  "));
+        }
+        eprintln!(
+            "\nDeepLearning.AI (dry-run): fetched {n_fetched} · kept {} · irrelevant {n_irrelevant} · failed {n_failed} · nothing written",
+            kept.len()
+        );
+        return Ok(());
+    }
+
+    // ── Emit ExternalCourseJson ─────────────────────────────────────────
+    let ext: Vec<ExternalCourseJson> = kept
+        .iter()
+        .map(|k| {
+            let c = &k.course;
+            let sections: Vec<String> =
+                serde_json::from_str(&c.topics_json).unwrap_or_default();
+            ExternalCourseJson {
+                title: c.title.clone(),
+                url: c.url.clone(),
+                provider: "DeepLearning.AI".to_string(),
+                description: if c.description.is_empty() {
+                    None
+                } else {
+                    Some(c.description.clone())
+                },
+                level: if c.level.is_empty() || c.level == "All Levels" {
+                    None
+                } else {
+                    Some(c.level.clone())
+                },
+                rating: None,
+                review_count: None,
+                duration_hours: if c.duration_hours > 0.0 {
+                    Some(c.duration_hours as f64)
+                } else {
+                    None
+                },
+                is_free: true,
+                enrolled: None,
+                image_url: if c.image_url.is_empty() {
+                    None
+                } else {
+                    Some(c.image_url.clone())
+                },
+                language: c.language.clone(),
+                topic_group: k.topic_group.to_string(),
+                metadata: serde_json::json!({
+                    "author": c.instructor,
+                    "sections": sections,
+                    "source": "deeplearning-short-course",
+                    "discoveredFrom": k.discovered_from,
+                }),
+                slug_mappings: k
+                    .slugs
+                    .iter()
+                    .cloned()
+                    .map(|(slug, relevance)| SlugMapping { slug, relevance })
+                    .collect(),
+            }
+        })
+        .collect();
+
+    if let Some(parent) = output.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    std::fs::write(&output, serde_json::to_string_pretty(&ext)?)
+        .with_context(|| format!("writing {}", output.display()))?;
+    eprintln!(
+        "\nWrote {} DeepLearning.AI course(s) to {}",
+        ext.len(),
+        output.display()
+    );
+
+    // ── Optional: embed courses + sections into the LanceDB corpus ──────
+    if embed && !kept.is_empty() {
+        eprintln!("\nEmbedding into LanceDB ({db}) ...");
+        let http = reqwest::Client::new();
+        http.get(format!("{embed_url}/health"))
+            .send()
+            .await
+            .context("embed server not reachable — start with: cargo run -p candle --bin embed-server --features server")?;
+
+        let mut store = CourseStore::connect(&db).await?;
+        let existing = store.existing_ids().await?;
+
+        let new_courses: Vec<Course> = kept
+            .iter()
+            .map(|k| k.course.clone())
+            .filter(|c| !existing.contains(&c.course_id))
+            .collect();
+
+        if new_courses.is_empty() {
+            eprintln!("  all courses already in store");
+        } else {
+            let mut done = 0usize;
+            for chunk in new_courses.chunks(embed_batch_size.max(1)) {
+                let texts: Vec<String> = chunk.iter().map(|c| c.embed_text()).collect();
+                let vecs = embed_batch(&http, &embed_url, &texts).await?;
+                store.add(chunk, &vecs).await?;
+                done += chunk.len();
+                eprintln!("  {done}/{} courses embedded", new_courses.len());
+            }
+
+            let new_ids: HashSet<&str> =
+                new_courses.iter().map(|c| c.course_id.as_str()).collect();
+            let chapters: Vec<Chapter> = kept
+                .iter()
+                .filter(|k| new_ids.contains(k.course.course_id.as_str()))
+                .flat_map(|k| k.chapters.clone())
+                .collect();
+            if !chapters.is_empty() {
+                let mut cdone = 0usize;
+                for chunk in chapters.chunks(embed_batch_size.max(1)) {
+                    let texts: Vec<String> =
+                        chunk.iter().map(|c| c.embed_text()).collect();
+                    let vecs = embed_batch(&http, &embed_url, &texts).await?;
+                    store.add_chapters(chunk, &vecs).await?;
+                    cdone += chunk.len();
+                    eprintln!("  {cdone}/{} sections embedded", chapters.len());
+                }
+            }
+        }
+    }
+
+    // ── Optional: upsert into data/courses.db for the frontend ──────────
+    if seed_frontend && !kept.is_empty() {
+        eprintln!("\nUpserting into {} ...", courses_db.display());
+        let conn = courses::open(&courses_db)
+            .with_context(|| format!("opening {}", courses_db.display()))?;
+        let (mut n_up, mut n_links) = (0usize, 0usize);
+        for k in &kept {
+            let c = &k.course;
+            let sections: Vec<String> =
+                serde_json::from_str(&c.topics_json).unwrap_or_default();
+            let value = serde_json::json!({
+                "title": c.title,
+                "url": c.url,
+                "description": c.description,
+                "level": c.level,
+                "durationHours": c.duration_hours as f64,
+                "isFree": true,
+                "imageUrl": c.image_url,
+                "language": c.language,
+                "metadata": {
+                    "author": c.instructor,
+                    "sections": sections,
+                    "source": "deeplearning-short-course",
+                },
+            });
+            let id = match courses::upsert_course(
+                &conn,
+                &value,
+                "DeepLearning.AI",
+                k.topic_group,
+            ) {
+                Ok(id) => id,
+                Err(e) => {
+                    eprintln!("  upsert failed: {e:#}");
+                    continue;
+                }
+            };
+            n_up += 1;
+            for (slug, rel) in &k.slugs {
+                courses::link_lesson_course(&conn, slug, &id, *rel as f64)?;
+                n_links += 1;
+            }
+        }
+        eprintln!(
+            "Upserted {n_up} course(s), {n_links} lesson link(s) → {}",
+            courses_db.display()
+        );
+    }
+
+    eprintln!(
+        "\n{}\nDeepLearning.AI: fetched {n_fetched} · kept {} · irrelevant {n_irrelevant} · failed {n_failed} · {:.1}s",
         "─".repeat(50),
         kept.len(),
         start.elapsed().as_secs_f64()
