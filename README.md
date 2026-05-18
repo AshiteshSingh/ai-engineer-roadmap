@@ -150,29 +150,33 @@ The application **/prep** page reads `aiInterviewQuestions` from Neon. In prod
 that DB-backed path is dormant (no Rust backend is deployed; the public page
 falls back to the committed `data/app-prep/<slug>.json` seed). To regenerate
 *real* prep and push it into the row — which, since `DATABASE_URL` is the
-shared Neon, also updates the live owner view — use the three-step flow:
+shared Neon, also updates the live owner view — one **full-Rust** command does
+generate → validate → persist:
 
 ```bash
-pnpm prep:loop                 # 1. deepseek-loop CLI agent: Reads the JD from
-                               #    data/app-prep/<slug>.json, regenerates it
-pnpm test:app-prep             # 2. validation gate (shape, categories, …)
-pnpm prep:db                   # 3. artifact -> shared Neon row
-# all default to slug european-central-bank-ssm-cockpit-developer;
-# pass a slug: pnpm prep:loop <slug> / pnpm prep:db --slug <slug>
+pnpm prep:loop                 # ECB SSM Cockpit Developer (default slug)
+pnpm prep:loop -- --slug <slug>            # another application
+pnpm prep:loop -- --slug <slug> --no-db    # regenerate + validate only
 ```
 
-`prep:loop` (`scripts/prep-loop.sh`) exports `DEEPSEEK_API_KEY` from the
-monorepo-root `/Users/vadimnicolai/Public/ai-apps/.env` (the Rust agent does
-**not** load `.env*`) and runs the `deepseek-loop` CLI with
-`--allowed-tools Read,Write --permission-mode acceptEdits` so the agent reads
-the job description and rewrites the committed artifact in place. `prep:db`
-(`scripts/gen-app-prep-db.ts`) is generation-agnostic: it re-validates the
-artifact (categories, non-empty markdown) and only then writes
-`aiInterviewQuestions`/`aiTechStack` (plus `jobDescription` backfill if the row
-had none) into Neon. It mutates the **live** row — not a dry run; Neon is left
-untouched if the gate or re-validation fails. (`prep:rust` — the `gen-app-prep`
-bin — and `backend:rust:local` remain valid alternatives for producing the
-artifact / serving the generic `app_prep` route.)
+`prep:loop` runs the `gen-app-prep-loop` Rust bin (`crates/ml`). It: (1) runs
+a `deepseek-loop` agent **in-process** (`deepseek::run`, only the builtin
+`Read`/`Write` tools, `AcceptEdits`) that reads the job description from
+`data/app-prep/<slug>.json` and rewrites the artifact's prep fields; (2)
+validates the result in Rust — exactly 4 `## ` sections, `aiTechStack` a JSON
+string whose every `category` ∈ `app_prep::CATEGORIES`, valid `relevance`; (3)
+connects to Neon over Postgres (`sqlx`) and updates the `applications` row
+(`aiInterviewQuestions`/`aiTechStack`, plus `jobDescription` backfill if the
+row had none), then reads back to confirm. It mutates the **live** row — not a
+dry run; the agent step and the validation gate must both pass first, so Neon
+is untouched on failure.
+
+The npm script exports `DEEPSEEK_API_KEY` from the monorepo-root
+`/Users/vadimnicolai/Public/ai-apps/.env` and `DATABASE_URL` from `.env.local`
+(the Rust process does **not** load `.env*`); `>1` rows for a slug →
+`--user-id <id>`. (`prep:rust` — the `gen-app-prep` bin, static artifact only —
+and `backend:rust:local` remain valid alternatives. `pnpm test:app-prep` still
+exists as the seed-loader / public-render contract test.)
 
 ### Environment
 
