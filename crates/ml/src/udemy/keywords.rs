@@ -613,6 +613,26 @@ pub const COURSERA_RAG_SEED_ARTICLES: &[&str] = &[
     "knowledge-graph-rag",
 ];
 
+/// RAG/embeddings-focused Coursera **course** slugs (`coursera.org/learn/...`,
+/// not `/articles/`) for the unified `udemy rag-deep-scrape` orchestrator.
+/// Turned into `https://www.coursera.org/learn/<slug>` and crawled with the
+/// RAG-only slug filter; the crawl then BFS-follows each course's
+/// recommendations rail to reach more RAG/embeddings courses. Intentionally
+/// separate from the article seeds so the standalone `coursera` subcommand
+/// (article-only) is unaffected.
+pub const COURSERA_RAG_SEED_COURSES: &[&str] = &[
+    "retrieval-augmented-generation-rag",
+    "introduction-to-rag",
+    "build-rag-applications-get-started",
+    "vector-database",
+    "rag-systems-in-practice",
+    "advanced-rag-with-vector-databases-and-retrievers",
+    "retrieval-augmented-generation-rag-with-embeddings-and-vector-databases",
+    "generative-ai-with-large-language-models",
+    "open-source-models-hugging-face",
+    "langchain-chat-with-your-data-project",
+];
+
 /// RAG/embeddings-focused DeepLearning.AI short-course slugs for the unified
 /// `udemy rag-deep-scrape` orchestrator. Turned into
 /// `https://www.deeplearning.ai/courses/<slug>/` and crawled with the RAG-only
@@ -1445,8 +1465,21 @@ mod tests {
     #[test]
     fn rag_deep_seed_lists_non_empty() {
         assert!(!COURSERA_RAG_SEED_ARTICLES.is_empty());
+        assert!(!COURSERA_RAG_SEED_COURSES.is_empty());
         assert!(!DEEPLEARNING_RAG_SEED_COURSES.is_empty());
         assert!(!RAG_DEEP_SLUGS.is_empty());
+    }
+
+    #[test]
+    fn coursera_rag_seed_courses_map_to_rag_deep() {
+        // The marquee RAG course's title text must survive the RAG-deep gate
+        // so the seed actually lands on a RAG lesson rail.
+        assert!(COURSERA_RAG_SEED_COURSES.contains(&"retrieval-augmented-generation-rag"));
+        let kept: Vec<_> = match_slugs("retrieval augmented generation rag embeddings vector database")
+            .into_iter()
+            .filter(|(s, _)| is_rag_deep_slug(s))
+            .collect();
+        assert!(!kept.is_empty(), "RAG course text should map to a RAG-deep slug");
     }
 
     #[test]
