@@ -8,7 +8,6 @@ import type { ApplicationStatus, AppData } from "@/components/app-detail/types";
 import { COLUMNS } from "@/components/app-detail/constants";
 import { Section, Heading as DSHeading } from "@/components/ui";
 import { PipelineContext } from "../_pipeline/context";
-import { PipelineFunnel } from "../_pipeline/PipelineFunnel";
 import { AddApplicationDialog } from "../_pipeline/AddApplicationDialog";
 import styles from "../_pipeline/pipeline.module.css";
 
@@ -83,9 +82,6 @@ export default function PipelineLayout({
           </Box>
           <AddApplicationDialog onCreated={addApp} />
         </Flex>
-
-        {/* Pipeline funnel */}
-        {!loading && total > 0 && <PipelineFunnel apps={apps} />}
 
         {/* Empty state — no applications at all */}
         {!loading && total === 0 ? (

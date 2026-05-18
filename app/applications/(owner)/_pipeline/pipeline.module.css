@@ -6,15 +6,6 @@
   text-decoration: none;
   font-size: var(--text-xs, 13px);
 }
-.chip {
-  border-radius: var(--ds-radius);
-  background: var(--chip-bg);
-  border: 1px solid var(--chip-border);
-  opacity: var(--chip-op, 1);
-}
-.sep {
-  opacity: 0.4;
-}
 .rowLink {
   text-decoration: none;
   color: inherit;
