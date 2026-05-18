@@ -13,6 +13,8 @@ export async function generateMetadata(): Promise<Metadata> {
 // interactive search / filter / sort). Browser-voice narration (Web Speech
 // API "Listen" tiles / play-all / docked speech player) is intentionally
 // disabled — do NOT re-add the `audio` prop without an explicit request.
+// `podcasts` opts this hub into the "RAG Podcasts" Spotify rail (data from
+// data/content/rag-podcasts.json; renders nothing when unseeded).
 export default function RagHubPage() {
-  return <PhaseHub slug={SLUG} />;
+  return <PhaseHub slug={SLUG} podcasts />;
 }

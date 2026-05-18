@@ -7,7 +7,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use anyhow::{Context, Result};
@@ -21,8 +21,9 @@ use aer_ml::udemy::coursera::{parse_article_html, parse_articles_index};
 use aer_ml::udemy::crawler::{CrawlConfig, FetchResult, UdemyClient};
 use aer_ml::udemy::deeplearning;
 use aer_ml::udemy::keywords::{
-    classify_topic_group, is_phase3_rag_slug, is_relevant, match_slugs, should_follow_topic,
-    COURSERA_SEED_ARTICLES, DEEPLEARNING_COURSES_INDEX, DEEPLEARNING_SEED_COURSES,
+    classify_topic_group, is_rag_deep_slug, is_relevant, match_slugs, should_follow_topic,
+    COURSERA_ARTICLES_INDEX, COURSERA_RAG_SEED_ARTICLES, COURSERA_SEED_ARTICLES,
+    DEEPLEARNING_COURSES_INDEX, DEEPLEARNING_RAG_SEED_COURSES, DEEPLEARNING_SEED_COURSES,
     RAG_SEED_QUERIES, SEED_TOPICS,
 };
 use aer_ml::udemy::scraper::{load_courses_json, parse_course_html};
