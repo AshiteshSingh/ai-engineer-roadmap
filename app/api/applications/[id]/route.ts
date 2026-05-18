@@ -21,12 +21,31 @@ async function getSession() {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const [session, { id }] = await Promise.all([getSession(), params]);
 
+  // Committed Rust prep artifact (gen-app-prep → data/app-prep/<slug>.json) is
+  // the source of truth for seeded slugs: overlaid onto a DB row that has no
+  // generated prep yet, and used standalone when no row exists. A real
+  // generated value in the DB still wins (the `||` short-circuits).
+  const seed = getAppPrepSeed(id);
+  const withSeedPrep = <
+    T extends { aiInterviewQuestions: string | null; aiTechStack: string | null },
+  >(
+    row: T,
+  ): T =>
+    seed
+      ? {
+          ...row,
+          aiInterviewQuestions:
+            row.aiInterviewQuestions || seed.aiInterviewQuestions,
+          aiTechStack: row.aiTechStack || seed.aiTechStack,
+        }
+      : row;
+
   if (session && isOwner(session)) {
     const [row] = await db
       .select()
       .from(applications)
       .where(whereApp(id, session.user.id));
-    if (row) return NextResponse.json(row);
+    if (row) return NextResponse.json(withSeedPrep(row));
   }
 
   // Allow public access for apps marked as public
@@ -36,10 +55,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .from(applications)
     .where(and(eq(col, id), eq(applications.public, true)));
 
-  if (publicRow) return NextResponse.json(publicRow);
+  if (publicRow) return NextResponse.json(withSeedPrep(publicRow));
 
-  // Static committed prep artifact (Rust `gen-app-prep` → data/app-prep/).
-  const seed = getAppPrepSeed(id);
   if (seed) return NextResponse.json(seed);
 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
