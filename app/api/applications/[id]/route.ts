@@ -5,7 +5,7 @@ import { isOwner, stripOwnerOnlyMarkdownLines } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications } from "@/src/db/schema";
 import { eq, and, or } from "drizzle-orm";
-import { getAppPrepSeed } from "@/lib/app-prep-seed";
+import { getAppPrepSeed, getOwnerPrepSeed } from "@/lib/app-prep-seed";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -21,6 +21,16 @@ async function getSession() {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const [session, { id }] = await Promise.all([getSession(), params]);
   const owner = !!session && isOwner(session);
+
+  // Owner-only tailored prep (data/app-prep/<slug>.owner.json). Resolved ONLY
+  // for the owner and stamped onto every returned payload; null for every
+  // non-owner response so the field never leaks. Same server-side gate as
+  // conceal()/stripOwnerOnlyMarkdownLines — no new auth surface.
+  const ownerPrep = owner ? getOwnerPrepSeed(id)?.ownerPrep ?? null : null;
+  const attach = <T extends object>(o: T): T & { ownerPrep: string | null } => ({
+    ...o,
+    ownerPrep,
+  });
 
   // Committed Rust prep artifact (gen-app-prep → data/app-prep/<slug>.json) is
   // the source of truth for seeded slugs: overlaid onto a DB row that has no
@@ -61,7 +71,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .select()
       .from(applications)
       .where(whereApp(id, session.user.id));
-    if (row) return NextResponse.json(withSeedPrep(row));
+    if (row) return NextResponse.json(attach(withSeedPrep(row)));
   }
 
   // Allow public access for apps marked as public
@@ -71,9 +81,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .from(applications)
     .where(and(eq(col, id), eq(applications.public, true)));
 
-  if (publicRow) return NextResponse.json(conceal(withSeedPrep(publicRow)));
+  if (publicRow) return NextResponse.json(attach(conceal(withSeedPrep(publicRow))));
 
-  if (seed) return NextResponse.json(conceal(seed));
+  if (seed) return NextResponse.json(attach(conceal(seed)));
 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({ error: "Not found" }, { status: 404 });

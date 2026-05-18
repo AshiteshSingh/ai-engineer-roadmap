@@ -24,6 +24,17 @@ interface PrepArtifact {
   generatedAt: string;
 }
 
+// Owner-only artifact written by the Rust `gen-app-prep-owner` bin to
+// data/app-prep/<slug>.owner.json. A SEPARATE file from <slug>.json so neither
+// regeneration path can clobber the other (regen-proof both ways).
+interface OwnerPrepArtifact {
+  slug: string;
+  company: string;
+  position: string;
+  ownerPrep: string | null;
+  generatedAt: string;
+}
+
 function resolveSeedDir(): string {
   if (process.env.APP_PREP_DIR) return process.env.APP_PREP_DIR;
 
@@ -67,6 +78,9 @@ export function getAppPrepSeed(idOrSlug: string): AppData | null {
       notes: null,
       jobDescription: a.jobDescription ?? null,
       aiInterviewQuestions: a.aiInterviewQuestions ?? null,
+      // Owner-only: never sourced from the public seed. The API attaches it
+      // from getOwnerPrepSeed() for the owner only; null everywhere else.
+      ownerPrep: null,
       aiTechStack: a.aiTechStack ?? null,
       aiInterviewers: null,
       techDismissedTags: null,
@@ -77,4 +91,33 @@ export function getAppPrepSeed(idOrSlug: string): AppData | null {
   }
   _cache.set(idOrSlug, app);
   return app;
+}
+
+const _ownerCache = new Map<string, { ownerPrep: string } | null>();
+
+/**
+ * Resolve the owner-only tailored prep for a slug from
+ * data/app-prep/<slug>.owner.json. Same path-traversal guard and dir
+ * resolution as getAppPrepSeed. The CALLER is responsible for owner gating —
+ * this only reads the file; it must only ever be invoked in an owner-verified
+ * server branch (see app/api/applications/[id]/route.ts).
+ */
+export function getOwnerPrepSeed(
+  idOrSlug: string,
+): { ownerPrep: string } | null {
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(idOrSlug)) return null;
+  if (_ownerCache.has(idOrSlug)) return _ownerCache.get(idOrSlug)!;
+
+  const file = path.join(resolveSeedDir(), `${idOrSlug}.owner.json`);
+  let result: { ownerPrep: string } | null = null;
+  if (fs.existsSync(/*turbopackIgnore: true*/ file)) {
+    const a = JSON.parse(
+      fs.readFileSync(/*turbopackIgnore: true*/ file, "utf-8"),
+    ) as OwnerPrepArtifact;
+    if (a.ownerPrep && a.ownerPrep.trim()) {
+      result = { ownerPrep: a.ownerPrep };
+    }
+  }
+  _ownerCache.set(idOrSlug, result);
+  return result;
 }

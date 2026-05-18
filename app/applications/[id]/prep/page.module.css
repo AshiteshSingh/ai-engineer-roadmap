@@ -22,3 +22,34 @@
   line-height: 1.7;
   background: var(--ds-surface-sub);
 }
+
+/* Owner-only tailored-prep panel. Distinct from the public prose: violet
+   accent (matches the Interview Prep theme) + a clear owner-only affordance.
+   Native <details>/<summary> — no extra deps, no inline styles. */
+.ownerBox {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--violet-6);
+  border-left: 3px solid var(--violet-9);
+  border-radius: var(--radius-3);
+  background: var(--violet-2);
+}
+.ownerSummary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--violet-11);
+  list-style: none;
+  user-select: none;
+}
+.ownerSummary::-webkit-details-marker {
+  display: none;
+}
+.ownerSummary::before {
+  content: "\25B8";
+  display: inline-block;
+  margin-right: var(--space-2);
+  transition: transform 0.15s ease;
+}
+.ownerBox[open] .ownerSummary::before {
+  transform: rotate(90deg);
+}

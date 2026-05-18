@@ -428,6 +428,17 @@ function PrepPageInner() {
   const content = app?.aiInterviewQuestions;
   const processed = useMemo(() => content ? groupCodeBlocks(content) : null, [content]);
 
+  // Owner-only tailored prep. The API only ever sends `ownerPrep` to the owner
+  // (server-gated); `isAdmin &&` below is defense-in-depth, matching how the
+  // OwnerDeepDives card is gated. Reuses the same markdown pipeline so the
+  // `**Say this:**` / `**Common mistake:**` / `**If they ask:**` / `⏱ Target:`
+  // callouts render styled with no extra work.
+  const ownerContent = app?.ownerPrep;
+  const ownerProcessed = useMemo(
+    () => (ownerContent ? groupCodeBlocks(ownerContent) : null),
+    [ownerContent],
+  );
+
   const mdComponents = useMemo(() => ({
     h1: ({ children }: { children: React.ReactNode }) => (
       <Heading size="6" mb="3" mt="6" style={{ color: "var(--violet-11)" }}>{children}</Heading>
@@ -655,6 +666,20 @@ function PrepPageInner() {
       </Flex>
 
       {isAdmin && <OwnerDeepDives appSlug={app.slug} />}
+
+      {/* Owner-only: tailored, evidence-grounded prep (server-gated). */}
+      {isAdmin && ownerProcessed && (
+        <details className={styles.ownerBox} open>
+          <summary className={styles.ownerSummary}>
+            Your evidence &amp; STAR &mdash; owner only
+          </summary>
+          <Box className="interview-prep-md" mt="4">
+            <ReactMarkdown remarkPlugins={remarkPlugins} components={mdComponents}>
+              {ownerProcessed}
+            </ReactMarkdown>
+          </Box>
+        </details>
+      )}
 
       {/* Content */}
       {processed ? (

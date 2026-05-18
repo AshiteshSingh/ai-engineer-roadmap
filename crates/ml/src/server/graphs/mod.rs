@@ -14,6 +14,7 @@
 //! SQLite/LanceDB, and that retrieval layer is unchanged.
 
 pub mod app_prep;
+pub mod app_prep_owner;
 pub mod article;
 pub mod course_review;
 pub mod course_review_prompts;

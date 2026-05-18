@@ -63,6 +63,9 @@ path = "src/bin/gen-app-prep.rs"
 name = "gen-app-prep-loop"
 path = "src/bin/gen-app-prep-loop.rs"
 [[bin]]
+name = "gen-app-prep-owner"
+path = "src/bin/gen-app-prep-owner.rs"
+[[bin]]
 name = "gen-topic"
 path = "src/bin/gen-topic.rs"
 [[bin]]
