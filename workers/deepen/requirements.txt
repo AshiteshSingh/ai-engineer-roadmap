@@ -1,0 +1,3 @@
+# No third-party Python packages — the worker uses only the stdlib `json`
+# plus the runtime-provided `workers` module and global `fetch`. This file
+# is kept (even though empty) so Python Workers packaging is explicit.

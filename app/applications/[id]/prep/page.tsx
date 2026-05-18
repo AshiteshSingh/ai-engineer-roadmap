@@ -11,6 +11,7 @@ import {
   Card,
   Skeleton,
   Badge,
+  Spinner,
 } from "@radix-ui/themes";
 import { ArrowLeftIcon, ExternalLinkIcon } from "@radix-ui/react-icons";
 import { useParams, useRouter } from "next/navigation";
@@ -366,6 +367,16 @@ function PrepPageInner() {
   const [app, setApp] = useState<AppData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deepening, setDeepening] = useState(false);
+  const [deepenError, setDeepenError] = useState<string | null>(null);
+  const deepPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (deepPollRef.current) clearInterval(deepPollRef.current);
+    },
+    [],
+  );
 
   const scrollKey = `prep-scroll-${params.id}`;
   const restoredRef = useRef(false);
@@ -624,6 +635,44 @@ function PrepPageInner() {
     );
   }
 
+  const startDeepen = async () => {
+    setDeepening(true);
+    setDeepenError(null);
+    let before: string | null = null;
+    try {
+      const pre = await fetch(`/api/applications/${app.slug}/deepen`);
+      if (pre.ok)
+        before = ((await pre.json()) as { updatedAt: string | null }).updatedAt;
+    } catch {
+      /* poll baseline is best-effort */
+    }
+    try {
+      const res = await fetch(`/api/applications/${app.slug}/deepen`, {
+        method: "POST",
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Deepen failed");
+      window.location.reload();
+    } catch (e) {
+      // The POST may have been aborted / timed out at the edge while the
+      // server finished the write — poll until updatedAt advances, reload.
+      deepPollRef.current = setInterval(async () => {
+        try {
+          const poll = await fetch(`/api/applications/${app.slug}/deepen`);
+          if (!poll.ok) return;
+          const pd = (await poll.json()) as { updatedAt: string | null };
+          if (pd.updatedAt && pd.updatedAt !== before) {
+            if (deepPollRef.current) clearInterval(deepPollRef.current);
+            window.location.reload();
+          }
+        } catch {
+          /* keep polling */
+        }
+      }, 4_000);
+      setDeepenError(e instanceof Error ? e.message : "Deepen failed");
+    }
+  };
+
   return (
     <Box className="prep-page" px={{ initial: "4", md: "8" }} py={{ initial: "4", md: "8" }}>
       {/* Navigation */}
@@ -649,6 +698,23 @@ function PrepPageInner() {
           </Flex>
         </Box>
         <Flex gap="2">
+          {isAdmin && app.jobDescription && (
+            <Button
+              size="2"
+              variant="soft"
+              color="cyan"
+              disabled={deepening}
+              onClick={startDeepen}
+            >
+              {deepening ? (
+                <>
+                  <Spinner size="1" /> Deepening…
+                </>
+              ) : (
+                "Deepen"
+              )}
+            </Button>
+          )}
           <Button size="2" variant="solid" color="violet" asChild>
             <Link href={`/applications/${app.slug}/prep/memorize`}>Memorize</Link>
           </Button>
@@ -664,6 +730,12 @@ function PrepPageInner() {
           )}
         </Flex>
       </Flex>
+
+      {deepenError && (
+        <Text size="1" color="red" mb="4" as="div">
+          {deepenError}
+        </Text>
+      )}
 
       {isAdmin && <OwnerDeepDives appSlug={app.slug} />}
 

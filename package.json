@@ -9,6 +9,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "deploy": "bash scripts/deploy.sh",
+    "deepen:dev": "wrangler dev --config workers/deepen/wrangler.toml",
+    "deepen:deploy": "wrangler deploy --config workers/deepen/wrangler.toml",
     "typecheck": "tsc --noEmit",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
     "roadmap:meta": "node --import tsx scripts/gen-roadmap-meta.ts",

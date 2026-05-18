@@ -1,0 +1,50 @@
+/* Co-located styling for LanggraphOwnerDive — mirrors
+   components/app-detail/OwnerDeepDives.module.css. No inline styles. */
+
+.card {
+  margin: var(--space-6) 0;
+  border-left: 3px solid var(--violet-6);
+  border-radius: 0;
+}
+
+.heading {
+  color: var(--violet-11);
+  margin-bottom: var(--space-3);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  margin: 0;
+}
+
+.link {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  color: var(--gray-12);
+  text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+.link:hover {
+  background-color: var(--violet-3);
+}
+
+.icon {
+  color: var(--violet-11);
+}
+
+.label {
+  color: var(--violet-11);
+}
+
+.blurb {
+  display: block;
+  margin-top: 2px;
+  color: var(--gray-11);
+}
