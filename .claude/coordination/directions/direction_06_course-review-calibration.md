@@ -15,7 +15,7 @@ suggested_team_archetype: team_06
 
 ## Context
 `backend/knowledge_agent/course_review_graph.py` runs 10 expert LLM evaluators
-(REASONER temp 0.0: pedagogy, technical_accuracy, ai_domain_relevance, aggregator;
+(REASONER temp 0.0: pedagogy, technical_accuracy, domain_relevance, aggregator;
 FAST temp 0.3: the other 7) then an aggregator that emits `aggregate_score` and a
 `verdict` from fixed bands (≥8.5 excellent / ≥7.0 recommended / ≥5.5 average / else
 skip). Results persist to `course_reviews` (10 dimension scores + `expert_details`
