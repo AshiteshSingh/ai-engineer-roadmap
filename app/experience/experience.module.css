@@ -1,0 +1,151 @@
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+  color: var(--gray-12);
+  background: var(--color-background);
+  min-height: 100vh;
+}
+
+.crumbs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.crumbLink {
+  font-size: 13px;
+  color: var(--gray-9);
+  text-decoration: none;
+  transition: color var(--ds-dur, 0.15s) var(--ds-ease, ease);
+}
+
+.crumbLink:hover {
+  color: var(--accent-10);
+}
+
+.header {
+  border-bottom: 1px solid var(--gray-5);
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+}
+
+.company {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0;
+  color: var(--gray-12);
+}
+
+.role {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--accent-10);
+  margin: 8px 0 0;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--gray-9);
+  margin: 14px 0 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-12);
+  background: var(--gray-3);
+  border: 1px solid var(--gray-5);
+  border-radius: var(--ds-radius-pill, 999px);
+}
+
+.section {
+  margin-top: 36px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-9);
+  margin: 0 0 16px;
+}
+
+.bullets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bullets li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--gray-12);
+}
+
+.bullets li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 11px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-9);
+}
+
+.chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--gray-12);
+  background: var(--gray-2);
+  border: 1px solid var(--gray-5);
+  border-radius: var(--ds-radius-pill, 999px);
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 32px 18px 72px;
+  }
+
+  .company {
+    font-size: 26px;
+  }
+}
+
+@media print {
+  .crumbs {
+    display: none;
+  }
+
+  .page {
+    min-height: auto;
+    color: #000;
+    background: #fff;
+  }
+}
