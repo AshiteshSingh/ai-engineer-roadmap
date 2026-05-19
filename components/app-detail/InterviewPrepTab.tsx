@@ -12,9 +12,18 @@ import s from "./InterviewPrepTab.module.css";
 
 export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
   const [running, setRunning] = useState(false);
+  const [deepening, setDeepening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prepContent, setPrepContent] = useState(app.interviewQuestions ?? null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const deepPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (deepPollRef.current) clearInterval(deepPollRef.current);
+    },
+    [],
+  );
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -44,6 +53,44 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
     );
   };
 
+  // Live "deepen" path: expands the existing prep + tech via the Cloudflare
+  // Python worker (DEEPEN_WORKER_URL), then reloads. Mirrors the prep page.
+  const startDeepen = async () => {
+    setDeepening(true);
+    setError(null);
+    let before: string | null = null;
+    try {
+      const pre = await fetch(`/api/applications/${app.slug}/deepen`);
+      if (pre.ok)
+        before = ((await pre.json()) as { updatedAt: string | null }).updatedAt;
+    } catch {
+      /* poll baseline is best-effort */
+    }
+    try {
+      const res = await fetch(`/api/applications/${app.slug}/deepen`, {
+        method: "POST",
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Deepen failed");
+      window.location.reload();
+    } catch (e) {
+      deepPollRef.current = setInterval(async () => {
+        try {
+          const poll = await fetch(`/api/applications/${app.slug}/deepen`);
+          if (!poll.ok) return;
+          const pd = (await poll.json()) as { updatedAt: string | null };
+          if (pd.updatedAt && pd.updatedAt !== before) {
+            if (deepPollRef.current) clearInterval(deepPollRef.current);
+            window.location.reload();
+          }
+        } catch {
+          /* keep polling */
+        }
+      }, 4_000);
+      setError(e instanceof Error ? e.message : "Deepen failed");
+    }
+  };
+
   if (!prepContent) {
     return (
       <Card className={s.card}>
@@ -63,15 +110,32 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
               <InfoCircledIcon width={24} height={24} color="var(--gray-8)" />
               <Text size="2" color="gray">No interview prep generated yet.</Text>
               {isAdmin && app.jobDescription && (
-                <Button
-                  size="2"
-                  variant="solid"
-                  color="violet"
-                  onClick={startPipeline}
-                >
-                  <RocketIcon />
-                  Generate Prep
-                </Button>
+                <Flex gap="2">
+                  <Button
+                    size="2"
+                    variant="solid"
+                    color="violet"
+                    onClick={startPipeline}
+                  >
+                    <RocketIcon />
+                    Generate Prep
+                  </Button>
+                  <Button
+                    size="2"
+                    variant="soft"
+                    color="cyan"
+                    disabled={deepening}
+                    onClick={startDeepen}
+                  >
+                    {deepening ? (
+                      <>
+                        <Spinner size="1" /> Deepening…
+                      </>
+                    ) : (
+                      "Deepen"
+                    )}
+                  </Button>
+                </Flex>
               )}
               {isAdmin && !app.jobDescription && (
                 <Text size="1" color="red">
@@ -91,15 +155,26 @@ export function InterviewPrepTab({ app, isAdmin }: TabBaseProps) {
       <Flex justify="between" align="center" mb="4">
         <Heading size="4">Interview Prep</Heading>
         {isAdmin && (
-          <Button
-            size="1"
-            variant="ghost"
-            color="violet"
-            disabled={running}
-            onClick={startPipeline}
-          >
-            {running ? <><Spinner size="1" /> Regenerating...</> : "Regenerate"}
-          </Button>
+          <Flex gap="2" align="center">
+            <Button
+              size="1"
+              variant="ghost"
+              color="violet"
+              disabled={running}
+              onClick={startPipeline}
+            >
+              {running ? <><Spinner size="1" /> Regenerating...</> : "Regenerate"}
+            </Button>
+            <Button
+              size="1"
+              variant="ghost"
+              color="cyan"
+              disabled={deepening}
+              onClick={startDeepen}
+            >
+              {deepening ? <><Spinner size="1" /> Deepening…</> : "Deepen"}
+            </Button>
+          </Flex>
         )}
       </Flex>
       <Box className="interview-prep-md">

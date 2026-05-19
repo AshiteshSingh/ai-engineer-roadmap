@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
     "*": [
       "**/crates/**",
       "**/target/**",
+      // Cloudflare Python worker (workers/deepen) is separate infra deployed
+      // via wrangler — never trace its source into the Vercel functions.
+      "**/workers/**",
       "**/*.rlib",
       "**/*.rmeta",
       "**/*.d",

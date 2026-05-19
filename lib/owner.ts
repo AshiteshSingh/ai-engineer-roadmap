@@ -12,7 +12,10 @@ export function isOwner(
 // Internal route prefixes that only the owner may see. References to these
 // (e.g. the Module Federation deep-dive) are stripped from publicly-served
 // markdown so non-owners don't even see the link text.
-export const OWNER_ONLY_PATHS = ["/module-federation"] as const;
+export const OWNER_ONLY_PATHS = [
+  "/module-federation",
+  "/cortex-portal",
+] as const;
 
 /**
  * Drop any markdown line that links to an owner-only path. Concealment for
@@ -59,3 +62,16 @@ export function ownerDeepDives(
 ): OwnerDeepDive[] {
   return (appSlug && OWNER_DEEP_DIVES[appSlug]) || [];
 }
+
+// Owner-only deep-dives surfaced in the LangGraph area (e.g. the lead-gen
+// page). Same code-owned, regen-proof pattern as OWNER_DEEP_DIVES. Blurbs are
+// deliberately generic and contain NO contact details or git statistics — the
+// route + card are owner-gated, this is defense-in-depth.
+export const LANGGRAPH_OWNER_DIVES: OwnerDeepDive[] = [
+  {
+    slug: "cortex-portal",
+    label: "Vitrifi · Cortex Portal",
+    blurb:
+      "Regulated UK-fibre telecom ops platform — Go microservices, Temporal, GraphQL, RBAC/multi-tenancy: the production analogue behind these LangGraph patterns.",
+  },
+];

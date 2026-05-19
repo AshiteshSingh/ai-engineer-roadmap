@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 
+import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
+import { LanggraphOwnerDive } from "@/components/langgraph/LanggraphOwnerDive";
 import { Topbar } from "@/components/topbar";
 import { MarkdownProse } from "@/components/markdown-prose";
 import { TableOfContents } from "@/components/toc";
@@ -42,10 +46,12 @@ export default async function LangGraphLeadGenPage() {
   const title = extractTitle(content);
   const readingMin = estimateReadingMinutes(content);
 
-  const [meta, audioMeta] = await Promise.all([
+  const [meta, audioMeta, session] = await Promise.all([
     getCategoryMeta("Agents & Harnesses"),
     getAudioMeta(AUDIO_SLUG),
+    auth.api.getSession({ headers: await headers() }),
   ]);
+  const owner = isOwner(session);
 
   return (
     <div className={`cat-${meta.slug}${audioMeta ? " has-audio-player" : ""}`}>
@@ -94,6 +100,7 @@ export default async function LangGraphLeadGenPage() {
       <div className="article-grid">
         <div>
           <MarkdownProse content={content} />
+          {owner && <LanggraphOwnerDive />}
           <ScrollToTop />
         </div>
         <TableOfContents markdown={content} />
