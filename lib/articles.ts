@@ -156,19 +156,43 @@ export const LESSON_NUMBER: Record<string, number> = Object.fromEntries(
 );
 
 export const CATEGORIES: [number, number, string][] = [
-  // Phases 1-7 form the continuous-play roadmap spine
+  // Phases form the continuous-play roadmap spine. Display numbers diverge
+  // from slugs by design (e.g. "Phase 7 · Evals" keeps slug phase-5-evals /
+  // route /evals) — see CATEGORY_META. "Phase 5 · Long-Term Memory" is a
+  // per-slug category (lessons assigned via LESSON_CATEGORY_OVERRIDES, not a
+  // number range): the sentinel [1,0] range matches no lesson number, so
+  // category_for() never assigns by range and footer's (hi-lo+1) adds 0.
   [1, 9, "Phase 1 · Foundations & Model Inference"],
   [10, 18, "Phase 2 · Prompting & Structured Output"],
   [19, 28, "Phase 3 · Embeddings & RAG"],
-  [29, 42, "Phase 4 · Agents, Memory & Orchestration"],
-  [43, 52, "Phase 5 · LangChain & LangGraph"],
-  [53, 69, "Phase 6 · Evals, Safety & Observability"],
-  [70, 80, "Phase 7 · Ship to Production"],
+  [29, 42, "Phase 4 · Agents & Orchestration"],
+  [1, 0, "Phase 5 · Long-Term Memory"],
+  [43, 52, "Phase 6 · LangChain & LangGraph"],
+  [53, 69, "Phase 7 · Evals, Safety & Observability"],
+  [70, 80, "Phase 8 · Ship to Production"],
   // Appendix · reachable, excluded from the flow spine
   [81, 86, "Appendix · Fine-tuning & Training"],
   [87, 89, "Appendix · Other Clouds & Platforms"],
   [90, 98, "Appendix · Engineering & Communication"],
 ];
+
+/**
+ * Per-slug category assignment that overrides the number-range mapping.
+ * Lets a cross-phase theme (Memory) be a real category WITHOUT reordering
+ * LESSON_SLUGS (lesson numbers / URLs / audiobook spine stay stable).
+ * Mirrored into data/roadmap-meta.json (gen-roadmap-meta.ts) and honored by
+ * the Rust seeder (crates/ml/src/content/seed.rs) and the FS fallback below.
+ */
+export const LESSON_CATEGORY_OVERRIDES: Record<string, string> = {
+  "agent-memory": "Phase 5 · Long-Term Memory",
+  memory: "Phase 5 · Long-Term Memory",
+  "memory-architectures": "Phase 5 · Long-Term Memory",
+  "context-engineering": "Phase 5 · Long-Term Memory",
+  "context-window-management": "Phase 5 · Long-Term Memory",
+  "dynamic-context-assembly": "Phase 5 · Long-Term Memory",
+  "context-compression": "Phase 5 · Long-Term Memory",
+  "langmem-vectorize-memory": "Phase 5 · Long-Term Memory",
+};
 
 // The cut-off lesson number for the continuous-play spine. Lessons numbered
 // above this belong to the Appendix and are excluded from getFlowOrder().
@@ -212,18 +236,30 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
       "Ship a Document Q&A System with citations and a faithfulness/relevance eval (Portfolio L1)",
     ],
   },
-  "Phase 4 · Agents, Memory & Orchestration": {
+  "Phase 4 · Agents & Orchestration": {
     slug: "phase-4-agents",
     icon: "🤖",
-    description: "Build agents that reason and act — tool-use loops, multi-agent coordination, and context & memory engineering",
+    description: "Build agents that reason and act — tool-use loops, multi-agent coordination, and orchestration",
     gradient: ["var(--amber-9)", "var(--amber-11)"],
     outcomes: [
-      "Build a tool-using agent loop with short- and long-term memory",
-      "Coordinate multiple agents and engineer the context window under token limits",
+      "Build a tool-using agent loop",
+      "Coordinate multiple agents and orchestrate multi-step work",
       "Ship a Multi-Source Research Agent reusing Phase 2 tool calls and Phase 3 retrieval (Portfolio L2)",
     ],
   },
-  "Phase 5 · LangChain & LangGraph": {
+  "Phase 5 · Long-Term Memory": {
+    slug: "phase-5-memory",
+    icon: "🧠",
+    description:
+      "Give agents durable recall — semantic, episodic and procedural memory, context-window engineering, and long-term memory stores that survive across sessions",
+    gradient: ["var(--amber-9)", "var(--amber-11)"],
+    outcomes: [
+      "Distinguish semantic vs episodic vs procedural memory and when each applies",
+      "Engineer the context window: compression, dynamic assembly, windowing",
+      "Persist long-term memory with vector + metadata stores (e.g. LangMem)",
+    ],
+  },
+  "Phase 6 · LangChain & LangGraph": {
     slug: "phase-5-langchain",
     icon: "⛓",
     description: "Build production agent graphs with LangChain and LangGraph — LCEL chains, stateful graphs, D1-checkpointed memory, human-in-the-loop, and tracing",
