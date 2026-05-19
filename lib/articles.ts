@@ -149,6 +149,9 @@ const LESSON_SLUGS = [
   "foreign-keys",
   "llamaindex",
   "public-speaking",
+  // Phase 2 companion (category via LESSON_CATEGORY_OVERRIDES, not range —
+  // appended at the tail so no existing lesson number / audiobook slot shifts)
+  "spec-driven-development",
 ];
 
 export const LESSON_NUMBER: Record<string, number> = Object.fromEntries(
@@ -192,6 +195,7 @@ export const LESSON_CATEGORY_OVERRIDES: Record<string, string> = {
   "dynamic-context-assembly": "Phase 5 · Long-Term Memory",
   "context-compression": "Phase 5 · Long-Term Memory",
   "langmem-vectorize-memory": "Phase 5 · Long-Term Memory",
+  "spec-driven-development": "Phase 2 · Prompting & Structured Output",
 };
 
 // The cut-off lesson number for the continuous-play spine. Lessons numbered
