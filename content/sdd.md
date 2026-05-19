@@ -1,6 +1,6 @@
 # Spec-Driven Development: Specs as the Durable Contract for Coding Agents
 
-Spec-Driven Development (SDD) is the professional response to the chaos of unsupervised AI code generation. Instead of prompting an agent ("create me a button") and iterating against whatever it produces, you decouple the *specification* — the what and the why — from the *implementation* — the how. The spec becomes a permanent technical artifact and a contract between humans, and between humans and the agent. This lesson distills the DeepLearning.AI / JetBrains course *Spec-Driven Development with Coding Agents* into the engineering principles that make it work, and connects them to the rest of Phase 2: a project constitution is a [system prompt](/system-prompts) for an entire codebase, a feature spec is a [structured-output](/structured-output) contract for generated code, and the whole discipline is the intent-fidelity principle from [prompt engineering fundamentals](/prompt-engineering-fundamentals) applied at project scale.
+Spec-Driven Development (SDD) is the professional response to the chaos of unsupervised AI code generation. Instead of prompting an agent ("create me a button") and iterating against whatever it produces, you decouple the *specification* — the what and the why — from the *implementation* — the how. The spec becomes a permanent technical artifact and a contract between humans, and between humans and the agent. This lesson distills the DeepLearning.AI / JetBrains course *Spec-Driven Development with Coding Agents* into the engineering principles that make it work, and connects them to the rest of Phase 2: a project constitution is a [system prompt](/system-prompts) for an entire codebase, a feature spec is a [structured-output](/structured-output) contract for generated code, and the whole discipline is the intent-fidelity principle from [prompt engineering fundamentals](/prompt-engineering-fundamentals) applied at project scale. The course teaches one opinionated workflow; the back half of this lesson widens the lens — the competing tool landscape, a maturity taxonomy, and a deliberately skeptical reading drawn from Birgitta Böckeler's Thoughtworks survey [*Understanding Spec-Driven Development*](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html) — so you can judge *when* SDD earns its overhead rather than adopt it by reflex.
 
 ## Mental Model
 
@@ -188,3 +188,85 @@ git checkout main && git merge --no-ff feat/agents-and-ailments
 ```
 
 The final principle is **agent replaceability**. Models and agents improve monthly, so you do not want a workflow welded to one vendor. Open standards make agents swappable while the SDD workflow and tools stay put: MCP for external tools, `AGENTS.md` for rules, Agent Skills for repeatable workflows-plus-context, and ACP (the Agent Client Protocol) for connecting agents to editors. A feature-spec skill authored for Claude Code runs unchanged in Codex once copied to its path; the ACP registry automates discovering, installing, and connecting agents to clients across their lifecycle. SDD moves the work from the *how* to the *what and why*, so the *how* — which specific agent executes the spec — becomes an interchangeable implementation detail. The specs you write today become the memory of your projects tomorrow; keep them sharp, and the agent stays a replaceable driver of an engineering process you own. The same intent-first reasoning underlies [prompt optimization](/prompt-optimization): improve the durable instruction, not the disposable output.
+
+## The SDD Tool Landscape: Kiro, Spec-Kit & Tessl
+
+The course teaches one workflow, but "spec-driven development" is a label several tools wear differently — as Böckeler puts it, SDD "is not just one thing." Three are worth knowing because they bracket the design space. **Kiro** is the lightweight end: a VS Code-based tool with a fixed `Requirements → Design → Tasks` flow, one markdown document per step, requirements expressed as `As a…` user stories with `GIVEN…WHEN…THEN…` acceptance criteria, and a flexible memory bank it calls *steering* (`product.md`, `structure.md`, `tech.md`). **GitHub Spec-Kit** is the most customizable: a CLI scaffolds workspace files for many coding assistants, you drive it through slash commands, and its memory bank is the **constitution** — immutable high-level principles applied to every change, the same idea this lesson's constitution section described. Its loop is `Constitution → ⟲ Specify → Plan → Tasks ⟲`, instantiated through bash scripts and templates with heavy AI-interpreted checklists acting as a per-step "definition of done." **Tessl Framework** (private beta, CLI that doubles as an [MCP](/tool-use) server) is the only one explicitly chasing the deep end: code files carry a `// GENERATED FROM SPEC — DO NOT EDIT` header, `tessl document --code` reverse-engineers a spec, `@generate`/`@test` tags and an API section pin the exposed interface, and `tessl build` regenerates the file. The decisive axes that separate them are workflow opinionation, how many artifacts a single spec sprawls into, whether a "memory bank" is optional or mandatory, and the abstraction level the spec sits at. Pick the tool by problem shape, not by brand — the same selection discipline you apply to an [agent harness](/agent-harnesses).
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "kiro", "label": "Kiro\n(lightweight)", "shape": "circle"},
+    {"id": "spec", "label": "Spec-Kit\n(customizable CLI)", "shape": "circle"},
+    {"id": "tessl", "label": "Tessl\n(beta, ambitious)", "shape": "circle"},
+    {"id": "kflow", "label": "Requirements→\nDesign→Tasks", "shape": "rect"},
+    {"id": "sflow", "label": "Constitution→\nSpecify→Plan→Tasks", "shape": "rect"},
+    {"id": "tflow", "label": "Spec is source;\ncode GENERATED", "shape": "rect"},
+    {"id": "bank", "label": "Memory bank\n(optional vs required)", "shape": "diamond"},
+    {"id": "abs", "label": "Abstraction level\n+ artifact sprawl", "shape": "diamond"}
+  ],
+  "edges": [
+    {"source": "kiro", "target": "kflow"},
+    {"source": "spec", "target": "sflow"},
+    {"source": "tessl", "target": "tflow"},
+    {"source": "kflow", "target": "bank", "label": "steering (loose)"},
+    {"source": "sflow", "target": "bank", "label": "constitution (required)"},
+    {"source": "tflow", "target": "abs", "label": "per-file 1:1"},
+    {"source": "bank", "target": "abs"}
+  ]
+}
+```
+
+## A Maturity Taxonomy: Spec-First → Spec-Anchored → Spec-as-Source
+
+Böckeler's most useful contribution is a maturity ladder that cuts through the marketing. **Spec-first**: a well-considered spec is written, used for the task, and then effectively discarded — every change starts a new spec. **Spec-anchored**: the spec survives the task and is maintained as the feature evolves, edited alongside the code over time. **Spec-as-source**: the spec is the primary artifact; humans edit only the spec and never touch the (generated) code. Every approach she examined is at least spec-first, but few genuinely reach spec-anchored, and the maintenance strategy over time is usually left vague — Spec-Kit even branches per spec, which reads more like change-request scope than feature-lifetime anchoring. Her working definition is worth memorizing: *a spec is a structured, behavior-oriented artifact — or set of related artifacts — written in natural language that expresses software functionality and serves as guidance to AI coding agents.* Crucially, separate the **spec** (task-scoped, only relevant to the change it drives) from the **memory bank** (cross-session rules and product/architecture context relevant to *every* session) — conflating them is why so many setups feel bloated; this is the same boundary [context engineering](/context-engineering) draws between durable and per-task context. The honest warning attached to the top of the ladder is the Model-Driven Development parallel: spec-as-source is MDD with a natural-language model and an LLM code generator. MDD never took hold for business applications — awkward abstraction level, too much overhead — and LLMs remove the parseable-DSL overhead only by trading it for non-determinism, risking the downsides of *both*: inflexibility and unpredictability, minus the tool support that once validated specs for completeness.
+
+```xyflow
+{
+  "direction": "LR",
+  "nodes": [
+    {"id": "first", "label": "Spec-first\n(spec → task → discard)", "shape": "stadium"},
+    {"id": "anchor", "label": "Spec-anchored\n(spec lives with feature)", "shape": "stadium"},
+    {"id": "source", "label": "Spec-as-source\n(code GENERATED)", "shape": "stadium"},
+    {"id": "mdd", "label": "MDD echo:\ninflexibility +\nnon-determinism", "shape": "diamond"},
+    {"id": "bankc", "label": "Memory bank\n(cross-session)", "shape": "rect"},
+    {"id": "specc", "label": "Spec\n(task-scoped)", "shape": "rect"}
+  ],
+  "edges": [
+    {"source": "first", "target": "anchor", "label": "persist"},
+    {"source": "anchor", "target": "source", "label": "invert ownership"},
+    {"source": "source", "target": "mdd", "label": "learn from the past"},
+    {"source": "bankc", "target": "specc", "label": "keep distinct"},
+    {"source": "specc", "target": "first"}
+  ]
+}
+```
+
+## When SDD Is Over-Engineering
+
+A balanced engineer holds both truths: spec-first is genuinely valuable — "how do I structure my memory bank?" and "how do I write a good spec for AI?" are among the most-asked practitioner questions — *and* the elaborate end of SDD can be `Verschlimmbesserung`, making things worse while trying to make them better. Böckeler's field reports are the cautionary data. **Problem-size mismatch**: asked to fix a small bug, Kiro inflated it into four user stories and sixteen acceptance criteria — "a sledgehammer to crack a nut"; a 3–5 point feature in Spec-Kit produced so many files to review she felt she'd have shipped it faster with plain AI-assisted coding and stayed more in control. **Review burden**: verbose, repetitive markdown that is more tedious to review than the code it describes — an effective tool needs a great spec-*review* experience, not just generation. **False sense of control**: bigger context windows do not mean the agent honors everything in them — it regenerated existing classes as duplicates by ignoring "this already exists" notes, and elsewhere over-applied a constitution rule too zealously. **Functional/technical separation** stays slippery, and our profession's track record at keeping requirements free of implementation is poor. The decision is therefore not "adopt SDD" but "match ceremony to the problem": small or well-understood changes favor tight iterative loops (the control argument from [adversarial-prompting](/adversarial-prompting)'s small-blast-radius logic and from [code agents](/code-agents)); large *and* well-specified work is where heavyweight SDD pays for its overhead. And because agents interpret specs non-deterministically, the validation scorecard is not optional decoration — it is the [eval](/eval-fundamentals) harness that tells you the amplification matched intent. The term is already semantically diffused — people now say "spec" to mean "a detailed prompt" — so the engineering value is not the label but the judgment of when a durable, right-sized spec beats a fast, disposable one. Treat this lesson's enthusiastic methodology and Böckeler's skepticism as the two error bars on the same measurement.
+
+```xyflow
+{
+  "direction": "TD",
+  "nodes": [
+    {"id": "q", "label": "New change", "shape": "stadium"},
+    {"id": "clear", "label": "Problem\nwell-defined?", "shape": "diamond"},
+    {"id": "big", "label": "Large /\nmulti-feature?", "shape": "diamond"},
+    {"id": "plain", "label": "Plain AI-assisted\n(tight loop)", "shape": "rect"},
+    {"id": "sf", "label": "Spec-first\n(right-sized)", "shape": "rect"},
+    {"id": "full", "label": "Full SDD\n+ scorecard", "shape": "rect"},
+    {"id": "review", "label": "Review cost <\ncode review?", "shape": "diamond"}
+  ],
+  "edges": [
+    {"source": "q", "target": "clear"},
+    {"source": "clear", "target": "plain", "label": "small + clear"},
+    {"source": "clear", "target": "big", "label": "clear + sizable"},
+    {"source": "big", "target": "sf", "label": "no"},
+    {"source": "big", "target": "full", "label": "yes"},
+    {"source": "full", "target": "review", "label": "check overhead"},
+    {"source": "review", "target": "sf", "label": "if not, downsize"}
+  ]
+}
+```
