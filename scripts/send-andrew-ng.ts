@@ -52,15 +52,14 @@ What I'm most curious about is the referral side: is there a referral program (f
 
 Happy to share more about the roadmap or how I could help. Thanks for everything you do for this field.
 
-— Vadim
-AI Engineer Roadmap · contact@ai-engineer-roadmap.xyz`;
+— Vadim`;
 
   const html = `<p>Hi Andrew,</p>
 <p>I've been building <strong>AI Engineer Roadmap</strong> (<a href="${SITE_URL}">${SITE_URL}</a>) — a hands-on path that takes engineers from transformer internals to shipping production AI systems: 108 deeply-researched lessons across RAG, agents, evals, fine-tuning, and prompting. It's open source: <a href="${REPO_URL}">${REPO_URL}</a></p>
 <p>I'd love to get involved with the <strong>DeepLearning.AI Ambassador program</strong> — the teaching mission and community line up closely with what I'm building.</p>
 <p>What I'm most curious about is the <strong>referral side</strong>: is there a referral program (for learners and/or ambassadors), and how does it work? That's the part most relevant to how I'd want to contribute, so any pointer there would be hugely appreciated.</p>
 <p>Happy to share more about the roadmap or how I could help. Thanks for everything you do for this field.</p>
-<p>— Vadim<br/>AI Engineer Roadmap · contact@ai-engineer-roadmap.xyz</p>`;
+<p>— Vadim</p>`;
 
   const result = await sendEmail({
     to,
