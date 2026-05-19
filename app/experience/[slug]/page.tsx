@@ -6,6 +6,8 @@ import {
   getExperienceBySlug,
   parseSummary,
 } from "@/lib/experience";
+import { getExperienceDetail } from "@/lib/experience-detail";
+import { MarkdownProse } from "@/components/markdown-prose";
 import styles from "../experience.module.css";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -21,8 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { bullets } = parseSummary(entry.summary);
   return {
     title: `${entry.name} — ${entry.position}`,
-    description:
-      bullets[0] ?? `${entry.position} at ${entry.name}`,
+    description: bullets[0] ?? `${entry.position} at ${entry.name}`,
   };
 }
 
@@ -32,6 +33,7 @@ export default async function ExperienceDetailPage({ params }: Props) {
   if (!entry) notFound();
 
   const { bullets, techStack } = parseSummary(entry.summary);
+  const detail = getExperienceDetail(slug);
 
   return (
     <main className={styles.page}>
@@ -75,6 +77,13 @@ export default async function ExperienceDetailPage({ params }: Props) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {detail && (
+        <section className={styles.caseStudy}>
+          <h2 className={styles.sectionTitle}>Case study</h2>
+          <MarkdownProse content={detail} />
         </section>
       )}
     </main>

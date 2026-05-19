@@ -1,0 +1,53 @@
+/**
+ * Hand-authored, regen-proof, PUBLIC long-form case studies keyed by the
+ * experience slug. Only entries that warrant a deep dive appear here; every
+ * other slug returns null so its page stays the thin resume summary.
+ *
+ * Constraints for anything added here (this renders on a public site):
+ *   - never any secrets, credentials, tokens, or internal hostnames
+ *   - no individual coworkers named
+ *
+ * Markdown is rendered by <MarkdownProse>, which strips a leading `# h1`,
+ * so each entry starts with a lead paragraph + `##` sections (no top h1).
+ * Inline-code backticks are intentionally avoided so the content can live in
+ * a template literal without escaping.
+ */
+
+const VITRIFI = `**Cortex Portal** was Vitrifi's multi-tenant SaaS platform for UK wholesale broadband — network provisioning, service-order management, and operator administration. Each tenant (a broadband operator) ran isolated on shared infrastructure, integrating upstream wholesale carriers such as **CityFibre**, **Openreach** and **BT** for line availability, ordering and activation. Vitrifi has since shut down; this is based on the codebase I worked in for roughly four years.
+
+## Architecture
+
+A single pnpm + Turborepo monorepo spanning the full stack:
+
+- **Six Go microservices** — portal-api (the main GraphQL API, schema-first via gqlgen), network-activator-api (REST, OpenAPI-first via oapi-codegen), addressing (UK address and postcode lookups on PostgreSQL with type-safe queries via sqlc), collateral (server-side PDF and CSV document generation), and a multi-tenant tenancy layer on MongoDB with one database per operator.
+- **Event-driven backbone** — services communicate asynchronously over NATS using Protobuf-defined messages for order-lifecycle and reporting events.
+- **Schema-first everything** — gqlgen, genqlient, oapi-codegen, sqlc and mockgen generate code from GraphQL, OpenAPI, SQL and proto contracts, keeping types consistent end to end.
+- **Authorization in the schema** — a custom GraphQL @hasPermission directive enforces role-based access per field against each user's permissions.
+- **Three React applications** (operator portal, network-activator, self-serve) sharing a @cortex workspace of UI components, hooks, validation schemas and constants.
+
+## Frontend
+
+React 18 with React Router 7, Apollo Client against the GraphQL API, an Ant Design 5 component system with Emotion styling, React Hook Form with Zod for forms, TanStack Table and Query for data grids and server state, i18next for localization, built with Rsbuild.
+
+## My contributions
+
+One of the primary full-stack contributors, with roughly 4,900 commits across frontend, backend and tooling. Selected work:
+
+- **Form-validation framework** — designed and migrated the portal's shared validation layer to Zod v4 and @hookform/resolvers v5, with a useFormErrorHandler hook that maps API and GraphQL errors back onto the correct form fields consistently across every admin form.
+- **Subscriber and named contacts** — full CRUD, validation rules and UX, including the "subscriber name or company name mandatory" service-order logic, with matching server-side validation in Go.
+- **Tenant administration** — app create and edit flows and their Zod schemas under tenant management.
+- **Domain validation** — UK phone-number validation and shared validation packages reused across apps.
+- **Backend** — Go validation logic for subscribers and contacts, plus MongoDB seed-data generation for development and tests.
+- **Quality** — search on the network and reporting event tables, early-return authorization guards in UI components, a sustained pass removing untyped values for real TypeScript type-safety, and Playwright end-to-end coverage.
+
+## Scale
+
+Roughly 338K lines of code (about 243K Go and 94K TypeScript/TSX) across some 1,732 source files — six backend services, three frontends and eight shared packages, shipped continuously through GitLab CI.`;
+
+const DEEP_DIVES: Record<string, string> = {
+  vitrifi: VITRIFI,
+};
+
+export function getExperienceDetail(slug: string): string | null {
+  return DEEP_DIVES[slug] ?? null;
+}
