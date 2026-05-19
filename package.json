@@ -51,6 +51,7 @@
     "seed:dlai-transcripts": "cd crates/ml && cargo run -p aer-ml --release --bin seed-dl-transcripts --",
     "content:similarity:dlai": "cd crates/ml && cargo run -p aer-ml --release --bin build-similarity -- --dlai-dir ../../data/deeplearning",
     "seed:rag-podcasts": "cd crates/ml && cargo run -p aer-ml --release --bin spotify-podcasts --",
+    "fetch:article": "cd crates/ml && cargo run -p aer-ml --release --bin fetch-article --",
     "audio:meta": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-meta --",
     "audio:gate:scan": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --all",
     "audio:gate:check": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --json --slug",

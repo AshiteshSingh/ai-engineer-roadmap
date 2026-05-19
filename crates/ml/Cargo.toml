@@ -115,6 +115,11 @@ path = "src/bin/udemy.rs"
 name = "spotify-podcasts"
 path = "src/bin/spotify_podcasts.rs"
 
+# ---- Web article → grounding-markdown extractor ---------------------------
+[[bin]]
+name = "fetch-article"
+path = "src/bin/fetch_article.rs"
+
 [dependencies]
 # External monorepo path deps (kept external; 4-up from crates/ml/)
 candle = { path = "../../../../crates/candle", default-features = false }
