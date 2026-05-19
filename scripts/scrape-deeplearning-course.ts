@@ -28,7 +28,9 @@ import { join } from "node:path";
 const COURSE_SLUG =
   process.env.DLAI_COURSE_SLUG ?? "long-term-agentic-memory-with-langgraph";
 const COURSE_URL = `https://learn.deeplearning.ai/courses/${COURSE_SLUG}`;
-const LOGIN_URL = "https://learn.deeplearning.ai/login";
+// Unauthenticated course hits redirect to the DeepLearning.AI identity
+// provider, which hosts the real email/password form.
+const AUTH_LOGIN_RE = /auth\.deeplearning\.ai\/login/i;
 
 const DATA_DIR = join(process.cwd(), "data", "deeplearning");
 const AUTH_DIR = join(DATA_DIR, ".auth");
