@@ -1,0 +1,7 @@
+$90b9e9d8-84bd-4a3c-a4aa-53f8fb72dec9²ó"course_slug ÿÿÿÿÿÿÿÿÿ*string8%course_title ÿÿÿÿÿÿÿÿÿ*string8#
+course_url ÿÿÿÿÿÿÿÿÿ*string8%lesson_index ÿÿÿÿÿÿÿÿÿ*uint328%lesson_title ÿÿÿÿÿÿÿÿÿ*string8#
+lesson_url ÿÿÿÿÿÿÿÿÿ*string8$chunk_index ÿÿÿÿÿÿÿÿÿ*uint328#
+start_secs ÿÿÿÿÿÿÿÿÿ*double8!end_secs ÿÿÿÿÿÿÿÿÿ*double8text	 ÿÿÿÿÿÿÿÿÿ*string85vector
+ ÿÿÿÿÿÿÿÿÿ*fixed_size_list:float:102408"!
+lance.auto_cleanup.interval20"'
+lance.auto_cleanup.older_than14days
