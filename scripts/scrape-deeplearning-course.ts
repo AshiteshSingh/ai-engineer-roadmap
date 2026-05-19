@@ -93,6 +93,24 @@ function looksLikeLogin(url: string): boolean {
   return /\/login|\/auth|auth0\.com|accounts\.|sign[_-]?in/i.test(url);
 }
 
+/**
+ * When unauthenticated, the course shell stays on learn.deeplearning.ai but
+ * overlays a `<dialog id="dlai_force_login_modal">` ("Sign in to Continue").
+ * Its presence — not the URL — is the reliable "not signed in" signal.
+ */
+async function hasForceLoginModal(page: Page): Promise<boolean> {
+  return page
+    .locator("#dlai_force_login_modal")
+    .first()
+    .isVisible()
+    .catch(() => false);
+}
+
+/** Authenticated = course reachable with no login URL and no force-login modal. */
+async function isAuthed(page: Page): Promise<boolean> {
+  return !looksLikeLogin(page.url()) && !(await hasForceLoginModal(page));
+}
+
 /** Attach a response listener that buffers every WebVTT body the page fetches. */
 function attachVttCapture(context: BrowserContext): {
   drain: () => string[];
@@ -138,22 +156,39 @@ async function runLogin(): Promise<void> {
   const context = await browser.newContext(BROWSER_OPTS);
   const page = await context.newPage();
 
-  // Hitting the gated course while unauthenticated 302s to the identity
-  // provider (auth.deeplearning.ai) that hosts the real email/password form,
-  // with the correct OIDC/PKCE params already attached.
+  // Hitting the gated course while unauthenticated keeps us on
+  // learn.deeplearning.ai but overlays a "Sign in to Continue" modal whose
+  // primary button kicks off the redirect to the identity provider
+  // (auth.deeplearning.ai) that hosts the real email/password form.
   console.log("→ Opening DeepLearning.AI sign-in…");
   await page.goto(COURSE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForTimeout(5000);
+
+  if (await isAuthed(page)) {
+    await context.storageState({ path: AUTH_STATE });
+    console.log(`✓ Already signed in. Session saved → ${AUTH_STATE}`);
+    await browser.close();
+    return;
+  }
+
+  // Click the modal's "Sign In" (the .btn-primary inside the dialog — not the
+  // ghost close button) to trigger the IdP redirect.
+  if (await hasForceLoginModal(page)) {
+    await page
+      .locator(
+        '#dlai_force_login_modal button.btn-primary, #dlai_force_login_modal button:has-text("Sign In")',
+      )
+      .first()
+      .click({ timeout: 8000 })
+      .catch(() => {});
+  }
 
   try {
     await page.waitForURL(AUTH_LOGIN_RE, { timeout: 45_000 });
   } catch {
-    if (!looksLikeLogin(page.url())) {
-      // Browser profile already carried a valid session — just persist it.
-      await context.storageState({ path: AUTH_STATE });
-      console.log(`✓ Already signed in. Session saved → ${AUTH_STATE}`);
-      await browser.close();
-      return;
-    }
+    throw new Error(
+      "Could not reach the auth.deeplearning.ai sign-in form. Re-run `pnpm scrape:dlai:login` (or run `pnpm scrape:dlai -- --recon` to inspect).",
+    );
   }
   await page.waitForTimeout(2500);
 
@@ -211,11 +246,14 @@ async function runLogin(): Promise<void> {
   }
   await page.waitForTimeout(4000);
 
-  // Verify the session actually reaches the course (not bounced to login).
+  // Verify the session truly reaches the gated course: no login URL AND no
+  // force-login modal on a fresh load.
   await page.goto(COURSE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.waitForTimeout(3000);
-  if (looksLikeLogin(page.url())) {
-    throw new Error("Still redirected to login after sign-in — session not valid.");
+  await page.waitForTimeout(5000);
+  if (!(await isAuthed(page))) {
+    throw new Error(
+      "Signed in but the course still shows the login modal — session not valid.",
+    );
   }
 
   await context.storageState({ path: AUTH_STATE });
@@ -450,6 +488,14 @@ async function runScrape(recon: boolean): Promise<void> {
     ...BROWSER_OPTS,
     storageState: AUTH_STATE,
   });
+  // esbuild's keep-names transform (via tsx) rewrites functions inside
+  // page.evaluate() to call a `__name` helper that doesn't exist in the page
+  // context. Inject it as a no-op shim. Passed as a string so esbuild leaves
+  // it untouched.
+  await context.addInitScript({
+    content:
+      "window.__name = window.__name || function (f) { return f; };",
+  });
   const vtt = attachVttCapture(context);
   const page = await context.newPage();
 
@@ -457,10 +503,10 @@ async function runScrape(recon: boolean): Promise<void> {
   await page.goto(COURSE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.waitForTimeout(6000);
 
-  if (looksLikeLogin(page.url())) {
+  if (!(await isAuthed(page))) {
     await browser.close();
     throw new Error(
-      "Session expired (redirected to login). Re-run `pnpm scrape:dlai:login`.",
+      "Session expired or invalid (login modal/redirect present). Re-run `pnpm scrape:dlai:login`.",
     );
   }
 
