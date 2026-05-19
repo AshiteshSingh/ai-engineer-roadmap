@@ -480,8 +480,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(62vw, 280px);
-  height: min(62vw, 280px);
+  width: min(48vw, 220px);
+  height: min(48vw, 220px);
   flex-shrink: 0;
   font-size: 72px;
   line-height: 1;
@@ -607,6 +607,7 @@
   width: 100%;
   max-width: 560px;
   flex: 1;
+  min-height: 40vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   border-top: 1px solid rgba(255, 255, 255, 0.08);

@@ -55,6 +55,7 @@
     "audio:meta": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-meta --",
     "audio:gate:scan": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --all",
     "audio:gate:check": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --json --slug",
+    "audio:vitrifi": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-meta -- --slug vitrifi --title \"Vitrifi Cortex Portal: Multi-Tenant Wholesale Broadband Engineering — Audio Guide\" --input ../../data/audio/vitrifi.src.md --output ../../data/audio/vitrifi.json && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --json --slug vitrifi",
     "ml:rag-audio": "cd crates/ml && mkdir -p ../../data/audio && for s in rag embeddings embedding-models vector-databases chunking-strategies retrieval-strategies advanced-rag rag-evaluation; do m=../../data/content/$s.json; t=$(node -p \"require('$m').title\"); w=$(node -p \"Math.max(600,Math.round(require('$m').wordCount*0.55))\"); echo \"→ $s — $w words — $t\"; cargo run -p aer-ml --release --bin build-audio-guide -- --input ../../content/$s.md --output ../../data/audio/$s.json --script-cache ../../data/audio/$s.script.md --slug $s --title \"$t — Audio Guide\" --strip-diagrams --target-words $w || exit 1; done"
   },
   "dependencies": {

@@ -34,13 +34,6 @@ struct Args {
     output: PathBuf,
 }
 
-/// Python `round(words * 60 / NARRATION_WPM)` (the bin keeps Python's
-/// round-to-nearest rather than `wpm::estimate_secs`' floor, so emitted JSON
-/// is byte-identical to the retired script).
-fn estimate_secs(words: usize) -> u32 {
-    ((words as f64) * 60.0 / f64::from(wpm::NARRATION_WPM)).round() as u32
-}
-
 fn build_audio_meta(md_path: &PathBuf, slug: &str, title: &str) -> anyhow::Result<AudioMeta> {
     let raw = std::fs::read_to_string(md_path)
         .map_err(|e| anyhow::anyhow!("reading {}: {e}", md_path.display()))?;
@@ -68,7 +61,10 @@ fn build_audio_meta(md_path: &PathBuf, slug: &str, title: &str) -> anyhow::Resul
             // Skip near-empty stub sections (one-liners that survived stripping).
             continue;
         }
-        let duration = estimate_secs(words);
+        // Floor estimate (`wpm::estimate_secs`) — must match the audio gate's
+        // `duration-mismatch` recompute (gate.rs uses the same fn) and the
+        // system-wide convention (build-audio-guide, old TS vitrifi builder).
+        let duration = wpm::estimate_secs(words);
         chapters.push(AudioChapter {
             index: chapters.len(),
             title: raw_title.clone(),

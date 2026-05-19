@@ -39,6 +39,7 @@ export default async function ExperienceDetailPage({ params }: Props) {
   // Only entries with a hand-authored deep dive have audio — gate the fetch
   // so siblings don't trigger a per-request R2 lookup.
   const audioMeta = detail ? await getAudioMeta(slug) : null;
+  const expLogo = EXPERIENCE_LOGOS[slug];
 
   return (
     <main className={styles.page}>
@@ -93,7 +94,12 @@ export default async function ExperienceDetailPage({ params }: Props) {
             spoken walkthrough of the work. Chapter headings below jump the
             player.
           </p>
-          <AudioPlayer meta={audioMeta} category="Experience" />
+          <AudioPlayer
+            meta={audioMeta}
+            category="Experience"
+            logoSrc={expLogo?.src}
+            logoAlt={expLogo?.alt}
+          />
           {audioMeta.full_script && (
             <MarkdownProse
               content={audioMeta.full_script}
