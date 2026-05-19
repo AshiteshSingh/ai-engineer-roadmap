@@ -13,6 +13,10 @@
 export const PHASE_HUB_ROUTES: Record<string, string> = {
   "phase-3-rag": "/rag",
   "phase-5-evals": "/evals",
+  // Curated cross-phase hub (not a Rust taxonomy category): the synthetic
+  // homepage "Memory" card carries meta.slug "memory", so this entry makes it
+  // deep-link to /memory instead of opening a category modal.
+  memory: "/memory",
 };
 
 export interface PhaseHubMeta {

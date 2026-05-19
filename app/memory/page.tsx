@@ -1,7 +1,12 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { getAllLessons } from "@/lib/data";
-import type { CategoryMeta, Lesson } from "@/lib/data";
+import type { Lesson } from "@/lib/data";
+import {
+  MEMORY_HUB_CATEGORY as CATEGORY,
+  MEMORY_HUB_META as META,
+  getMemoryArticles,
+} from "@/lib/memory-hub";
 import { getAllCoursesByGroup } from "@/lib/db/queries";
 import type { ExternalCourse } from "@/lib/db/queries";
 import { Topbar } from "@/components/topbar";
@@ -13,38 +18,10 @@ import { ExternalCourses } from "@/components/external-courses";
 // Dedicated /memory hub. Memory is a cross-phase theme (no single taxonomy
 // category), so this is a curated standalone hub — it reuses the phase-hub
 // presentational suite (hero + interactive lesson browser) over a hand-picked
-// lesson set, then features the relevant DeepLearning.AI courses as external
+// lesson set (lib/memory-hub.ts, shared with the homepage card so they never
+// drift), then features the relevant DeepLearning.AI courses as external
 // resources. The scraped transcripts are NOT shown here — they remain private
 // chat-retrieval grounding; this page only links out to the courses.
-
-const CATEGORY = "Long-Term Memory";
-
-// Curated, roadmap-ordered. Cross-phase (Phase 4 agents/context + Phase 5
-// LangChain memory). Filtered against real lessons, so unknown slugs are
-// silently dropped rather than 404-ing.
-const MEMORY_SLUGS = [
-  "agent-memory",
-  "memory",
-  "memory-architectures",
-  "context-engineering",
-  "context-window-management",
-  "dynamic-context-assembly",
-  "context-compression",
-  "langmem-vectorize-memory",
-];
-
-const META: CategoryMeta = {
-  slug: "memory",
-  icon: "🧠",
-  description:
-    "Give agents durable recall — semantic, episodic and procedural memory, context-window engineering, and long-term memory stores that survive across sessions.",
-  gradient: ["var(--amber-9)", "var(--amber-11)"],
-  outcomes: [
-    "Distinguish semantic vs episodic vs procedural memory and when each applies",
-    "Engineer the context window: compression, dynamic assembly, windowing",
-    "Persist long-term memory with vector + metadata stores (e.g. LangMem)",
-  ],
-};
 
 export const metadata: Metadata = {
   title: "Long-Term Memory for AI Agents — AI Engineering",
@@ -54,10 +31,7 @@ export const metadata: Metadata = {
 
 export default async function MemoryHubPage() {
   const all = await getAllLessons();
-  const order = new Map(MEMORY_SLUGS.map((s, i) => [s, i]));
-  const articles: Lesson[] = all
-    .filter((l) => order.has(l.slug))
-    .sort((a, b) => order.get(a.slug)! - order.get(b.slug)!);
+  const articles: Lesson[] = getMemoryArticles(all);
 
   const totalMinutes = Math.round(
     articles.reduce((sum, a) => sum + a.readingTimeMin, 0),
