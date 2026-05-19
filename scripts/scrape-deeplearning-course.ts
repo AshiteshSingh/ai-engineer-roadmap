@@ -122,7 +122,7 @@ function attachVttCapture(context: BrowserContext): {
   };
 }
 
-// ── Phase A: login (headed, human-assisted) ──────────────────────────
+// ── Phase A: login (auto-fills credentials; headed for challenge assist) ──
 
 async function runLogin(): Promise<void> {
   const email = process.env.DLAI_EMAIL;
@@ -138,56 +138,78 @@ async function runLogin(): Promise<void> {
   const context = await browser.newContext(BROWSER_OPTS);
   const page = await context.newPage();
 
-  console.log("→ Opening DeepLearning.AI login…");
-  await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  // Hitting the gated course while unauthenticated 302s to the identity
+  // provider (auth.deeplearning.ai) that hosts the real email/password form,
+  // with the correct OIDC/PKCE params already attached.
+  console.log("→ Opening DeepLearning.AI sign-in…");
+  await page.goto(COURSE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+
+  try {
+    await page.waitForURL(AUTH_LOGIN_RE, { timeout: 45_000 });
+  } catch {
+    if (!looksLikeLogin(page.url())) {
+      // Browser profile already carried a valid session — just persist it.
+      await context.storageState({ path: AUTH_STATE });
+      console.log(`✓ Already signed in. Session saved → ${AUTH_STATE}`);
+      await browser.close();
+      return;
+    }
+  }
   await page.waitForTimeout(2500);
 
-  // Best-effort auto-fill. The site may stage email → password across screens;
-  // fill whatever is visible. Anything we miss, the user completes by hand.
-  try {
-    const emailInput = page
-      .locator(
-        'input[type="email"], input[name="email"], input[id*="email" i], input[autocomplete="username"]',
-      )
-      .first();
-    if (await emailInput.count()) {
-      await emailInput.fill(email, { timeout: 8000 });
-      await page
-        .getByRole("button", { name: /continue|next|sign in|log ?in/i })
-        .first()
-        .click({ timeout: 4000 })
-        .catch(() => {});
-      await page.waitForTimeout(2000);
-    }
-    const pwInput = page.locator('input[type="password"]').first();
-    if (await pwInput.count()) {
-      await pwInput.fill(password, { timeout: 8000 });
-      await page
-        .getByRole("button", { name: /sign in|log ?in|continue|submit/i })
-        .first()
-        .click({ timeout: 4000 })
-        .catch(() => {});
-    }
-  } catch (e) {
-    console.log(`  (auto-fill partial: ${(e as Error).message})`);
-  }
+  // Dismiss a cookie-consent banner if it overlays the form.
+  await page
+    .locator(
+      '#onetrust-accept-btn-handler, button:has-text("Accept all"), button:has-text("Accept All")',
+    )
+    .first()
+    .click({ timeout: 3000 })
+    .catch(() => {});
+
+  // Fill the email + password form (NOT the Google/LinkedIn/Apple SSO buttons)
+  // and submit it via the exact "Sign in" button.
+  const emailInput = page
+    .locator(
+      'input#email, input[type="email"], input[name="email"], input[autocomplete="username"], input[type="text"]:visible',
+    )
+    .first();
+  await emailInput.waitFor({ state: "visible", timeout: 30_000 });
+  await emailInput.fill(email);
+
+  const pwInput = page
+    .locator('input#password, input[type="password"]')
+    .first();
+  await pwInput.waitFor({ state: "visible", timeout: 15_000 });
+  await pwInput.fill(password);
+
+  await page
+    .getByRole("button", { name: /^\s*sign in\s*$/i })
+    .first()
+    .click({ timeout: 8000 })
+    .catch(async () => {
+      await pwInput.press("Enter").catch(() => {});
+    });
 
   console.log(
-    "\n  → Complete any captcha / 2FA / magic-link in the browser window.\n" +
-      "    Waiting up to 6 minutes for login to finish…\n",
+    "\n  Credentials submitted. If a captcha / 2FA appears, complete it in the\n" +
+      "  browser window — waiting up to 6 minutes for sign-in to finish…\n",
   );
 
-  // Success = the app navigates off the login/auth screens.
+  // Success = we land back on learn.deeplearning.ai, off the login/auth screens.
   try {
-    await page.waitForURL((u) => !looksLikeLogin(u.toString()), {
-      timeout: 360_000,
-    });
+    await page.waitForURL(
+      (u) => {
+        const s = u.toString();
+        return s.includes("learn.deeplearning.ai") && !looksLikeLogin(s);
+      },
+      { timeout: 360_000 },
+    );
   } catch {
     throw new Error(
-      "Login did not complete within 6 minutes. Re-run `pnpm scrape:dlai:login`.",
+      "Sign-in did not complete within 6 minutes. Check DLAI_EMAIL/DLAI_PASSWORD in .env.local, then re-run `pnpm scrape:dlai:login`.",
     );
   }
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(4000);
 
   // Verify the session actually reaches the course (not bounced to login).
   await page.goto(COURSE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
