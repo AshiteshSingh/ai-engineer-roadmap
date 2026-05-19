@@ -344,6 +344,12 @@ function getCategory(num: number): string {
   return "Other";
 }
 
+/** Per-slug override first (FS-fallback parity with the Rust seeder), then
+ *  the number-range mapping. */
+function categoryForSlug(slug: string, num: number): string {
+  return LESSON_CATEGORY_OVERRIDES[slug] ?? getCategory(num);
+}
+
 export function resolveContentFile(slug: string): string | null {
   const filePath = path.join(CONTENT_DIR, `${slug}.md`);
   return fs.existsSync(filePath) ? filePath : null;
@@ -432,7 +438,7 @@ export function getAllLessons(): Lesson[] {
       const number = LESSON_NUMBER[slug] ?? 0;
       const raw = fs.readFileSync(path.join(CONTENT_DIR, file), "utf-8");
       const title = extractTitle(raw);
-      const category = getCategory(number);
+      const category = categoryForSlug(slug, number);
       const wordCount = raw.split(/\s+/).filter(Boolean).length;
       const readingTimeMin = Math.max(1, Math.round(wordCount / 200));
       const excerpt = extractExcerpt(raw);
@@ -449,7 +455,7 @@ export function getLessonBySlug(slug: string): LessonWithContent | null {
   const raw = fs.readFileSync(file, "utf-8");
   const number = LESSON_NUMBER[slug] ?? 0;
   const title = extractTitle(raw);
-  const category = getCategory(number);
+  const category = categoryForSlug(slug, number);
   const wordCount = raw.split(/\s+/).filter(Boolean).length;
   const readingTimeMin = Math.max(1, Math.round(wordCount / 200));
   const excerpt = extractExcerpt(raw);

@@ -13,10 +13,9 @@
 export const PHASE_HUB_ROUTES: Record<string, string> = {
   "phase-3-rag": "/rag",
   "phase-5-evals": "/evals",
-  // Curated cross-phase hub (not a Rust taxonomy category): the synthetic
-  // homepage "Memory" card carries meta.slug "memory", so this entry makes it
-  // deep-link to /memory instead of opening a category modal.
-  memory: "/memory",
+  // Real taxonomy category "Phase 5 · Long-Term Memory" (slug phase-5-memory,
+  // lessons assigned per-slug); its homepage card deep-links to /memory.
+  "phase-5-memory": "/memory",
 };
 
 export interface PhaseHubMeta {
@@ -34,5 +33,10 @@ export const PHASE_HUB_METADATA_OVERRIDES: Record<string, PhaseHubMeta> = {
     title: "Evals, Safety & Observability — AI Engineering",
     description:
       "Measure what matters and ship safely: evaluation fundamentals, LLM-as-judge, benchmarks, red-teaming, guardrails, online evaluation and observability.",
+  },
+  "phase-5-memory": {
+    title: "Long-Term Memory for AI Agents — AI Engineering",
+    description:
+      "A focused track on agent memory: semantic/episodic/procedural memory, context engineering, and long-term memory stores — plus the best DeepLearning.AI courses on the topic.",
   },
 };

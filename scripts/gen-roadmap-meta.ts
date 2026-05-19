@@ -11,7 +11,12 @@
 
 import fs from "fs";
 import path from "path";
-import { CATEGORIES, CATEGORY_META, LESSON_NUMBER } from "../lib/articles";
+import {
+  CATEGORIES,
+  CATEGORY_META,
+  LESSON_NUMBER,
+  LESSON_CATEGORY_OVERRIDES,
+} from "../lib/articles";
 
 const categories = CATEGORIES.map(([lo, hi, name], i) => {
   const meta = CATEGORY_META[name];
@@ -29,7 +34,11 @@ const categories = CATEGORIES.map(([lo, hi, name], i) => {
   };
 });
 
-const out = { categories, lessonNumber: LESSON_NUMBER };
+const out = {
+  categories,
+  lessonNumber: LESSON_NUMBER,
+  lessonCategoryOverrides: LESSON_CATEGORY_OVERRIDES,
+};
 
 const file = path.join(process.cwd(), "data", "roadmap-meta.json");
 fs.mkdirSync(path.dirname(file), { recursive: true });

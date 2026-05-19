@@ -32,6 +32,10 @@ pub struct CategoryMeta {
 pub struct RoadmapMeta {
     pub categories: Vec<CategoryMeta>,
     pub lesson_number: HashMap<String, i64>,
+    /// Per-slug category assignment that wins over the number-range mapping
+    /// (lets a cross-phase theme be a real category without renumbering).
+    #[serde(default)]
+    pub lesson_category_overrides: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -214,10 +218,17 @@ pub fn seed_content(
         let Some(&number) = meta.lesson_number.get(&slug) else {
             continue;
         };
-        let Some(cat) = category_for(number, &meta) else {
+        // Per-slug override wins over the number-range mapping.
+        let cat_name = match meta.lesson_category_overrides.get(&slug) {
+            Some(name) => name.clone(),
+            None => match category_for(number, &meta) {
+                Some(cat) => cat.name.clone(),
+                None => continue,
+            },
+        };
+        let Some(&cat_id) = cat_id_by_name.get(&cat_name) else {
             continue;
         };
-        let cat_id = cat_id_by_name[&cat.name];
 
         let content = fs::read_to_string(&path)?;
         let title = extract_title(&content);

@@ -50,15 +50,15 @@
       "lessonRangeHi": 28
     },
     {
-      "name": "Phase 4 · Agents, Memory & Orchestration",
+      "name": "Phase 4 · Agents & Orchestration",
       "slug": "phase-4-agents",
       "icon": "🤖",
-      "description": "Build agents that reason and act — tool-use loops, multi-agent coordination, and context & memory engineering",
+      "description": "Build agents that reason and act — tool-use loops, multi-agent coordination, and orchestration",
       "gradientFrom": "var(--amber-9)",
       "gradientTo": "var(--amber-11)",
       "outcomes": [
-        "Build a tool-using agent loop with short- and long-term memory",
-        "Coordinate multiple agents and engineer the context window under token limits",
+        "Build a tool-using agent loop",
+        "Coordinate multiple agents and orchestrate multi-step work",
         "Ship a Multi-Source Research Agent reusing Phase 2 tool calls and Phase 3 retrieval (Portfolio L2)"
       ],
       "sortOrder": 3,
@@ -66,7 +66,23 @@
       "lessonRangeHi": 42
     },
     {
-      "name": "Phase 5 · LangChain & LangGraph",
+      "name": "Phase 5 · Long-Term Memory",
+      "slug": "phase-5-memory",
+      "icon": "🧠",
+      "description": "Give agents durable recall — semantic, episodic and procedural memory, context-window engineering, and long-term memory stores that survive across sessions",
+      "gradientFrom": "var(--amber-9)",
+      "gradientTo": "var(--amber-11)",
+      "outcomes": [
+        "Distinguish semantic vs episodic vs procedural memory and when each applies",
+        "Engineer the context window: compression, dynamic assembly, windowing",
+        "Persist long-term memory with vector + metadata stores (e.g. LangMem)"
+      ],
+      "sortOrder": 4,
+      "lessonRangeLo": 1,
+      "lessonRangeHi": 0
+    },
+    {
+      "name": "Phase 6 · LangChain & LangGraph",
       "slug": "phase-5-langchain",
       "icon": "⛓",
       "description": "Build production agent graphs with LangChain and LangGraph — LCEL chains, stateful graphs, D1-checkpointed memory, human-in-the-loop, and tracing",
@@ -78,12 +94,12 @@
         "Add human-in-the-loop interrupts and stream/trace a graph end to end",
         "Ship a deployed multi-agent LangGraph service on the edge (Portfolio L2)"
       ],
-      "sortOrder": 4,
+      "sortOrder": 5,
       "lessonRangeLo": 43,
       "lessonRangeHi": 52
     },
     {
-      "name": "Phase 6 · Evals, Safety & Observability",
+      "name": "Phase 7 · Evals, Safety & Observability",
       "slug": "phase-5-evals",
       "icon": "🛡",
       "description": "Prove it works and ships safely — evals, red-teaming, guardrails, and gateway-level observability",
@@ -94,12 +110,12 @@
         "Add guardrails and mitigate hallucination and bias",
         "Ship an eval + red-team + observability harness over your Phase 4–5 agent (Portfolio L3)"
       ],
-      "sortOrder": 5,
+      "sortOrder": 6,
       "lessonRangeLo": 53,
       "lessonRangeHi": 69
     },
     {
-      "name": "Phase 7 · Ship to Production",
+      "name": "Phase 8 · Ship to Production",
       "slug": "phase-6-ship",
       "icon": "🚀",
       "description": "Take it to production — deploy, scale, cost-control, and CI/CD",
@@ -110,7 +126,7 @@
         "Cap inference cost and wire CI/CD-gated evals",
         "Ship a cost-bounded, observable AI feature to production (e.g. an AI Code Review Bot)"
       ],
-      "sortOrder": 6,
+      "sortOrder": 7,
       "lessonRangeLo": 70,
       "lessonRangeHi": 80
     },
@@ -126,7 +142,7 @@
         "Fine-tune with LoRA/QLoRA on a curated dataset",
         "Ship a domain-tuned assistant wrapped in a safety stack (Portfolio L3, senior signal)"
       ],
-      "sortOrder": 7,
+      "sortOrder": 8,
       "lessonRangeLo": 81,
       "lessonRangeHi": 86
     },
@@ -142,7 +158,7 @@
         "Containerize a service with Docker",
         "Run a workload on Kubernetes"
       ],
-      "sortOrder": 8,
+      "sortOrder": 9,
       "lessonRangeLo": 87,
       "lessonRangeHi": 89
     },
@@ -158,7 +174,7 @@
         "Reason about microservices, SQL joins and CI/CD",
         "Communicate technical work with structure and presence"
       ],
-      "sortOrder": 9,
+      "sortOrder": 10,
       "lessonRangeLo": 90,
       "lessonRangeHi": 98
     }
@@ -262,5 +278,15 @@
     "foreign-keys": 96,
     "llamaindex": 97,
     "public-speaking": 98
+  },
+  "lessonCategoryOverrides": {
+    "agent-memory": "Phase 5 · Long-Term Memory",
+    "memory": "Phase 5 · Long-Term Memory",
+    "memory-architectures": "Phase 5 · Long-Term Memory",
+    "context-engineering": "Phase 5 · Long-Term Memory",
+    "context-window-management": "Phase 5 · Long-Term Memory",
+    "dynamic-context-assembly": "Phase 5 · Long-Term Memory",
+    "context-compression": "Phase 5 · Long-Term Memory",
+    "langmem-vectorize-memory": "Phase 5 · Long-Term Memory"
   }
 }
