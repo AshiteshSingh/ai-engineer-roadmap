@@ -3956,9 +3956,11 @@
 /* ── Node marker on the spine ────────────────────────── */
 .lp-node {
   position: absolute;
-  top: 0;
+  /* card padding-top (--space-4) + half of .lp-icon (34px) → node center
+     aligns with the card header (icon/phase) row */
+  top: calc(var(--space-4) + 17px);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   width: 44px;
   height: 44px;
   border-radius: var(--ds-radius-pill);
@@ -4207,7 +4209,8 @@
     padding-left: 52px;
   }
   .lp-rail::before { left: 21px; }
-  .lp-node { left: 21px; }
+  /* card padding shrinks to --space-3 here; keep node centered on header row */
+  .lp-node { left: 21px; top: calc(var(--space-3) + 17px); }
   .lp-card { padding: var(--space-3); }
   .lp-card-foot {
     flex-direction: column;
