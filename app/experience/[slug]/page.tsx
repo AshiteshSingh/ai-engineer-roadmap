@@ -12,6 +12,12 @@ import styles from "../experience.module.css";
 // guard can run — intentionally NO generateStaticParams (no static prerender).
 type Props = { params: Promise<{ slug: string }> };
 
+// Brand logo shown in the narration player's cover plate, per experience slug.
+// Entries without a mapping fall back to the player's default emoji/gradient.
+const EXPERIENCE_LOGOS: Record<string, { src: string; alt: string }> = {
+  vitrifi: { src: "/experience/vitrifi-logo.png", alt: "Vitrifi" },
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const entry = getExperienceBySlug(slug);

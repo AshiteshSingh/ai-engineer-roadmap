@@ -109,6 +109,21 @@
     0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
+/* Brand-logo variant: a contained wide plate instead of the square emoji tile.
+   Keeps the dark surface so the white "Powered by Vitrifi" lockup reads. */
+.audioCoverLogo {
+  width: auto;
+  max-width: 150px;
+  padding: 0 8px;
+}
+.audioCoverImg {
+  display: block;
+  height: 60%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 .audioInfo {
   display: flex;
   flex-direction: column;
@@ -331,6 +346,12 @@
     height: 40px;
     font-size: 19px;
   }
+  /* Re-assert the logo plate — the .audioCover mobile rule above would
+     otherwise clamp it back to a 40px square. */
+  .audioCoverLogo {
+    width: auto;
+    max-width: 132px;
+  }
   .audioInfoTime {
     display: none;
   }
@@ -470,6 +491,19 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     inset 0 -12px 28px rgba(0, 0, 0, 0.24),
     0 16px 44px -10px rgba(0, 0, 0, 0.6);
+}
+/* Brand-logo variant: a centered wide banner, not a 280px letterboxed square. */
+.audioFsCoverLogo {
+  width: min(70vw, 320px);
+  height: auto;
+  aspect-ratio: auto;
+  padding: 20px 24px;
+}
+.audioFsCoverImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 .audioFsMeta {
   width: 100%;

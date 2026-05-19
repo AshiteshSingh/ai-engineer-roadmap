@@ -65,12 +65,18 @@ export function AudioPlayer({
   meta,
   gradient,
   icon,
+  logoSrc,
+  logoAlt,
   category,
   autoPlay = false,
 }: {
   meta: AudioMeta;
   gradient?: [string, string];
   icon?: string;
+  /** Optional brand logo image. When set, the cover tile renders this image
+   *  (as a contained wide brand plate) instead of the emoji/gradient. */
+  logoSrc?: string;
+  logoAlt?: string;
   category?: string;
   /** Start playing as soon as metadata loads (resumes from saved position).
    *  Default false — the lesson detail page must NOT autoplay. */
@@ -618,8 +624,22 @@ export function AudioPlayer({
               </button>
             </div>
 
-            <div className={styles.audioFsCover} aria-hidden="true">
-              {icon ?? "♪"}
+            <div
+              className={cx(
+                styles.audioFsCover,
+                logoSrc && styles.audioFsCoverLogo,
+              )}
+              aria-hidden="true"
+            >
+              {logoSrc ? (
+                <img
+                  src={logoSrc}
+                  alt=""
+                  className={styles.audioFsCoverImg}
+                />
+              ) : (
+                (icon ?? "♪")
+              )}
             </div>
 
             <div className={styles.audioFsMeta}>
@@ -699,8 +719,18 @@ export function AudioPlayer({
             onClick={openExpanded}
             aria-label="Open full screen player"
           >
-            <span className={styles.audioCover} aria-hidden="true">
-              {icon ?? "♪"}
+            <span
+              className={cx(
+                styles.audioCover,
+                logoSrc && styles.audioCoverLogo,
+              )}
+              aria-hidden="true"
+            >
+              {logoSrc ? (
+                <img src={logoSrc} alt="" className={styles.audioCoverImg} />
+              ) : (
+                (icon ?? "♪")
+              )}
             </span>
             <span className={styles.audioInfo}>
               <span className={styles.audioInfoChapter}>
