@@ -17,6 +17,8 @@
  * configured separately via Email Routing; this module is sending-only.
  */
 
+import { d1Query, d1Configured } from "../d1";
+
 const CF_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const SEND_TOKEN =
   process.env.CLOUDFLARE_EMAIL_SENDING_API_TOKEN ||
@@ -46,6 +48,41 @@ export interface SendEmailResult {
   status: number;
 }
 
+/**
+ * Best-effort audit log of an outbound send into D1 `email_sends`.
+ * Never throws and never blocks delivery — a logging failure is swallowed.
+ */
+async function logSend(
+  to: string | string[],
+  from: string,
+  subject: string,
+  status: number | null,
+  cfMessageId: string | undefined,
+  error: string | null,
+): Promise<void> {
+  if (!d1Configured()) return;
+  try {
+    await d1Query(
+      `INSERT INTO email_sends
+         (to_addr, from_addr, subject, provider, status, cf_message_id, error, sent_at)
+       VALUES (?, ?, ?, 'cloudflare', ?, ?, ?, ?)`,
+      [
+        Array.isArray(to) ? to.join(", ") : to,
+        from,
+        subject,
+        status,
+        cfMessageId ?? null,
+        error,
+        Date.now(),
+      ],
+    );
+  } catch (e) {
+    console.warn(
+      `email_sends log skipped: ${e instanceof Error ? e.message : e}`,
+    );
+  }
+}
+
 export async function sendEmail(
   input: SendEmailInput,
 ): Promise<SendEmailResult> {
@@ -56,9 +93,10 @@ export async function sendEmail(
     );
   }
   const url = `${API}/accounts/${CF_ACCOUNT_ID}/email/sending/send`;
+  const fromAddr = input.from || DEFAULT_FROM;
   const body: Record<string, unknown> = {
     to: input.to,
-    from: input.from || DEFAULT_FROM,
+    from: fromAddr,
     subject: input.subject,
     html: input.html,
     text: input.text,
@@ -84,6 +122,14 @@ export async function sendEmail(
         "ai-engineer-roadmap.xyz has not been onboarded under Compute → " +
         "Email Service → Email Sending. See docs/cloudflare-email.md.";
     }
+    await logSend(
+      input.to,
+      fromAddr,
+      input.subject,
+      res.status,
+      undefined,
+      `${res.status}: ${detail}`,
+    );
     throw new Error(`Cloudflare Email send ${res.status}: ${detail}${hint}`);
   }
 
@@ -94,5 +140,6 @@ export async function sendEmail(
   } catch {
     // An empty / non-JSON 2xx body is acceptable for this endpoint.
   }
+  await logSend(input.to, fromAddr, input.subject, res.status, id, null);
   return { id, status: res.status };
 }
