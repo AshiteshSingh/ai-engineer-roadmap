@@ -87,6 +87,25 @@ function parseVtt(raw: string): { cues: Cue[]; text: string } {
   return { cues, text: seen.join("\n") };
 }
 
+/** A "thumbnails"/storyboard track: cue text is image sprite URLs, not prose. */
+function isStoryboardVtt(p: { cues: Cue[] }): boolean {
+  if (!p.cues.length) return true;
+  const spritey = p.cues.filter((c) =>
+    /#xywh=|\.(jpe?g|png|webp)(\?|#|$)/i.test(c.text),
+  ).length;
+  return spritey / p.cues.length > 0.5;
+}
+
+/** Derive a clean lesson title from the `/lesson/<id>/<slug>` URL segment. */
+function slugTitle(url: string): string {
+  const seg = decodeURIComponent(url).split("/").filter(Boolean).pop() ?? "";
+  return seg
+    .replace(/[-_]+/g, " ")
+    .replace(/\s*\+\s*/g, " + ")
+    .trim()
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 // ── Browser helpers ──────────────────────────────────────────────────
 
 function looksLikeLogin(url: string): boolean {
@@ -296,7 +315,12 @@ async function discoverLessons(page: Page): Promise<LessonRef[]> {
     return out;
   }, COURSE_SLUG);
 
-  return refs;
+  // The nav text concatenates metadata ("…Video・2m"); the URL slug is the
+  // clean canonical name. Keep the raw nav text as a fallback only.
+  return refs.map((r) => ({
+    title: slugTitle(r.url) || r.title,
+    url: r.url,
+  }));
 }
 
 // ── Per-lesson extraction ────────────────────────────────────────────
@@ -342,6 +366,65 @@ async function scrapeLesson(
       .catch(() => {});
   }
   await page.waitForTimeout(1500);
+
+  // Caption tracks are lazy: the player only fetches the spoken-text VTT once
+  // subtitles are turned on. Best-effort click a CC/subtitles control, then
+  // force every non-metadata text track to load and read its cues straight
+  // from the HTMLVideoElement (lets us skip the "thumbnails" storyboard track).
+  for (const sel of [
+    'button[aria-label*="subtitle" i]',
+    'button[aria-label*="caption" i]',
+    'button[aria-label*="cc" i]',
+    'button:has-text("CC")',
+    '[data-testid*="subtitle" i]',
+  ]) {
+    await page.locator(sel).first().click({ timeout: 1500 }).catch(() => {});
+  }
+  await page
+    .locator("video")
+    .first()
+    .focus()
+    .then(() => page.keyboard.press("c"))
+    .catch(() => {});
+
+  const trackCues = await page.evaluate(async () => {
+    const v = document.querySelector("video");
+    if (!v) return [] as { start: number; end: number; text: string }[];
+    const tracks = [...v.textTracks];
+    for (const t of tracks) {
+      if (t.kind === "metadata") continue;
+      try {
+        t.mode = "showing";
+      } catch {
+        /* some tracks reject mode changes */
+      }
+    }
+    // Poll up to ~6s for the browser to fetch + parse the cue list.
+    const pick = () => {
+      for (const t of [...v.textTracks]) {
+        if (t.kind === "metadata") continue;
+        const label = `${t.label} ${t.language}`.toLowerCase();
+        if (/thumb|storyboard|sprite/.test(label)) continue;
+        const cues = [...((t.cues as TextTrackCueList | null) ?? [])];
+        if (cues.length) {
+          return cues.map((c) => ({
+            start: (c as VTTCue).startTime,
+            end: (c as VTTCue).endTime,
+            text: String((c as VTTCue).text ?? "")
+              .replace(/<[^>]+>/g, "")
+              .trim(),
+          }));
+        }
+      }
+      return null;
+    };
+    for (let i = 0; i < 24; i++) {
+      const got = pick();
+      if (got && got.length) return got;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    return [];
+  });
 
   const dom = await page.evaluate(() => {
     const txt = (el: Element | null) =>
@@ -436,20 +519,34 @@ async function scrapeLesson(
     };
   });
 
-  // Resolve subtitles: network VTT first, DOM transcript fallback.
-  const vttBodies = vtt.drain();
-  let subtitles: Lesson["subtitles"] = {
-    source: "none",
-    cues: [],
-    text: "",
-  };
-  if (vttBodies.length) {
-    const best = vttBodies
-      .map(parseVtt)
-      .sort((a, b) => b.text.length - a.text.length)[0];
-    if (best && best.text.trim())
-      subtitles = { source: "vtt", cues: best.cues, text: best.text };
+  // Resolve subtitles, best source first:
+  //  1. cues read straight off the <video> textTracks (kind-filtered),
+  //  2. network-captured VTT, with the thumbnail/storyboard track rejected,
+  //  3. the on-page transcript/lesson text.
+  let subtitles: Lesson["subtitles"] = { source: "none", cues: [], text: "" };
+
+  const cleanCues = trackCues.filter((c) => c.text && c.text.trim());
+  if (cleanCues.length) {
+    const seen: string[] = [];
+    for (const c of cleanCues)
+      if (seen[seen.length - 1] !== c.text) seen.push(c.text);
+    subtitles = { source: "vtt", cues: cleanCues, text: seen.join("\n") };
   }
+
+  if (subtitles.source === "none") {
+    const candidate = vtt
+      .drain()
+      .map(parseVtt)
+      .filter((p) => !isStoryboardVtt(p) && p.text.trim().length > 0)
+      .sort((a, b) => b.text.length - a.text.length)[0];
+    if (candidate)
+      subtitles = {
+        source: "vtt",
+        cues: candidate.cues,
+        text: candidate.text,
+      };
+  }
+
   if (subtitles.source === "none" && dom.transcriptDom.length > 80) {
     subtitles = { source: "dom", cues: [], text: dom.transcriptDom };
   }
