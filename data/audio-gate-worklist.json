@@ -1,5 +1,5 @@
 {
-  "generated_at_unix": 1779077502,
+  "generated_at_unix": 1779197674,
   "thresholds": {
     "min_chapters": 3,
     "min_words_per_chapter": 40,
@@ -9,8 +9,8 @@
     "sentence_cv_min": 0.3
   },
   "summary": {
-    "total": 8,
-    "pass": 6,
+    "total": 9,
+    "pass": 7,
     "fail": 2
   },
   "lessons": [
@@ -594,6 +594,46 @@
         "total_duration_secs": 1414,
         "mean_words_per_chapter": 295,
         "sentence_len_cv": 0.4396122748695394
+      }
+    },
+    {
+      "slug": "vitrifi",
+      "title": "Vitrifi Cortex Portal: Multi-Tenant Wholesale Broadband Engineering — Audio Guide",
+      "ok": true,
+      "failures": [],
+      "warnings": [
+        {
+          "chapter": 0,
+          "rule": "acronym-first-use",
+          "detail": "`BT` not expanded on first use"
+        },
+        {
+          "chapter": 0,
+          "rule": "acronym-first-use",
+          "detail": "`NATS` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`NSO` not expanded on first use"
+        },
+        {
+          "chapter": 1,
+          "rule": "acronym-first-use",
+          "detail": "`ONU` not expanded on first use"
+        },
+        {
+          "chapter": 20,
+          "rule": "sentence-variety",
+          "detail": "monotone cadence (cv 0.29 < 0.30)"
+        }
+      ],
+      "metrics": {
+        "chapters": 21,
+        "total_words": 11782,
+        "total_duration_secs": 4705,
+        "mean_words_per_chapter": 561,
+        "sentence_len_cv": 0.5986538237119435
       }
     }
   ],
