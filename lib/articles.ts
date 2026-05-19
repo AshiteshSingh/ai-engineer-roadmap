@@ -271,7 +271,7 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
       "Ship a deployed multi-agent LangGraph service on the edge (Portfolio L2)",
     ],
   },
-  "Phase 6 · Evals, Safety & Observability": {
+  "Phase 7 · Evals, Safety & Observability": {
     slug: "phase-5-evals",
     icon: "🛡",
     description: "Prove it works and ships safely — evals, red-teaming, guardrails, and gateway-level observability",
@@ -282,7 +282,7 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
       "Ship an eval + red-team + observability harness over your Phase 4–5 agent (Portfolio L3)",
     ],
   },
-  "Phase 7 · Ship to Production": {
+  "Phase 8 · Ship to Production": {
     slug: "phase-6-ship",
     icon: "🚀",
     description: "Take it to production — deploy, scale, cost-control, and CI/CD",
