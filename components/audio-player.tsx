@@ -266,20 +266,18 @@ export function AudioPlayer({
     [meta.chapters, seek, isPlaying],
   );
 
-  const cycleSpeed = useCallback(() => {
+  const setSpeed = useCallback((rate: number) => {
     const audio = audioRef.current;
     if (!audio) return;
-    const idx = SPEEDS.indexOf(playbackRate);
-    const next = SPEEDS[(idx + 1) % SPEEDS.length];
-    audio.playbackRate = next;
-    setPlaybackRate(next);
+    audio.playbackRate = rate;
+    setPlaybackRate(rate);
     persistState({
       slug: meta.slug,
       currentTime: audio.currentTime,
-      playbackRate: next,
+      playbackRate: rate,
       updatedAt: Date.now(),
     });
-  }, [playbackRate, meta.slug]);
+  }, [meta.slug]);
 
   const seekToChapter = useCallback(
     (chapter: AudioChapter) => {
@@ -582,13 +580,26 @@ export function AudioPlayer({
           </div>
 
           {/* Speed */}
-          <button
-            className={cx(styles.audioBtn, styles.audioBtnSpeed)}
-            onClick={cycleSpeed}
-            aria-label={`Playback speed: ${playbackRate}x`}
+          <div
+            className={styles.audioSpeedGroup}
+            role="group"
+            aria-label="Playback speed"
           >
-            {playbackRate}x
-          </button>
+            {SPEEDS.map((s) => (
+              <button
+                key={s}
+                className={cx(
+                  styles.audioSpeedPill,
+                  playbackRate === s && styles.audioSpeedPillActive,
+                )}
+                onClick={() => setSpeed(s)}
+                aria-pressed={playbackRate === s}
+                aria-label={`Playback speed ${s}×`}
+              >
+                {s}×
+              </button>
+            ))}
+          </div>
 
           {/* Chapters toggle */}
           <button

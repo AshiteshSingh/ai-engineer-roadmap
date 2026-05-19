@@ -181,19 +181,54 @@
   filter: brightness(1.08);
   transform: scale(1.04);
 }
-.audioBtnSpeed {
-  width: auto;
-  border-radius: var(--ds-radius);
-  padding: 0 9px;
-  font-size: var(--text-xs);
+/* Speed pills — always-visible, directly selectable rates.
+   No-wrap scrollable strip so all 5 stay reachable at any viewport width. */
+.audioSpeedGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.audioSpeedGroup::-webkit-scrollbar {
+  display: none;
+}
+.audioSpeedPill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--ds-radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ds-text-muted);
+  font-size: var(--text-2xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--ds-ink);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease,
+    transform 0.1s ease;
 }
-.audioBtnSpeed:hover {
+.audioSpeedPill:hover {
+  color: var(--ds-ink);
   background: rgba(255, 255, 255, 0.09);
+}
+.audioSpeedPill:active {
+  transform: scale(0.94);
+}
+.audioSpeedPill:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+.audioSpeedPillActive {
+  color: var(--ds-ink);
+  background: color-mix(in srgb, var(--cat-from) 22%, transparent);
+  border-color: color-mix(in srgb, var(--cat-from) 45%, transparent);
 }
 
 /* Chapter panel (slides up above the bar) */
@@ -306,5 +341,12 @@
   .audioBtnPlay {
     width: 42px;
     height: 42px;
+  }
+  .audioSpeedGroup {
+    gap: 3px;
+  }
+  .audioSpeedPill {
+    height: 26px;
+    padding: 0 6px;
   }
 }
