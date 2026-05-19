@@ -860,7 +860,15 @@
       "category": "Appendix · Engineering & Communication",
       "wordCount": 2010,
       "readingTimeMin": 10
+    },
+    {
+      "slug": "sdd",
+      "number": 99,
+      "title": "Spec-Driven Development: Specs as the Durable Contract for Coding Agents",
+      "category": "Phase 2 · Prompting & Structured Output",
+      "wordCount": 2408,
+      "readingTimeMin": 12
     }
   ],
-  "totalWordCount": 471851
+  "totalWordCount": 474259
 }

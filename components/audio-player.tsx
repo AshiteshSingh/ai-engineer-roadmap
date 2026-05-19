@@ -83,6 +83,10 @@ export function AudioPlayer({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showChapters, setShowChapters] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  // Audible-style mobile full-screen "now playing" view.
+  const [expanded, setExpanded] = useState(false);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const expandHitRef = useRef<HTMLButtonElement>(null);
 
   // Find current chapter via reverse scan
   const currentChapterIndex = (() => {
@@ -289,6 +293,34 @@ export function AudioPlayer({
     [seek, isPlaying],
   );
 
+  // Tapping the bar opens the full-screen view — mobile only. Desktop keeps
+  // the inline bar (matchMedia guard + CSS pointer-events both enforce this).
+  const openExpanded = useCallback(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 768px)").matches
+    ) {
+      setExpanded(true);
+    }
+  }, []);
+
+  // Body-scroll-lock + Escape + focus management while the sheet is open.
+  useEffect(() => {
+    if (!expanded) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKey);
+    closeBtnRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+      expandHitRef.current?.focus();
+    };
+  }, [expanded]);
+
   // Media Session — lock-screen / headphone / car controls.
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
@@ -380,6 +412,148 @@ export function AudioPlayer({
 
   const progress = totalSecs > 0 ? (currentTime / totalSecs) * 100 : 0;
 
+  // Transport cluster — reused verbatim in the bar and the full-screen sheet
+  // (same handlers, same audio element; size differs purely via parent CSS).
+  const transportButtons = (
+    <>
+      <button
+        className={styles.audioBtn}
+        onClick={() => goToChapter(-1)}
+        disabled={!hasPrevChapter}
+        aria-label="Previous chapter"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="6" y="5" width="2.4" height="14" rx="1" />
+          <path d="M19 5v14L9 12z" />
+        </svg>
+      </button>
+
+      <button
+        className={styles.audioBtn}
+        onClick={() => skip(-SKIP)}
+        aria-label="Back 30 seconds"
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M1 4v6h6" />
+          <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+          <text
+            x="12.5"
+            y="16"
+            fill="currentColor"
+            stroke="none"
+            fontSize="8"
+            fontWeight="700"
+            textAnchor="middle"
+          >
+            30
+          </text>
+        </svg>
+      </button>
+
+      <button
+        className={cx(styles.audioBtn, styles.audioBtnPlay)}
+        onClick={togglePlay}
+        aria-label={isPlaying ? "Pause" : "Play"}
+        aria-pressed={isPlaying}
+      >
+        {isPlaying ? (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" rx="1" />
+            <rect x="14" y="4" width="4" height="16" rx="1" />
+          </svg>
+        ) : (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5.14v14.72a1 1 0 001.5.86l11-7.36a1 1 0 000-1.72l-11-7.36A1 1 0 008 5.14z" />
+          </svg>
+        )}
+      </button>
+
+      <button
+        className={styles.audioBtn}
+        onClick={() => skip(SKIP)}
+        aria-label="Forward 30 seconds"
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M23 4v6h-6" />
+          <path d="M20.49 15a9 9 0 11-2.13-9.36L23 10" />
+          <text
+            x="11.5"
+            y="16"
+            fill="currentColor"
+            stroke="none"
+            fontSize="8"
+            fontWeight="700"
+            textAnchor="middle"
+          >
+            30
+          </text>
+        </svg>
+      </button>
+
+      <button
+        className={styles.audioBtn}
+        onClick={() => goToChapter(1)}
+        disabled={!hasNextChapter}
+        aria-label="Next chapter"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M5 5v14l10-7z" />
+          <rect x="15.6" y="5" width="2.4" height="14" rx="1" />
+        </svg>
+      </button>
+    </>
+  );
+
+  const speedButtons = SPEEDS.map((s) => (
+    <button
+      key={s}
+      className={cx(
+        styles.audioSpeedPill,
+        playbackRate === s && styles.audioSpeedPillActive,
+      )}
+      onClick={() => setSpeed(s)}
+      aria-pressed={playbackRate === s}
+      aria-label={`Playback speed ${s}×`}
+    >
+      {s}×
+    </button>
+  ));
+
+  const chapterRows = meta.chapters.map((ch) => (
+    <button
+      key={ch.index}
+      className={cx(
+        styles.audioChapterItem,
+        ch.index === currentChapterIndex && styles.audioChapterItemActive,
+      )}
+      onClick={() => seekToChapter(ch)}
+    >
+      <span className={styles.audioChapterIdx}>{ch.index + 1}</span>
+      <span className={styles.audioChapterName}>{ch.title}</span>
+      <span className={styles.audioChapterTime}>
+        {formatTime(ch.start_secs)}
+      </span>
+    </button>
+  ));
+
   return (
     <>
       <audio ref={audioRef} src={meta.audio_url} preload="metadata" />
@@ -396,23 +570,96 @@ export function AudioPlayer({
           >
             <div className={styles.audioChaptersHandle} />
             <div className={styles.audioChaptersTitle}>Chapters</div>
-            {meta.chapters.map((ch) => (
+            {chapterRows}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile full-screen "now playing" view (Audible-style). Same audio
+          element / handlers — only the UI is restructured, never remounted. */}
+      {expanded && (
+        <div
+          className={styles.audioFsBackdrop}
+          onClick={() => setExpanded(false)}
+        >
+          <div
+            className={styles.audioFsSheet}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Now playing: ${meta.title}`}
+            style={
+              {
+                ["--cat-from" as string]:
+                  gradient?.[0] ?? "var(--ds-accent)",
+                ["--cat-to" as string]: gradient?.[1] ?? "var(--cyan-9)",
+              } as React.CSSProperties
+            }
+          >
+            <div className={styles.audioFsTop}>
               <button
-                key={ch.index}
-                className={cx(
-                  styles.audioChapterItem,
-                  ch.index === currentChapterIndex &&
-                    styles.audioChapterItemActive,
-                )}
-                onClick={() => seekToChapter(ch)}
+                ref={closeBtnRef}
+                className={styles.audioFsClose}
+                onClick={() => setExpanded(false)}
+                aria-label="Collapse player"
               >
-                <span className={styles.audioChapterIdx}>{ch.index + 1}</span>
-                <span className={styles.audioChapterName}>{ch.title}</span>
-                <span className={styles.audioChapterTime}>
-                  {formatTime(ch.start_secs)}
-                </span>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
               </button>
-            ))}
+            </div>
+
+            <div className={styles.audioFsCover} aria-hidden="true">
+              {icon ?? "♪"}
+            </div>
+
+            <div className={styles.audioFsMeta}>
+              <div className={styles.audioFsTitle}>{meta.title}</div>
+              <div className={styles.audioFsChapter}>
+                {currentChapter?.title ?? ""}
+              </div>
+            </div>
+
+            <div className={styles.audioFsSeekRow}>
+              <input
+                type="range"
+                className={styles.audioFsSeek}
+                min={0}
+                max={totalSecs}
+                step={0.1}
+                value={currentTime}
+                onChange={(e) => seek(Number(e.target.value))}
+                style={
+                  { "--progress": `${progress}%` } as React.CSSProperties
+                }
+                aria-label="Seek"
+              />
+              <div className={styles.audioFsTimes}>
+                <span>{formatTime(currentTime)}</span>
+                <span>-{formatTime(remaining)}</span>
+              </div>
+            </div>
+
+            <div className={styles.audioFsTransport}>{transportButtons}</div>
+
+            <div
+              className={styles.audioFsSpeeds}
+              role="group"
+              aria-label="Playback speed"
+            >
+              {speedButtons}
+            </div>
+
+            <div className={styles.audioFsList}>{chapterRows}</div>
           </div>
         </div>
       )}
@@ -445,160 +692,34 @@ export function AudioPlayer({
 
         {/* Row 2 — cover · info · transport · speed · chapters */}
         <div className={styles.audioPlayerInner}>
-          <div className={styles.audioCover} aria-hidden="true">
-            {icon ?? "♪"}
-          </div>
+          <button
+            type="button"
+            ref={expandHitRef}
+            className={styles.audioExpandHit}
+            onClick={openExpanded}
+            aria-label="Open full screen player"
+          >
+            <span className={styles.audioCover} aria-hidden="true">
+              {icon ?? "♪"}
+            </span>
+            <span className={styles.audioInfo}>
+              <span className={styles.audioInfoChapter}>
+                {currentChapter?.title ?? meta.title}
+              </span>
+              <span className={styles.audioInfoTime}>
+                {formatTime(currentTime)} &middot; -{formatTime(remaining)}
+              </span>
+            </span>
+          </button>
 
-          <div className={styles.audioInfo}>
-            <div className={styles.audioInfoChapter}>
-              {currentChapter?.title ?? meta.title}
-            </div>
-            <div className={styles.audioInfoTime}>
-              {formatTime(currentTime)} &middot; -{formatTime(remaining)}
-            </div>
-          </div>
+          <div className={styles.audioTransport}>{transportButtons}</div>
 
-          <div className={styles.audioTransport}>
-            {/* Previous chapter */}
-            <button
-              className={styles.audioBtn}
-              onClick={() => goToChapter(-1)}
-              disabled={!hasPrevChapter}
-              aria-label="Previous chapter"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="5" width="2.4" height="14" rx="1" />
-                <path d="M19 5v14L9 12z" />
-              </svg>
-            </button>
-
-            {/* Back 30s */}
-            <button
-              className={styles.audioBtn}
-              onClick={() => skip(-SKIP)}
-              aria-label="Back 30 seconds"
-            >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M1 4v6h6" />
-                <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
-                <text
-                  x="12.5"
-                  y="16"
-                  fill="currentColor"
-                  stroke="none"
-                  fontSize="8"
-                  fontWeight="700"
-                  textAnchor="middle"
-                >
-                  30
-                </text>
-              </svg>
-            </button>
-
-            {/* Play / Pause */}
-            <button
-              className={cx(styles.audioBtn, styles.audioBtnPlay)}
-              onClick={togglePlay}
-              aria-label={isPlaying ? "Pause" : "Play"}
-              aria-pressed={isPlaying}
-            >
-              {isPlaying ? (
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <rect x="6" y="4" width="4" height="16" rx="1" />
-                  <rect x="14" y="4" width="4" height="16" rx="1" />
-                </svg>
-              ) : (
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M8 5.14v14.72a1 1 0 001.5.86l11-7.36a1 1 0 000-1.72l-11-7.36A1 1 0 008 5.14z" />
-                </svg>
-              )}
-            </button>
-
-            {/* Forward 30s */}
-            <button
-              className={styles.audioBtn}
-              onClick={() => skip(SKIP)}
-              aria-label="Forward 30 seconds"
-            >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M23 4v6h-6" />
-                <path d="M20.49 15a9 9 0 11-2.13-9.36L23 10" />
-                <text
-                  x="11.5"
-                  y="16"
-                  fill="currentColor"
-                  stroke="none"
-                  fontSize="8"
-                  fontWeight="700"
-                  textAnchor="middle"
-                >
-                  30
-                </text>
-              </svg>
-            </button>
-
-            {/* Next chapter */}
-            <button
-              className={styles.audioBtn}
-              onClick={() => goToChapter(1)}
-              disabled={!hasNextChapter}
-              aria-label="Next chapter"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M5 5v14l10-7z" />
-                <rect x="15.6" y="5" width="2.4" height="14" rx="1" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Speed */}
           <div
             className={styles.audioSpeedGroup}
             role="group"
             aria-label="Playback speed"
           >
-            {SPEEDS.map((s) => (
-              <button
-                key={s}
-                className={cx(
-                  styles.audioSpeedPill,
-                  playbackRate === s && styles.audioSpeedPillActive,
-                )}
-                onClick={() => setSpeed(s)}
-                aria-pressed={playbackRate === s}
-                aria-label={`Playback speed ${s}×`}
-              >
-                {s}×
-              </button>
-            ))}
+            {speedButtons}
           </div>
 
           {/* Chapters toggle */}

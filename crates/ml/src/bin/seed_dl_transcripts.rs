@@ -88,7 +88,7 @@ fn lesson_links(haystack: &str) -> Vec<(&'static str, f64)> {
         ("vector", "vector-databases", 0.8),
         ("chunk", "chunking-strategies", 0.8),
         ("evaluation", "rag-evaluation", 0.75),
-        ("spec-driven", "spec-driven-development", 0.95),
+        ("spec-driven", "sdd", 0.95),
     ];
     let h = haystack.to_lowercase();
     let mut out: Vec<(&'static str, f64)> = Vec::new();

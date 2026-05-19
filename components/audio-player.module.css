@@ -335,12 +335,12 @@
     display: none;
   }
   .audioBtn {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
   }
   .audioBtnPlay {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
   }
   .audioSpeedGroup {
     gap: 3px;
@@ -348,5 +348,239 @@
   .audioSpeedPill {
     height: 26px;
     padding: 0 6px;
+  }
+}
+
+/* ================================================================
+   Mobile full-screen "now playing" (Audible-style). The bar's
+   cover+info is a button (.audioExpandHit) that, on mobile, opens
+   .audioFsSheet. Desktop: the hit area is inert and the sheet is
+   never shown (display:none defensively).
+   ================================================================ */
+
+/* Tap target on the bar (wraps cover + info) */
+.audioExpandHit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.audioExpandHit:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-radius-md);
+}
+/* Span-based info keeps its single-line ellipsis */
+.audioInfoChapter,
+.audioInfoTime {
+  display: block;
+}
+@media (min-width: 769px) {
+  /* Desktop: bar unchanged, tap area inert (JS also matchMedia-guards). */
+  .audioExpandHit {
+    pointer-events: none;
+    cursor: default;
+  }
+  .audioFsBackdrop,
+  .audioFsSheet {
+    display: none;
+  }
+}
+
+.audioFsBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: var(--z-scrim);
+}
+.audioFsSheet {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: calc(env(safe-area-inset-top) + var(--space-4))
+    calc(env(safe-area-inset-right) + var(--space-5))
+    calc(env(safe-area-inset-bottom) + var(--space-5))
+    calc(env(safe-area-inset-left) + var(--space-5));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--cat-from) 22%, transparent),
+      transparent 52%
+    ),
+    rgba(10, 10, 12, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: slide-up 0.28s ease;
+}
+.audioFsTop {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}
+.audioFsClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.audioFsClose:hover {
+  color: var(--ds-ink);
+  background: rgba(255, 255, 255, 0.08);
+}
+.audioFsClose:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+.audioFsCover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(62vw, 280px);
+  height: min(62vw, 280px);
+  flex-shrink: 0;
+  font-size: 72px;
+  line-height: 1;
+  border-radius: var(--ds-radius-lg);
+  background: linear-gradient(135deg, var(--cat-from), var(--cat-to));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -12px 28px rgba(0, 0, 0, 0.24),
+    0 16px 44px -10px rgba(0, 0, 0, 0.6);
+}
+.audioFsMeta {
+  width: 100%;
+  text-align: center;
+}
+.audioFsTitle {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--ds-ink);
+  line-height: 1.3;
+}
+.audioFsChapter {
+  font-size: var(--text-sm);
+  color: var(--ds-text-muted);
+  margin-top: 4px;
+}
+.audioFsSeekRow {
+  width: 100%;
+}
+.audioFsSeek {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: var(--ds-radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--cat-from) 0%,
+    var(--cat-to) var(--progress, 0%),
+    rgba(255, 255, 255, 0.14) var(--progress, 0%),
+    rgba(255, 255, 255, 0.14) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+.audioFsSeek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ds-ink);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+.audioFsSeek::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ds-ink);
+  border: none;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+.audioFsSeek:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: 4px;
+}
+.audioFsTimes {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: var(--text-2xs);
+  color: var(--ds-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.audioFsTransport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+.audioFsTransport .audioBtn {
+  width: 52px;
+  height: 52px;
+}
+.audioFsTransport .audioBtn svg {
+  width: 26px;
+  height: 26px;
+}
+.audioFsTransport .audioBtnPlay {
+  width: 72px;
+  height: 72px;
+}
+.audioFsTransport .audioBtnPlay svg {
+  width: 30px;
+  height: 30px;
+}
+.audioFsSpeeds {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.audioFsSpeeds .audioSpeedPill {
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--text-xs);
+}
+.audioFsList {
+  width: 100%;
+  max-width: 560px;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: var(--space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audioFsSheet {
+    animation: none;
   }
 }

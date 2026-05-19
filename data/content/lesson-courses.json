@@ -63,5 +63,20 @@
     "lessonSlug": "agent-architectures",
     "courseId": "769d4866-b1a3-4d15-b5cb-13d9bcd98dfd",
     "relevance": 0.8
+  },
+  {
+    "lessonSlug": "agent-architectures",
+    "courseId": "55b84e6c-7b18-4f57-8bd2-3f297e70c7f6",
+    "relevance": 0.8
+  },
+  {
+    "lessonSlug": "spec-driven-development",
+    "courseId": "55b84e6c-7b18-4f57-8bd2-3f297e70c7f6",
+    "relevance": 0.95
+  },
+  {
+    "lessonSlug": "sdd",
+    "courseId": "55b84e6c-7b18-4f57-8bd2-3f297e70c7f6",
+    "relevance": 0.95
   }
 ]

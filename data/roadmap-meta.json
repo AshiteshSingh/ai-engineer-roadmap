@@ -278,7 +278,7 @@
     "foreign-keys": 96,
     "llamaindex": 97,
     "public-speaking": 98,
-    "spec-driven-development": 99
+    "sdd": 99
   },
   "lessonCategoryOverrides": {
     "agent-memory": "Phase 5 · Long-Term Memory",
@@ -289,6 +289,6 @@
     "dynamic-context-assembly": "Phase 5 · Long-Term Memory",
     "context-compression": "Phase 5 · Long-Term Memory",
     "langmem-vectorize-memory": "Phase 5 · Long-Term Memory",
-    "spec-driven-development": "Phase 2 · Prompting & Structured Output"
+    "sdd": "Phase 2 · Prompting & Structured Output"
   }
 }
