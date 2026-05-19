@@ -32,8 +32,22 @@ let _lessons: LessonDoc[] | null = null;
 
 function load() {
   if (_sections && _lessons) return;
-  const file = path.join(resolveContentDir(), "sections.json");
-  const rows: SectionRow[] = JSON.parse(fs.readFileSync(file, "utf-8"));
+  const dir = resolveContentDir();
+  const rows: SectionRow[] = JSON.parse(
+    fs.readFileSync(path.join(dir, "sections.json"), "utf-8"),
+  );
+
+  // DeepLearning.AI lesson transcripts (chunked by seed-dl-transcripts) are an
+  // optional sibling corpus — fold them in so chat retrieval can cite them.
+  const dlaiFile = path.join(dir, "deeplearning-sections.json");
+  if (fs.existsSync(dlaiFile)) {
+    try {
+      const dlai: SectionRow[] = JSON.parse(fs.readFileSync(dlaiFile, "utf-8"));
+      rows.push(...dlai);
+    } catch {
+      /* malformed/partial export — fall back to roadmap sections only */
+    }
+  }
 
   _sections = rows.map((r) => ({
     ...r,

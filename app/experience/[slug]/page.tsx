@@ -1,20 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import {
-  getAllExperience,
-  getExperienceBySlug,
-  parseSummary,
-} from "@/lib/experience";
+import { getExperienceBySlug, parseSummary } from "@/lib/experience";
 import { getExperienceDetail } from "@/lib/experience-detail";
 import { MarkdownProse } from "@/components/markdown-prose";
 import styles from "../experience.module.css";
 
+// Owner-only (enforced by ../layout.tsx). Rendered per-request so the session
+// guard can run — intentionally NO generateStaticParams (no static prerender).
 type Props = { params: Promise<{ slug: string }> };
-
-export function generateStaticParams() {
-  return getAllExperience().map(({ slug }) => ({ slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

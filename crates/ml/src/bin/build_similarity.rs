@@ -1,7 +1,8 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-use aer_ml::content::{parser, similarity::SimilarityMatrix, sqlite};
+use aer_ml::content::{parser, similarity::SimilarityMatrix, sqlite, Lesson};
+use aer_ml::dlai::model::ScrapedCourse;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
@@ -15,6 +16,41 @@ struct Args {
     content: PathBuf,
     #[arg(long, default_value = "../data/similarity-matrix.json")]
     output: PathBuf,
+    /// Optional: also fold DeepLearning.AI scraped-course lessons
+    /// (`data/deeplearning/<slug>.json`) into the matrix as `dlai-*` nodes.
+    #[arg(long)]
+    dlai_dir: Option<PathBuf>,
+}
+
+/// One similarity node per scraped DeepLearning.AI lesson.
+fn dlai_lessons(dir: &std::path::Path) -> anyhow::Result<Vec<Lesson>> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(dir)? {
+        let path = entry?.path();
+        if !path.is_file() || path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        let Ok(course) = serde_json::from_str::<ScrapedCourse>(&std::fs::read_to_string(&path)?)
+        else {
+            continue;
+        };
+        for l in &course.lessons {
+            let body = ScrapedCourse::lesson_transcript(l);
+            if body.trim().is_empty() {
+                continue;
+            }
+            let excerpt: String = body.chars().take(600).collect();
+            out.push(Lesson {
+                slug: format!("dlai-{}-{}", course.slug, l.index),
+                title: format!("{} — {}", course.title, l.title),
+                excerpt,
+                word_count: body.split_whitespace().count(),
+                content: body,
+                category: "DeepLearning.AI".to_string(),
+            });
+        }
+    }
+    Ok(out)
 }
 
 fn main() -> anyhow::Result<()> {
@@ -23,7 +59,7 @@ fn main() -> anyhow::Result<()> {
         .init();
     let args = Args::parse();
 
-    let lessons = if args.db.exists() {
+    let mut lessons = if args.db.exists() {
         tracing::info!("Loading lessons from SQLite: {}", args.db.display());
         sqlite::load_lessons_from_sqlite(&args.db)?
     } else {
@@ -34,7 +70,18 @@ fn main() -> anyhow::Result<()> {
         );
         parser::load_lessons(&args.content)?
     };
-    tracing::info!("Loaded {} lessons", lessons.len());
+    tracing::info!("Loaded {} roadmap lessons", lessons.len());
+
+    if let Some(dir) = &args.dlai_dir {
+        if dir.exists() {
+            let dl = dlai_lessons(dir)?;
+            tracing::info!("Folding in {} DeepLearning.AI lesson nodes", dl.len());
+            lessons.extend(dl);
+        } else {
+            tracing::warn!("--dlai-dir {} not found; skipping", dir.display());
+        }
+    }
+    tracing::info!("Total {} lessons in matrix", lessons.len());
 
     let device = candle::best_device()?;
     let model = candle::EmbeddingModel::from_hf("BAAI/bge-large-en-v1.5", &device)?;

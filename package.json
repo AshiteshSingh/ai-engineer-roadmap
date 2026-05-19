@@ -48,6 +48,8 @@
     "prep:loop": "cd crates/ml && DEEPSEEK_API_KEY=\"$(grep -m1 '^DEEPSEEK_API_KEY=' /Users/vadimnicolai/Public/ai-apps/.env | cut -d= -f2- | tr -d '[:space:]')\" DATABASE_URL=\"$(grep -m1 '^DATABASE_URL=' /Users/vadimnicolai/Public/ai-apps/apps/ai-engineer-roadmap/.env.local | cut -d= -f2- | tr -d '[:space:]')\" cargo run -q -p aer-ml --release --bin gen-app-prep-loop --",
     "seed:courses": "cd crates/ml && cargo run -p aer-ml --release --bin seed-topic-courses --",
     "seed:deeplearning": "cd crates/ml && cargo run -p aer-ml --release --bin udemy -- deeplearning --seed-frontend",
+    "seed:dlai-transcripts": "cd crates/ml && cargo run -p aer-ml --release --bin seed-dl-transcripts --",
+    "content:similarity:dlai": "cd crates/ml && cargo run -p aer-ml --release --bin build-similarity -- --dlai-dir ../../data/deeplearning",
     "seed:rag-podcasts": "cd crates/ml && cargo run -p aer-ml --release --bin spotify-podcasts --",
     "audio:meta": "cd crates/ml && cargo run -p aer-ml --release --bin build-audio-meta --",
     "audio:gate:scan": "cd crates/ml && cargo run -q -p aer-ml --release --bin audio-gate -- --dir ../../data/audio --all",

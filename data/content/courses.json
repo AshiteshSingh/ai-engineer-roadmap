@@ -1,1 +1,67 @@
-[]
+[
+  {
+    "id": "c7fe082d-7d78-41db-9ee5-06dbaa2f22e2",
+    "title": "AI Agents in LangGraph",
+    "url": "https://learn.deeplearning.ai/courses/ai-agents-in-langgraph",
+    "provider": "DeepLearning.AI",
+    "description": "DeepLearning.AI short course. 10 lessons: Build An Agent From Scratch; Introduction; Langgraph Components; Agentic Search Tools; Persistence And Streaming; Human In The Loop; Essay Writer; Langchain Resources; Conclusion; Quiz.",
+    "level": "All Levels",
+    "rating": null,
+    "reviewCount": null,
+    "durationHours": 1.54,
+    "isFree": true,
+    "topicGroup": "AI Agents & Frameworks"
+  },
+  {
+    "id": "7a060339-620e-450d-87f7-42d35e955f1e",
+    "title": "Functions, Tools and Agents with LangChain",
+    "url": "https://learn.deeplearning.ai/courses/functions-tools-agents-langchain",
+    "provider": "DeepLearning.AI",
+    "description": "DeepLearning.AI short course. 9 lessons: Openai Function Calling; Introduction; Langchain Expression Language (Lcel); Openai Function Calling In Langchain; Tagging And Extraction; Tools And Routing; Conversational Agent; Conclusion; Quiz.",
+    "level": "All Levels",
+    "rating": null,
+    "reviewCount": null,
+    "durationHours": 1.75,
+    "isFree": true,
+    "topicGroup": "AI Agents & Frameworks"
+  },
+  {
+    "id": "2ee417e0-afff-4ba8-a7f7-0ba737cf85c0",
+    "title": "LangChain for LLM Application Development",
+    "url": "https://learn.deeplearning.ai/courses/langchain",
+    "provider": "DeepLearning.AI",
+    "description": "DeepLearning.AI short course. 9 lessons: Models, Prompts And Parsers; Introduction; Memory; Chains; Question And Answer; Evaluation; Agents; Conclusion; Quiz.",
+    "level": "All Levels",
+    "rating": null,
+    "reviewCount": null,
+    "durationHours": 1.64,
+    "isFree": true,
+    "topicGroup": "AI Agents & Frameworks"
+  },
+  {
+    "id": "4dd0d7a0-9f4c-4e80-a362-b2434c71d524",
+    "title": "LangChain Chat with Your Data",
+    "url": "https://learn.deeplearning.ai/courses/langchain-chat-with-your-data",
+    "provider": "DeepLearning.AI",
+    "description": "DeepLearning.AI short course. 9 lessons: Document Loading; Introduction; Document Splitting; Vectorstores And Embedding; Retrieval; Question Answering; Chat; Conclusion; Quiz.",
+    "level": "All Levels",
+    "rating": null,
+    "reviewCount": null,
+    "durationHours": 1.15,
+    "isFree": true,
+    "topicGroup": "AI Agents & Frameworks"
+  },
+  {
+    "id": "769d4866-b1a3-4d15-b5cb-13d9bcd98dfd",
+    "title": "Long-Term Agentic Memory With LangGraph",
+    "url": "https://learn.deeplearning.ai/courses/long-term-agentic-memory-with-langgraph",
+    "provider": "DeepLearning.AI",
+    "description": "DeepLearning.AI short course. 9 lessons: Introduction To Agent Memory; Introduction; Baseline Email Assistant; Email Assistant With Semantic Memory; Email Assistant With Semantic + Episodic Memory; Email Assistant With Semantic + Episodic + Procedural Memory; Conclusion; Quiz; Appendix Tips And Helps.",
+    "level": "All Levels",
+    "rating": null,
+    "reviewCount": null,
+    "durationHours": 1.08,
+    "isFree": true,
+    "topicGroup": "AI Agents & Frameworks"
+  }
+]

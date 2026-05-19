@@ -1,1 +1,67 @@
-[]
+[
+  {
+    "lessonSlug": "langgraph",
+    "courseId": "c7fe082d-7d78-41db-9ee5-06dbaa2f22e2",
+    "relevance": 0.9
+  },
+  {
+    "lessonSlug": "agent-architectures",
+    "courseId": "c7fe082d-7d78-41db-9ee5-06dbaa2f22e2",
+    "relevance": 0.8
+  },
+  {
+    "lessonSlug": "function-calling",
+    "courseId": "c7fe082d-7d78-41db-9ee5-06dbaa2f22e2",
+    "relevance": 0.7
+  },
+  {
+    "lessonSlug": "agent-architectures",
+    "courseId": "7a060339-620e-450d-87f7-42d35e955f1e",
+    "relevance": 0.8
+  },
+  {
+    "lessonSlug": "function-calling",
+    "courseId": "7a060339-620e-450d-87f7-42d35e955f1e",
+    "relevance": 0.9
+  },
+  {
+    "lessonSlug": "agent-architectures",
+    "courseId": "2ee417e0-afff-4ba8-a7f7-0ba737cf85c0",
+    "relevance": 0.8
+  },
+  {
+    "lessonSlug": "rag-evaluation",
+    "courseId": "2ee417e0-afff-4ba8-a7f7-0ba737cf85c0",
+    "relevance": 0.75
+  },
+  {
+    "lessonSlug": "retrieval-strategies",
+    "courseId": "4dd0d7a0-9f4c-4e80-a362-b2434c71d524",
+    "relevance": 0.85
+  },
+  {
+    "lessonSlug": "advanced-rag",
+    "courseId": "4dd0d7a0-9f4c-4e80-a362-b2434c71d524",
+    "relevance": 0.85
+  },
+  {
+    "lessonSlug": "embeddings",
+    "courseId": "4dd0d7a0-9f4c-4e80-a362-b2434c71d524",
+    "relevance": 0.85
+  },
+  {
+    "lessonSlug": "vector-databases",
+    "courseId": "4dd0d7a0-9f4c-4e80-a362-b2434c71d524",
+    "relevance": 0.8
+  },
+  {
+    "lessonSlug": "langgraph",
+    "courseId": "769d4866-b1a3-4d15-b5cb-13d9bcd98dfd",
+    "relevance": 0.9
+  },
+  {
+    "lessonSlug": "agent-architectures",
+    "courseId": "769d4866-b1a3-4d15-b5cb-13d9bcd98dfd",
+    "relevance": 0.8
+  }
+]

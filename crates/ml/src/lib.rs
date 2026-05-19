@@ -22,3 +22,4 @@ pub mod topic_miner;
 pub mod audio_guide;
 pub mod bkt;
 pub mod udemy;
+pub mod dlai;

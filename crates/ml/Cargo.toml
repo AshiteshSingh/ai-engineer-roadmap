@@ -34,6 +34,9 @@ cuda = [
 name = "build-similarity"
 path = "src/bin/build_similarity.rs"
 [[bin]]
+name = "seed-dl-transcripts"
+path = "src/bin/seed_dl_transcripts.rs"
+[[bin]]
 name = "analyze-readability"
 path = "src/bin/analyze_readability.rs"
 [[bin]]
