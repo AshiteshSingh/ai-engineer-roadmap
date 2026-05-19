@@ -140,6 +140,8 @@ function attachVttCapture(context: BrowserContext): {
     try {
       const url = res.url();
       const ct = (res.headers()["content-type"] ?? "").toLowerCase();
+      // The chapter & thumbnail tracks are also .vtt but are not a transcript.
+      if (/\/chapter\/|thumbnail/i.test(url)) return;
       const isVtt =
         url.includes(".vtt") ||
         ct.includes("text/vtt") ||
@@ -367,64 +369,30 @@ async function scrapeLesson(
   }
   await page.waitForTimeout(1500);
 
-  // Caption tracks are lazy: the player only fetches the spoken-text VTT once
-  // subtitles are turned on. Best-effort click a CC/subtitles control, then
-  // force every non-metadata text track to load and read its cues straight
-  // from the HTMLVideoElement (lets us skip the "thumbnails" storyboard track).
-  for (const sel of [
-    'button[aria-label*="subtitle" i]',
-    'button[aria-label*="caption" i]',
-    'button[aria-label*="cc" i]',
-    'button:has-text("CC")',
-    '[data-testid*="subtitle" i]',
-  ]) {
-    await page.locator(sel).first().click({ timeout: 1500 }).catch(() => {});
+  // Clear the paywall / "Start your course" / promo modals so the player and
+  // lesson body aren't hidden behind an overlay.
+  for (let i = 0; i < 5; i++) {
+    const closed = await page
+      .locator(
+        'button[aria-label="Close modal" i], dialog[open] button[aria-label*="close" i]',
+      )
+      .first()
+      .click({ timeout: 1200 })
+      .then(() => true)
+      .catch(() => false);
+    await page.keyboard.press("Escape").catch(() => {});
+    if (!closed) break;
+    await page.waitForTimeout(400);
   }
-  await page
-    .locator("video")
-    .first()
-    .focus()
-    .then(() => page.keyboard.press("c"))
-    .catch(() => {});
 
-  const trackCues = await page.evaluate(async () => {
-    const v = document.querySelector("video");
-    if (!v) return [] as { start: number; end: number; text: string }[];
-    const tracks = [...v.textTracks];
-    for (const t of tracks) {
-      if (t.kind === "metadata") continue;
-      try {
-        t.mode = "showing";
-      } catch {
-        /* some tracks reject mode changes */
-      }
-    }
-    // Poll up to ~6s for the browser to fetch + parse the cue list.
-    const pick = () => {
-      for (const t of [...v.textTracks]) {
-        if (t.kind === "metadata") continue;
-        const label = `${t.label} ${t.language}`.toLowerCase();
-        if (/thumb|storyboard|sprite/.test(label)) continue;
-        const cues = [...((t.cues as TextTrackCueList | null) ?? [])];
-        if (cues.length) {
-          return cues.map((c) => ({
-            start: (c as VTTCue).startTime,
-            end: (c as VTTCue).endTime,
-            text: String((c as VTTCue).text ?? "")
-              .replace(/<[^>]+>/g, "")
-              .trim(),
-          }));
-        }
-      }
-      return null;
-    };
-    for (let i = 0; i < 24; i++) {
-      const got = pick();
-      if (got && got.length) return got;
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    return [];
-  });
+  // Best-effort: toggle the player's "Captions" control so the caption VTT is
+  // also fetched over the network (a fallback to the direct-URL fetch below).
+  await page
+    .locator('button[aria-label="Captions" i], button[aria-label*="caption" i]')
+    .first()
+    .click({ timeout: 1500 })
+    .catch(() => {});
+  await page.waitForTimeout(1200);
 
   const dom = await page.evaluate(() => {
     const txt = (el: Element | null) =>
@@ -463,6 +431,14 @@ async function scrapeLesson(
       ) ??
       document.querySelector("main article, main [class*='content' i], main");
     const transcriptDom = txt(tEl);
+
+    // The lesson page embeds the spoken-caption VTT URL (…/subtitle/…/*.vtt)
+    // in its HTML / __NEXT_DATA__. Normalize JSON-escaped slashes first.
+    const rawHtml = document.documentElement.innerHTML.replace(/\\\//g, "/");
+    const subM = rawHtml.match(
+      /https?:\/\/[^"'\\\s)]+\/subtitle\/[^"'\\\s)]+\.vtt[^"'\\\s)]*/i,
+    );
+    const subtitleUrl = subM ? subM[0] : null;
 
     // Embedded notebook: a coding/Jupyter iframe. Cross-origin bodies can't be
     // read from here — capture same-origin code cells if reachable, plus the
@@ -513,6 +489,7 @@ async function scrapeLesson(
       videoSrc,
       durationSecs,
       transcriptDom,
+      subtitleUrl,
       notebookFrames: nbFrames,
       cells,
       resources,
@@ -520,17 +497,28 @@ async function scrapeLesson(
   });
 
   // Resolve subtitles, best source first:
-  //  1. cues read straight off the <video> textTracks (kind-filtered),
-  //  2. network-captured VTT, with the thumbnail/storyboard track rejected,
+  //  1. fetch the lesson's own caption VTT URL embedded in the page,
+  //  2. a network-captured VTT (chapter & thumbnail tracks already excluded),
   //  3. the on-page transcript/lesson text.
   let subtitles: Lesson["subtitles"] = { source: "none", cues: [], text: "" };
 
-  const cleanCues = trackCues.filter((c) => c.text && c.text.trim());
-  if (cleanCues.length) {
-    const seen: string[] = [];
-    for (const c of cleanCues)
-      if (seen[seen.length - 1] !== c.text) seen.push(c.text);
-    subtitles = { source: "vtt", cues: cleanCues, text: seen.join("\n") };
+  if (dom.subtitleUrl) {
+    try {
+      const resp = await page.request.get(dom.subtitleUrl, {
+        timeout: 30_000,
+      });
+      if (resp.ok()) {
+        const parsed = parseVtt(await resp.text());
+        if (parsed.text.trim())
+          subtitles = {
+            source: "vtt",
+            cues: parsed.cues,
+            text: parsed.text,
+          };
+      }
+    } catch {
+      /* fall through to the network/DOM fallbacks */
+    }
   }
 
   if (subtitles.source === "none") {
@@ -556,9 +544,11 @@ async function scrapeLesson(
     if (!resources.some((r) => r.href === f))
       resources.push({ label: "notebook (iframe)", href: f });
 
+  // ref.title is the clean slug-derived name; the lesson page's h1 is the
+  // course title, so prefer ref.title.
   return {
     index,
-    title: dom.title || ref.title || `Lesson ${index + 1}`,
+    title: ref.title || dom.title || `Lesson ${index + 1}`,
     url: ref.url,
     durationSecs: dom.durationSecs,
     videoSrc: dom.videoSrc,
