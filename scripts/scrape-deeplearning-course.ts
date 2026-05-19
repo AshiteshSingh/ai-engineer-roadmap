@@ -2,9 +2,12 @@
  * Authenticated scrape of a DeepLearning.AI short course (personal archival of
  * a course the running user is enrolled in).
  *
- *   pnpm scrape:dlai:login          # Phase A — headed login, caches session
- *   pnpm scrape:dlai -- --recon     # Phase B recon — headed, dumps selectors
- *   pnpm scrape:dlai                # Phase B — headless scrape → JSON
+ *   pnpm scrape:dlai:login                       # Phase A — headed login, caches session
+ *   pnpm scrape:dlai -- --recon --course <u|s>   # Phase B recon — headed, dumps selectors
+ *   pnpm scrape:dlai -- --course <url|slug>      # Phase B — headless scrape → JSON
+ *
+ * Course selection (first match wins): `--course <url|slug>` arg →
+ * DLAI_COURSE_SLUG env → the built-in default.
  *
  * Credentials are read from .env.local (DLAI_EMAIL / DLAI_PASSWORD) and are
  * never written into this committed script or the output JSON. The cached
@@ -25,8 +28,29 @@ import { join } from "node:path";
 
 // ── Config ───────────────────────────────────────────────────────────
 
-const COURSE_SLUG =
-  process.env.DLAI_COURSE_SLUG ?? "long-term-agentic-memory-with-langgraph";
+/** Accept a full `…/courses/<slug>` URL or a bare slug; return the slug. */
+function toSlug(value: string): string {
+  return value
+    .trim()
+    .replace(/^https?:\/\/[^/]+\/courses\//i, "")
+    .replace(/[/?#].*$/, "")
+    .replace(/\/+$/, "");
+}
+
+/** `--course <url|slug>` or `--course=<url|slug>` from argv, if present. */
+function courseArg(): string | undefined {
+  const a = process.argv.slice(2);
+  const eq = a.find((x) => x.startsWith("--course="));
+  if (eq) return eq.slice("--course=".length);
+  const i = a.indexOf("--course");
+  if (i !== -1 && a[i + 1] && !a[i + 1].startsWith("--")) return a[i + 1];
+  return undefined;
+}
+
+const _courseArg = courseArg();
+const COURSE_SLUG = _courseArg
+  ? toSlug(_courseArg)
+  : (process.env.DLAI_COURSE_SLUG ?? "long-term-agentic-memory-with-langgraph");
 const COURSE_URL = `https://learn.deeplearning.ai/courses/${COURSE_SLUG}`;
 // Unauthenticated course hits redirect to the DeepLearning.AI identity
 // provider, which hosts the real email/password form.
