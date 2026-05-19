@@ -32,6 +32,8 @@
     "review:courses": "cd crates/ml && DEEPSEEK_API_KEY=\"$(grep -m1 '^DEEPSEEK_API_KEY=' /Users/vadimnicolai/Public/ai-apps/.env | cut -d= -f2- | tr -d '[:space:]')\" cargo run -q -p aer-ml --release --bin review-courses --",
     "review:courses:dry": "cd crates/ml && DEEPSEEK_API_KEY=\"$(grep -m1 '^DEEPSEEK_API_KEY=' /Users/vadimnicolai/Public/ai-apps/.env | cut -d= -f2- | tr -d '[:space:]')\" cargo run -q -p aer-ml --release --bin review-courses -- --dry-run",
     "scrape:udemy": "tsx --env-file=.env.local scripts/scrape-udemy-courses.ts",
+    "scrape:dlai:login": "tsx --env-file=.env.local scripts/scrape-deeplearning-course.ts --login",
+    "scrape:dlai": "tsx --env-file=.env.local scripts/scrape-deeplearning-course.ts",
     "email:status": "tsx --env-file=.env.local scripts/email-status.ts",
     "email:status:ensure": "tsx --env-file=.env.local scripts/email-status.ts --ensure-routing",
     "email:test": "tsx --env-file=.env.local scripts/test-send-email.ts",

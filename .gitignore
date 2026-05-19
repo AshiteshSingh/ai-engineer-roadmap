@@ -23,6 +23,11 @@ data/*.chapters/
 data/*.mp3
 data/*.wav
 
+# DeepLearning.AI scraper: cached login session + recon dumps are local-only.
+# The scraped course JSON (data/deeplearning/<slug>.json) IS tracked.
+data/deeplearning/.auth/
+data/deeplearning/_recon/
+
 # Node / Next.js build output
 /node_modules/
 /.next/
