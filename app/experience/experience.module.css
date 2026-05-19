@@ -134,6 +134,19 @@
   border-top: 1px solid var(--gray-5);
 }
 
+.listen {
+  margin-top: 48px;
+  padding-top: 36px;
+  border-top: 1px solid var(--gray-5);
+}
+
+.listenNote {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--gray-9);
+}
+
 @media (max-width: 600px) {
   .page {
     padding: 32px 18px 72px;

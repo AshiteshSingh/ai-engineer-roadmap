@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getExperienceBySlug, parseSummary } from "@/lib/experience";
 import { getExperienceDetail } from "@/lib/experience-detail";
+import { getAudioMeta } from "@/lib/audio";
 import { MarkdownProse } from "@/components/markdown-prose";
+import { AudioPlayer } from "@/components/audio-player";
 import styles from "../experience.module.css";
 
 // Owner-only (enforced by ../layout.tsx). Rendered per-request so the session
@@ -28,6 +30,9 @@ export default async function ExperienceDetailPage({ params }: Props) {
 
   const { bullets, techStack } = parseSummary(entry.summary);
   const detail = getExperienceDetail(slug);
+  // Only entries with a hand-authored deep dive have audio — gate the fetch
+  // so siblings don't trigger a per-request R2 lookup.
+  const audioMeta = detail ? await getAudioMeta(slug) : null;
 
   return (
     <main className={styles.page}>
@@ -71,6 +76,24 @@ export default async function ExperienceDetailPage({ params }: Props) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {audioMeta && (
+        <section className={styles.listen}>
+          <h2 className={styles.sectionTitle}>Listen</h2>
+          <p className={styles.listenNote}>
+            ~{Math.round(audioMeta.duration_secs / 60)} min narration — a
+            spoken walkthrough of the work. Chapter headings below jump the
+            player.
+          </p>
+          <AudioPlayer meta={audioMeta} category="Experience" />
+          {audioMeta.full_script && (
+            <MarkdownProse
+              content={audioMeta.full_script}
+              chapters={audioMeta.chapters}
+            />
+          )}
         </section>
       )}
 

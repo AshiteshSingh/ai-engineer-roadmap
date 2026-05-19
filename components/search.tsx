@@ -16,6 +16,25 @@ function highlightSnippet(snippet: string) {
   );
 }
 
+/**
+ * Resolve where a search result links. DeepLearning.AI transcript chunks are
+ * indexed under synthetic `dlai-<courseSlug>` slugs (chat-retrieval grounding,
+ * not roadmap routes); send those to the course on learn.deeplearning.ai in a
+ * new tab instead of an internal route that would 404.
+ */
+function resolveResultHref(
+  lessonSlug: string | null,
+  metaUrl?: string,
+): { href: string; external: boolean } {
+  if (lessonSlug && lessonSlug.startsWith("dlai-")) {
+    return {
+      href: `https://learn.deeplearning.ai/courses/${lessonSlug.slice(5)}`,
+      external: true,
+    };
+  }
+  return { href: metaUrl ?? `/${lessonSlug}`, external: false };
+}
+
 function typeBadgeLabel(type: SearchResult["resultType"]) {
   switch (type) {
     case "lesson":
@@ -139,7 +158,9 @@ export function Search({ groups }: Props) {
       e.preventDefault();
       const r = results[focusedIndex];
       const meta = r.lessonSlug ? lessonLookup.get(r.lessonSlug) : undefined;
-      router.push(meta?.url ?? `/${r.lessonSlug}`);
+      const { href, external } = resolveResultHref(r.lessonSlug, meta?.url);
+      if (external) window.open(href, "_blank", "noopener,noreferrer");
+      else router.push(href);
     }
   }
 
@@ -295,10 +316,13 @@ export function Search({ groups }: Props) {
           )}
           {results.map((r, i) => {
             const meta = r.lessonSlug ? lessonLookup.get(r.lessonSlug) : undefined;
+            const { href, external } = resolveResultHref(r.lessonSlug, meta?.url);
             return (
               <Link
                 key={`${r.resultType}-${r.title}-${i}`}
-                href={meta?.url ?? `/${r.lessonSlug}`}
+                href={href}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noopener noreferrer" : undefined}
                 className={`search-result-card${meta ? ` cat-${meta.catSlug}` : ""}${i === focusedIndex ? " search-result-card--focused" : ""}`}
               >
                 <span className="search-result-rail" aria-hidden="true" />

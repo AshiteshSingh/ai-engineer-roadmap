@@ -14,7 +14,9 @@ struct Args {
     /// Markdown directory, used as a fallback when `--db` is absent.
     #[arg(long, default_value = "../../content")]
     content: PathBuf,
-    #[arg(long, default_value = "../data/similarity-matrix.json")]
+    // Runtime (lib/ml-client.ts) loads crates/ml/data/similarity-matrix.json;
+    // default must land there (cwd is crates/ml when run via npm scripts).
+    #[arg(long, default_value = "data/similarity-matrix.json")]
     output: PathBuf,
     /// Optional: also fold DeepLearning.AI scraped-course lessons
     /// (`data/deeplearning/<slug>.json`) into the matrix as `dlai-*` nodes.
