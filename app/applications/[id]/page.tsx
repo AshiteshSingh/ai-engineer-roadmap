@@ -27,6 +27,7 @@ function ApplicationDetailInner() {
   const [app, setApp] = useState<AppData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [typeformUrl, setTypeformUrl] = useState<string | null>(null);
 
   const isAdmin = isOwner(session);
 
@@ -46,6 +47,14 @@ function ApplicationDetailInner() {
         .finally(() => setLoading(false));
     }
   }, [params.id, router]);
+
+  useEffect(() => {
+    if (!isAdmin || !app) return;
+    fetch(`/api/applications/${app.id}/typeform-url`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { url: string | null } | null) => setTypeformUrl(d?.url ?? null))
+      .catch(() => setTypeformUrl(null));
+  }, [isAdmin, app]);
 
   // Tab state persisted to URL
   const rawTab = searchParams.get("tab") ?? "description";
@@ -190,6 +199,16 @@ function ApplicationDetailInner() {
           </Tabs.Content>
         </Box>
       </Tabs.Root>
+
+      {typeformUrl && (
+        <Flex mt="5" justify="end">
+          <Button asChild variant="soft">
+            <a href={typeformUrl} target="_blank" rel="noopener noreferrer">
+              Open feedback form
+            </a>
+          </Button>
+        </Flex>
+      )}
     </Container>
   );
 }

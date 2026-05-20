@@ -22,6 +22,7 @@ export interface AppData {
   techStack: string | null;
   interviewers: string | null;
   techDismissedTags: string | null;
+  audioUrl: string | null;
   appliedAt: string | null;
   createdAt: string;
   updatedAt: string;

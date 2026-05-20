@@ -119,7 +119,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const [session, { id }] = await Promise.all([getSession(), params]);
   if (!session || !isOwner(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await req.json();
-  const { company, position, url, status, slug, notes, appliedAt, jobDescription, interviewQuestions, techStack, interviewers, techDismissedTags } = body;
+  const { company, position, url, status, slug, notes, appliedAt, jobDescription, interviewQuestions, techStack, interviewers, techDismissedTags, audioUrl } = body;
 
   const [row] = await db
     .update(applications)
@@ -135,6 +135,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ...(techStack !== undefined && { techStack }),
       ...(interviewers !== undefined && { interviewers }),
       ...(techDismissedTags !== undefined && { techDismissedTags }),
+      ...(audioUrl !== undefined && { audioUrl }),
       ...(appliedAt !== undefined && { appliedAt: appliedAt ? new Date(appliedAt) : null }),
       updatedAt: new Date(),
     })
