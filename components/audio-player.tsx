@@ -90,6 +90,7 @@ export function AudioPlayer({
   logoAlt,
   category,
   autoPlay = false,
+  desktopRail = false,
 }: {
   meta: AudioMeta;
   gradient?: [string, string];
@@ -102,6 +103,10 @@ export function AudioPlayer({
   /** Start playing as soon as metadata loads (resumes from saved position).
    *  Default false — the lesson detail page must NOT autoplay. */
   autoPlay?: boolean;
+  /** Desktop only: render a persistent full-height "now playing" rail pinned
+   *  to the left instead of the bottom bar (the bar is hidden ≥ 769px). Mobile
+   *  is unchanged — bottom bar + tap-to-expand sheet. Opt-in per page. */
+  desktopRail?: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -870,9 +875,79 @@ export function AudioPlayer({
         </div>
       )}
 
+      {/* Desktop left rail — full-height "now playing" (opt-in via desktopRail).
+          CSS hides it < 769px; the bottom bar is hidden ≥ 769px in this mode.
+          Reuses the same audio element + transport/speed/chapter controls. */}
+      {desktopRail && (
+        <aside
+          className={styles.audioRail}
+          aria-label={`Audio player: ${meta.title}`}
+          style={
+            {
+              ["--cat-from" as string]: gradient?.[0] ?? "var(--ds-accent)",
+              ["--cat-to" as string]: gradient?.[1] ?? "var(--cyan-9)",
+            } as React.CSSProperties
+          }
+        >
+          <div
+            className={cx(
+              styles.audioRailCover,
+              logoSrc && styles.audioRailCoverLogo,
+            )}
+            aria-hidden="true"
+          >
+            {logoSrc ? (
+              <img src={logoSrc} alt="" className={styles.audioRailCoverImg} />
+            ) : (
+              (icon ?? "♪")
+            )}
+          </div>
+
+          <div className={styles.audioRailMeta}>
+            <div className={styles.audioRailTitle}>{meta.title}</div>
+            <div className={styles.audioRailChapter}>
+              {currentChapter?.title ?? ""}
+            </div>
+          </div>
+
+          <div className={styles.audioRailSeekRow}>
+            <input
+              type="range"
+              className={styles.audioFsSeek}
+              min={0}
+              max={totalSecs}
+              step={0.1}
+              value={currentTime}
+              onChange={(e) => seek(Number(e.target.value))}
+              style={{ "--progress": `${progress}%` } as React.CSSProperties}
+              aria-label="Seek"
+            />
+            <div className={styles.audioRailTimes}>
+              <span>{formatTime(currentTime)}</span>
+              <span>-{formatTime(remaining)}</span>
+            </div>
+          </div>
+
+          <div className={styles.audioRailTransport}>{transportButtons}</div>
+
+          <div
+            className={styles.audioRailSpeeds}
+            role="group"
+            aria-label="Playback speed"
+          >
+            {speedButtons}
+          </div>
+
+          <div className={styles.audioRailList}>{chapterRows}</div>
+        </aside>
+      )}
+
       {/* Player bar */}
       <div
-        className={styles.audioPlayer}
+        className={cx(
+          styles.audioPlayer,
+          desktopRail && styles.audioPlayerRailHiddenDesktop,
+        )}
         style={
           {
             ["--cat-from" as string]: gradient?.[0] ?? "var(--ds-accent)",

@@ -5,6 +5,7 @@ import { getAudioMeta } from "@/lib/audio";
 import { MarkdownProse } from "@/components/markdown-prose";
 import { AudioPlayer } from "@/components/audio-player";
 import styles from "../../../experience/experience.module.css";
+import rail from "./interviewing.module.css";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -60,6 +61,7 @@ export default async function InterviewingDetailPage({ params }: Props) {
   const audioMeta = await getAudioMeta(slug);
 
   return (
+    <div className={rail.railLayout}>
     <main className={styles.page}>
       <nav className={styles.crumbs} aria-label="Breadcrumb">
         <Link href="/" className={styles.crumbLink}>
@@ -112,6 +114,7 @@ export default async function InterviewingDetailPage({ params }: Props) {
             category="Applications"
             logoSrc={entry.logo?.src}
             logoAlt={entry.logo?.alt}
+            desktopRail
           />
           {audioMeta.full_script && (
             <MarkdownProse
@@ -122,5 +125,6 @@ export default async function InterviewingDetailPage({ params }: Props) {
         </section>
       )}
     </main>
+    </div>
   );
 }

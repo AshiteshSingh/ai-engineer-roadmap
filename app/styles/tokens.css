@@ -42,6 +42,11 @@
   --space-7: 48px;
   --space-8: 64px;
 
+  /* Width of the desktop left-rail audio player (opt-in `desktopRail`).
+     Single source of truth so the rail width and the page content offset
+     (.railLayout padding-left) can't drift. */
+  --audio-rail-w: 360px;
+
   /* Responsive shell tokens — section gutters/rhythm scale on small
      screens; clamp max == prior fixed value so desktop is unchanged. */
   --space-section-x: clamp(16px, 5vw, 24px);   /* max == --space-5 */

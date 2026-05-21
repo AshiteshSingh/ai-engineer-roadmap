@@ -1,0 +1,11 @@
+/* On desktop the audio player renders as a fixed full-height left rail
+   (AudioPlayer desktopRail). Shift the page content right by the rail width
+   so nothing sits underneath it. padding-left shrinks the containing block
+   from the left, so the inner `.page` (max-width:760px; margin:0 auto)
+   recenters within the space to the right of the rail. Below 769px the rail
+   is hidden and the bottom bar takes over, so no offset is applied. */
+@media (min-width: 769px) {
+  .railLayout {
+    padding-left: var(--audio-rail-w);
+  }
+}

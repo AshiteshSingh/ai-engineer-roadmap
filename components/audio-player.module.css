@@ -619,3 +619,162 @@
     animation: none;
   }
 }
+
+/* ================================================================
+   DESKTOP LEFT RAIL  —  opt-in via the `desktopRail` prop (used only
+   by /applications/interviewing/*). On desktop the bottom bar is
+   replaced by a full-height vertical "now playing" rail pinned to the
+   left, with larger type. Below 769px the rail is hidden and the bar +
+   mobile full-screen sheet behave exactly as before.
+   ================================================================ */
+.audioRail {
+  display: none; /* mobile: never shown — the bottom bar handles it */
+}
+
+@media (min-width: 769px) {
+  /* Rail mode hides the bottom bar on desktop (source order beats the
+     base `.audioPlayer { display: flex }` — no !important needed). */
+  .audioPlayerRailHiddenDesktop {
+    display: none;
+  }
+
+  .audioRail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--audio-rail-w);
+    z-index: var(--z-dock);
+    padding: var(--space-5);
+    overflow-y: auto;
+    /* same dark glass + per-phase ambient wash as the bar / sheet */
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--cat-from) 16%, transparent),
+        transparent 55%
+      ),
+      rgba(8, 8, 10, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 8px 0 28px rgba(0, 0, 0, 0.38);
+  }
+
+  /* Cover — gradient tile (or contained brand plate when logoSrc is set) */
+  .audioRailCover {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-height: 220px;
+    flex-shrink: 0;
+    font-size: 64px;
+    line-height: 1;
+    border-radius: var(--ds-radius-lg);
+    background: linear-gradient(135deg, var(--cat-from), var(--cat-to));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -12px 28px rgba(0, 0, 0, 0.24),
+      0 16px 44px -10px rgba(0, 0, 0, 0.6);
+  }
+  .audioRailCoverLogo {
+    aspect-ratio: auto;
+    max-height: none;
+    padding: 20px 24px;
+  }
+  .audioRailCoverImg {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  /* Meta — bigger type than the bar (bar uses --text-sm / --text-2xs) */
+  .audioRailMeta {
+    width: 100%;
+  }
+  .audioRailTitle {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    line-height: var(--ds-leading-tight);
+    color: var(--ds-ink);
+  }
+  .audioRailChapter {
+    font-size: var(--text-base);
+    color: var(--ds-text-muted);
+    margin-top: 4px;
+  }
+
+  /* Seek row reuses the .audioFsSeek input; larger times below it */
+  .audioRailSeekRow {
+    width: 100%;
+  }
+  .audioRailTimes {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: var(--text-sm);
+    color: var(--ds-text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Transport — larger hit targets than the bar */
+  .audioRailTransport {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+  }
+  .audioRailTransport .audioBtn {
+    width: 48px;
+    height: 48px;
+  }
+  .audioRailTransport .audioBtn svg {
+    width: 24px;
+    height: 24px;
+  }
+  .audioRailTransport .audioBtnPlay {
+    width: 60px;
+    height: 60px;
+  }
+  .audioRailTransport .audioBtnPlay svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* Speed pills — larger */
+  .audioRailSpeeds {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .audioRailSpeeds .audioSpeedPill {
+    height: 32px;
+    padding: 0 12px;
+    font-size: var(--text-sm);
+  }
+
+  /* Chapter list — fills remaining height, bigger rows */
+  .audioRailList {
+    width: 100%;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: var(--space-3);
+  }
+  .audioRailList .audioChapterItem {
+    font-size: var(--text-base);
+  }
+  .audioRailList .audioChapterIdx,
+  .audioRailList .audioChapterTime {
+    font-size: var(--text-sm);
+  }
+}
