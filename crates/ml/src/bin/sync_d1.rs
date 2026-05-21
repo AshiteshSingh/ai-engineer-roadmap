@@ -54,6 +54,8 @@ async fn main() -> Result<()> {
     let mut lessons = 0usize;
     let mut audios = 0usize;
     let mut audio_slugs: Vec<String> = Vec::new();
+    let mut lesson_slugs: Vec<String> = Vec::new();
+    let mut index_synced = false;
 
     // --- index + lessons -------------------------------------------------
     let index_path = content_dir.join("index.json");
