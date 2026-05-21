@@ -889,20 +889,6 @@ export function AudioPlayer({
             } as React.CSSProperties
           }
         >
-          <div
-            className={cx(
-              styles.audioRailCover,
-              logoSrc && styles.audioRailCoverLogo,
-            )}
-            aria-hidden="true"
-          >
-            {logoSrc ? (
-              <img src={logoSrc} alt="" className={styles.audioRailCoverImg} />
-            ) : (
-              (icon ?? "♪")
-            )}
-          </div>
-
           <div className={styles.audioRailMeta}>
             <div className={styles.audioRailTitle}>{meta.title}</div>
             <div className={styles.audioRailChapter}>
