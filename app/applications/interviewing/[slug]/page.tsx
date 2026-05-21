@@ -105,9 +105,10 @@ export default async function InterviewingDetailPage({ params }: Props) {
         <section className={styles.listen}>
           <h2 className={styles.sectionTitle}>Listen</h2>
           <p className={styles.listenNote}>
-            ~{Math.round(audioMeta.duration_secs / 60)} min narration — eight
-            chapters, each one a specific moment inside the 90-minute interview.
-            Chapter headings below jump the player.
+            ~{Math.round(audioMeta.duration_secs / 60)} min narration —{" "}
+            {audioMeta.chapters.length} chapters, each a moment inside the
+            90-minute interview or a deeper dive behind it. Chapter headings
+            below jump the player.
           </p>
           <AudioPlayer
             meta={audioMeta}
