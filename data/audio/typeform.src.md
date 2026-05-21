@@ -1,5 +1,3 @@
-# Typeform Live-Coding Interview — Audio Prep
-
 Spoken-narration prep for the ninety-minute live coding with George Gillams and Ethan Carlsson on the Typeform AI team. Listen until the cadence is yours.
 
 Nine chapters, roughly thirty minutes total. Every chapter is a moment inside the ninety-minute interview. No generic narration, no engineering memoir. Each chapter is what I will say at that specific moment.
