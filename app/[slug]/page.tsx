@@ -16,11 +16,13 @@ import { PageAnalytics } from "@/components/page-analytics";
 import { AudioPlayer } from "@/components/audio-player";
 import type { CategoryMeta } from "@/lib/data";
 
-// Render at request time so lesson body + audio guide read fresh from D1
-// (written by the Rust `sync-d1` pipeline) — new/edited content shows on
-// refresh without a redeploy. Known slugs are still pre-listed via
-// generateStaticParams; new slugs render on-demand (dynamicParams defaults on).
-export const revalidate = 0;
+// ISR: known slugs are prerendered (generateStaticParams) and revalidated
+// hourly; the D1 reads inside are tagged so the Rust `sync-d1` pipeline busts
+// them on publish via /api/revalidate — new/edited content shows in seconds
+// without a redeploy. New slugs render on-demand (dynamicParams defaults on).
+// (`revalidate = 0` here forces the whole route — and its callers — to fully
+// dynamic rendering, dropping static prerendering site-wide.)
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const lessons = await getAllLessons();

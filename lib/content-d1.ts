@@ -30,6 +30,11 @@ async function getDoc<T>(kind: string, slug: string): Promise<T | null> {
     const rows = await d1Query<PayloadRow>(
       "SELECT payload FROM content_cache WHERE kind = ? AND slug = ? LIMIT 1",
       [kind, slug],
+      // ISR: cache content reads (1h TTL) so they do not force every consuming
+      // page to dynamic rendering, and tag them so the Rust `sync-d1` publish
+      // step can bust them on demand via /api/revalidate. `audio:<slug>` matches
+      // the tag that pipeline already POSTs.
+      { revalidate: 3600, tags: [kind, `${kind}:${slug}`] },
     );
     const raw = rows[0]?.payload;
     return raw ? (JSON.parse(raw) as T) : null;

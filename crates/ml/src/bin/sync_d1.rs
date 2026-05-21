@@ -63,6 +63,7 @@ async fn main() -> Result<()> {
         let raw = std::fs::read_to_string(&index_path)
             .with_context(|| format!("read {}", index_path.display()))?;
         client.upsert("index", "__index__", &raw).await.context("upsert index")?;
+        index_synced = true;
         eprintln!("  index __index__ ({} bytes)", raw.len());
 
         let index: Value = serde_json::from_str(&raw).context("parse index.json")?;
@@ -80,6 +81,7 @@ async fn main() -> Result<()> {
                     .with_context(|| format!("read {}", file.display()))?;
                 client.upsert("lesson", slug, &body).await.with_context(|| format!("upsert lesson {slug}"))?;
                 lessons += 1;
+                lesson_slugs.push(slug.to_string());
                 eprintln!("  lesson {slug} ({} bytes)", body.len());
             }
         }
@@ -125,17 +127,25 @@ async fn main() -> Result<()> {
 
     eprintln!("\nsync-d1: done — {lessons} lessons, {audios} audio guides, 1 index.");
 
-    // On-demand revalidation: bust the live page's tagged R2 fetch so updates
+    // On-demand revalidation: bust the live pages' tagged D1/R2 reads so updates
     // show in seconds instead of waiting out the revalidate:3600 TTL. Best-effort
     // — runs only when REVALIDATE_URL + WORKER_AUTH_SECRET are set; never fails the sync.
-    revalidate(&audio_slugs).await;
+    // Tags mirror lib/content-d1.ts (`<kind>:<slug>`): audio:<slug>, lesson:<slug>,
+    // index:__index__.
+    let mut tags: Vec<String> = audio_slugs.iter().map(|s| format!("audio:{s}")).collect();
+    tags.extend(lesson_slugs.iter().map(|s| format!("lesson:{s}")));
+    if index_synced {
+        tags.push("index:__index__".to_string());
+    }
+    revalidate(&tags).await;
 
     Ok(())
 }
 
-/// POST `audio:<slug>` tags to the app's /api/revalidate route (bearer-authed).
-/// No-op if REVALIDATE_URL / WORKER_AUTH_SECRET are unset; logs on failure.
-async fn revalidate(audio_slugs: &[String]) {
+/// POST cache tags (e.g. `audio:<slug>`, `lesson:<slug>`, `index:__index__`) to
+/// the app's /api/revalidate route (bearer-authed). No-op if REVALIDATE_URL /
+/// WORKER_AUTH_SECRET are unset; logs on failure.
+async fn revalidate(tags: &[String]) {
     let (url, secret) = match (
         std::env::var("REVALIDATE_URL").ok().filter(|v| !v.is_empty()),
         std::env::var("WORKER_AUTH_SECRET").ok().filter(|v| !v.is_empty()),
@@ -146,10 +156,9 @@ async fn revalidate(audio_slugs: &[String]) {
             return;
         }
     };
-    if audio_slugs.is_empty() {
+    if tags.is_empty() {
         return;
     }
-    let tags: Vec<String> = audio_slugs.iter().map(|s| format!("audio:{s}")).collect();
     let body = serde_json::json!({ "tags": tags });
     let client = reqwest::Client::new();
     match client
