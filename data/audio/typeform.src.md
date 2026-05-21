@@ -10,7 +10,7 @@ Sure. I'm between roles right now. Vitrifi, where I spent four years as a Senior
 
 If I run long, I drop the Go portfolio sentence and let it surface later when George asks "what did you actually write?" If I blank, the fallback is one sentence: between roles since January when Vitrifi shut down, four years of Go and React on a multi-tenant United Kingdom telecoms platform, now deep on an AI engineering roadmap site and looking to ship daily.
 
-## The scaffold opener and the light spec
+## Scaffold opener and light spec
 
 This is minute eight to thirteen of the call. George has said "want to walk us through what you've got?" and I have the editor open on the small Go scaffold I brought. Two pieces: a thirty-second opener that hands them the choice, and a three-line verbal spec before I touch a line of code.
 
@@ -40,7 +40,7 @@ When George asks why did I do X, I point at the verbal spec, not the file. I do 
 
 If I hit a wall — the AI generates something wrong, a test fails, the endpoint hangs — I narrate the wall, name two ways out, pick one, move on. I do not go silent. Silence at minute thirty-five is worse than picking the wrong fix at minute thirty-five.
 
-## How I keep the AI tool consistent
+## Keeping the AI tool consistent
 
 This is a thing I do throughout the coding stretch, and it's worth calling out on its own because it's exactly what they said they're assessing — my use of AI tools. I don't drive the tool from a blank slate every prompt. I keep a small set of scoped instructions — skills — that load the house conventions for this codebase, so the generated code already follows them instead of me re-explaining the style every time.
 
@@ -98,7 +98,7 @@ If asked about tuning the system prompt: I treat it as code. It lives in version
 
 If asked what the eval grading rubric looks like: each scripted conversation has an expected outcome — which tool, which args, whether the model declines. I grade per-turn on tool-selection accuracy and argument-resolution accuracy, and per-conversation on whether the user's goal was achieved. The aggregate over the suite is what I track over time.
 
-## The frame mismatch — title versus work
+## Frame mismatch: title versus work
 
 If Ethan probes the gap between my title and what they're hiring for — Senior Full Stack versus Go Engineer — this is the answer. Honest, short, with a pivot.
 
@@ -106,7 +106,7 @@ My title at Vitrifi was Senior Full Stack. Across roughly five thousand commits 
 
 I do not pretend to be a pure Go engineer. I do not minimise the frontend work. I name the split honestly, point at the Go pieces I designed, and signal direction. Anything else reads as either insecure or evasive.
 
-## Questions, and what I will not say
+## Questions and what to avoid
 
 Last five minutes of the interview. They'll ask if I have questions. Two is the sweet spot — three feels rushed, one feels disengaged. I pick the right one for the right person.
 
