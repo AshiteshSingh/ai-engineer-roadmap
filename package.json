@@ -16,7 +16,7 @@
     "roadmap:meta": "node --import tsx scripts/gen-roadmap-meta.ts",
     "seed:content": "cd crates/ml && cargo run -p aer-ml --release --bin seed-content",
     "export:content": "cd crates/ml && cargo run -p aer-ml --release --bin export-content",
-    "sync:d1": "cd crates/ml && cargo run -p aer-ml --release --bin sync-d1",
+    "sync:d1": "cd crates/ml && KNOWLEDGE_AUDIO_MANIFEST_DIR=../../data cargo run -p aer-ml --release --bin sync-d1",
     "content:build": "npm run roadmap:meta && npm run seed:content && npm run export:content && npm run sync:d1",
     "content:similarity": "cd crates/ml && cargo run -p aer-ml --release --bin build-similarity",
     "content:gate:scan": "cd crates/ml && cargo run -q -p aer-ml --release --bin content-gate -- --all --ai-only",
