@@ -78,6 +78,7 @@ export function getAppPrepSeed(idOrSlug: string): AppData | null {
       notes: null,
       jobDescription: a.jobDescription ?? null,
       interviewQuestions: a.interviewQuestions ?? null,
+      audioUrl: null,
       // Owner-only: never sourced from the public seed. The API attaches it
       // from getOwnerPrepSeed() for the owner only; null everywhere else.
       ownerPrep: null,
