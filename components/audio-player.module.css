@@ -647,6 +647,10 @@
     left: 0;
     bottom: 0;
     width: var(--audio-rail-w);
+    /* footprint must equal --audio-rail-w so the page's padding-left offset
+       (.railLayout) clears the rail at every desktop width — not just wide
+       ones where centered content happens to leave a gap. */
+    box-sizing: border-box;
     z-index: var(--z-dock);
     padding: var(--space-5);
     overflow-y: auto;
