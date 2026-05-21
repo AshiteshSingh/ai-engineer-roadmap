@@ -17,6 +17,7 @@
 //!                      (Udemy + Coursera + DeepLearning.AI sources).
 
 pub mod content;
+pub mod d1;
 pub mod server;
 pub mod topic_miner;
 pub mod audio_guide;

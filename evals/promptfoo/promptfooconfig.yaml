@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: AI-engineer-roadmap tutor eval — custom Go provider calling DeepSeek
+
+prompts:
+  - file://prompts/answer.txt
+
+# Custom Go (golang) provider. promptfoo builds go-provider/provider.go in a
+# temp dir and calls its CallApi func. Stdlib-only, so no module download is
+# needed at build time. Reads DEEPSEEK_API_KEY from the environment.
+providers:
+  - id: file://go-provider/provider.go
+    label: deepseek-go
+    config:
+      model: deepseek-chat
+      baseUrl: https://api.deepseek.com/v1
+      temperature: 0.2
+      # systemPrompt: (defaults to the lib/chat-llm.ts tutor prompt)
+      # apiKeyEnv: DEEPSEEK_API_KEY
+
+# Grade llm-rubric assertions with DeepSeek too, so the eval needs only
+# DEEPSEEK_API_KEY (no OPENAI_API_KEY for the default grader).
+defaultTest:
+  options:
+    provider:
+      id: openai:chat:deepseek-chat
+      config:
+        apiBaseUrl: https://api.deepseek.com/v1
+        apiKeyEnvar: DEEPSEEK_API_KEY
+        temperature: 0
+
+tests:
+  - description: Defines RAG accurately
+    vars:
+      question: What is retrieval-augmented generation (RAG)?
+    assert:
+      - type: llm-rubric
+        value: Explains that RAG retrieves external context and feeds it to the model before generating an answer
+      - type: latency
+        threshold: 15000
+
+  - description: Explains transformer attention
+    vars:
+      question: Explain the self-attention mechanism in transformers.
+    assert:
+      - type: llm-rubric
+        value: Mentions query/key/value projections or scaled dot-product attention and is technically accurate
+      - type: latency
+        threshold: 15000
+
+  - description: Redirects off-topic questions back to AI/ML
+    vars:
+      question: What's a good recipe for homemade pizza dough?
+    assert:
+      - type: llm-rubric
+        value: Politely declines or redirects the conversation back to AI/ML engineering rather than giving a pizza recipe

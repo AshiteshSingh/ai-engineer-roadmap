@@ -43,6 +43,9 @@ path = "src/bin/analyze_readability.rs"
 name = "export-content"
 path = "src/bin/export_content.rs"
 [[bin]]
+name = "sync-d1"
+path = "src/bin/sync_d1.rs"
+[[bin]]
 name = "seed-content"
 path = "src/bin/seed_content.rs"
 [[bin]]

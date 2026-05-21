@@ -1,5 +1,5 @@
 {
-  "generated_at_unix": 1779197674,
+  "generated_at_unix": 1779199114,
   "thresholds": {
     "min_chapters": 3,
     "min_words_per_chapter": 40,
@@ -623,17 +623,17 @@
           "detail": "`ONU` not expanded on first use"
         },
         {
-          "chapter": 20,
+          "chapter": 21,
           "rule": "sentence-variety",
           "detail": "monotone cadence (cv 0.29 < 0.30)"
         }
       ],
       "metrics": {
-        "chapters": 21,
-        "total_words": 11782,
-        "total_duration_secs": 4705,
-        "mean_words_per_chapter": 561,
-        "sentence_len_cv": 0.5986538237119435
+        "chapters": 22,
+        "total_words": 12158,
+        "total_duration_secs": 4855,
+        "mean_words_per_chapter": 552,
+        "sentence_len_cv": 0.6057473682693034
       }
     }
   ],

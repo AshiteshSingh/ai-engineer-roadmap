@@ -18,7 +18,6 @@ pub struct ContentMetrics {
     pub word_count: usize,
     pub code_blocks: usize,
     pub cross_refs: usize,
-    pub xyflow_blocks: usize,
 }
 
 // ── Byte-level scanners (ASCII patterns; UTF-8 safe) ─────────────────
@@ -137,7 +136,6 @@ pub fn structure_check(content: &str, s: &StructureCfg) -> (Vec<String>, Content
     let cross_refs = extract_links(b).len();
     let has_title = content.trim_start().starts_with("# ");
     let section_count = content.lines().filter(|l| l.starts_with("## ")).count();
-    let xyflow_blocks = count_fenced_tag(b, b"```xyflow");
     let mermaid_blocks = count_fenced_tag(b, b"```mermaid");
     let has_mental_model = has_h2_phrase(content, "Mental Model");
     let has_runtime_internals = has_h2_phrase(content, "Runtime Internals");
@@ -158,13 +156,6 @@ pub fn structure_check(content: &str, s: &StructureCfg) -> (Vec<String>, Content
     if section_count < s.min_h2_sections {
         issues.push(format!("Fewer than {} ## sections", s.min_h2_sections));
     }
-    if xyflow_blocks < s.min_xyflow_blocks {
-        issues.push(format!(
-            "Too few xyflow diagrams: {xyflow_blocks} (min {}). \
-Use ```xyflow JSON fences, not ```mermaid.",
-            s.min_xyflow_blocks
-        ));
-    }
     if s.reject_mermaid && mermaid_blocks > 0 {
         issues.push(format!(
             "Found {mermaid_blocks} ```mermaid block(s) — replace each with a ```xyflow JSON diagram."
@@ -181,7 +172,7 @@ Use ```xyflow JSON fences, not ```mermaid.",
 
     (
         issues,
-        ContentMetrics { word_count, code_blocks, cross_refs, xyflow_blocks },
+        ContentMetrics { word_count, code_blocks, cross_refs },
     )
 }
 

@@ -2,7 +2,7 @@
 
 Spoken-narration prep for the ninety-minute live coding with George Gillams and Ethan Carlsson on the Typeform AI team. Listen until the cadence is yours.
 
-Eight chapters, roughly thirty minutes total. Every chapter is a moment inside the ninety-minute interview. No generic narration, no engineering memoir. Each chapter is what I will say at that specific moment.
+Nine chapters, roughly thirty minutes total. Every chapter is a moment inside the ninety-minute interview. No generic narration, no engineering memoir. Each chapter is what I will say at that specific moment.
 
 ## The 60-second background pitch
 
@@ -41,6 +41,16 @@ The light spec resurfaces twice during this stretch, both times as a tool not a 
 When George asks why did I do X, I point at the verbal spec, not the file. I do not walk them through a methodology document. I do not open the scratch directory. I say: that's in scope because the success criterion we agreed on is end-to-end streaming, and this tool is on the critical path. Or I say: that's out of scope and I'd come back to it. Two sentences. Then I keep coding.
 
 If I hit a wall — the AI generates something wrong, a test fails, the endpoint hangs — I narrate the wall, name two ways out, pick one, move on. I do not go silent. Silence at minute thirty-five is worse than picking the wrong fix at minute thirty-five.
+
+## How I keep the AI tool consistent
+
+This is a thing I do throughout the coding stretch, and it's worth calling out on its own because it's exactly what they said they're assessing — my use of AI tools. I don't drive the tool from a blank slate every prompt. I keep a small set of scoped instructions — skills — that load the house conventions for this codebase, so the generated code already follows them instead of me re-explaining the style every time.
+
+Concretely, three of them matter for this scaffold. One carries the backend conventions: how the tool-definitions slice is shaped, how the dispatch function is structured, how the session store sits behind an interface, how the server-sent-events stream is written. One carries the test conventions: standard-library testing, fake the upstream model with an http test server, reset shared state between tests. One carries the tracing conventions: the span names and attributes so a trace is readable later. So when I ask the tool to add the summarise-responses capability, it already writes the tool definition in our shape, writes the test the way the rest of the suite is written, and traces the call like every other tool — without me hand-holding each prompt.
+
+If George asks why bother, the answer is the principle I keep coming back to: make the machine carry the invariant instead of trusting myself to remember it under pressure. A skill is how I stop the tool from free-styling its own conventions, and it's reviewable and version-controlled, so the conventions live next to the code rather than in my head. Same instinct as schema-first contracts and the eval suite — move correctness somewhere that fails earlier than production.
+
+And the honest limit, which I'll say out loud: a skill biases the tool strongly toward the house style, it doesn't guarantee it. That's why I still read every diff out loud before I accept it. The skill narrows what the model is likely to do; the read-aloud review is what proves what it actually did.
 
 ## Answers to design probes
 

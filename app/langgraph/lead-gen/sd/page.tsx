@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Topbar } from "@/components/topbar";
 import { MarkdownProse } from "@/components/markdown-prose";
 import { TableOfContents } from "@/components/toc";
-import { ReadingProgress } from "@/components/reading-progress";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { AudioPlayer } from "@/components/audio-player";
 import { getAudioMeta, getCategoryMeta } from "@/lib/data";
@@ -41,7 +40,6 @@ export default async function LangGraphLeadGenSdPage() {
 
   return (
     <div className={`cat-${meta.slug}${audioMeta ? " has-audio-player" : ""}`}>
-      <ReadingProgress />
       <Topbar />
 
       <div className="article-banner">

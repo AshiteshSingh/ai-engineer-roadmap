@@ -10,9 +10,22 @@ export interface D1Row {
   [key: string]: string | number | null;
 }
 
+export interface D1QueryOptions {
+  /**
+   * When set, the request is stored in the Next Data Cache for this many
+   * seconds (and is revalidatable via `tags`) instead of `no-store`. Use ONLY
+   * for read-only content safe to share across users/requests — a `no-store`
+   * read in the render path forces the whole route to dynamic rendering.
+   */
+  revalidate?: number;
+  /** Cache tags for on-demand `revalidateTag` busting (see /api/revalidate). */
+  tags?: string[];
+}
+
 export async function d1Query<T = D1Row>(
   sql: string,
   params: (string | number | null)[] = [],
+  opts?: D1QueryOptions,
 ): Promise<T[]> {
   if (!d1Configured()) {
     throw new Error("D1 env vars missing");
@@ -25,7 +38,12 @@ export async function d1Query<T = D1Row>(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ sql, params }),
-    cache: "no-store",
+    // Per-user / mutating callers (email, audio-progress) omit `opts` and stay
+    // uncached; shared content readers opt into ISR caching so they don't poison
+    // static generation.
+    ...(opts?.revalidate !== undefined
+      ? { next: { revalidate: opts.revalidate, tags: opts.tags } }
+      : { cache: "no-store" as const }),
   });
   if (!res.ok) {
     const body = await res.text();

@@ -23,6 +23,13 @@ export interface AudioChapter {
   /** Per-chapter narration prose. Present in the generated JSON; consumed by
    *  the hub's Web-Speech player. Optional so an MP3-only meta still type-checks. */
   script?: string;
+  /** Per-chapter MP3 URL. Present only for guides synthesized with the
+   *  no-stitch per-chapter TTS path; when set on every chapter the player
+   *  streams pieces + background-prefetches. Absent ⇒ legacy single-file
+   *  (`AudioMeta.audio_url` + `start_secs` offsets). */
+  audio_url?: string;
+  /** Size of this chapter's MP3 (bytes). Companion to per-chapter `audio_url`. */
+  file_size_bytes?: number;
 }
 
 export interface AudioMeta {
@@ -78,10 +85,22 @@ function readLocalAudioMeta(slug: string): AudioMeta | null {
 }
 
 export async function getAudioMeta(slug: string): Promise<AudioMeta | null> {
+  // D1 first: written by the Rust `sync-d1` pipeline, carries the chapter
+  // transcript (`script`) + metadata, and is read at request time so updates
+  // show on refresh without a redeploy.
+  try {
+    const { getAudioMetaFromD1 } = await import("./content-d1");
+    const fromD1 = await getAudioMetaFromD1(slug);
+    if (fromD1) return fromD1;
+  } catch {
+    // D1 unavailable — fall through to R2 / local.
+  }
   if (R2_PUBLIC_DOMAIN) {
     try {
       const url = `https://${R2_PUBLIC_DOMAIN}/knowledge/${slug}.json`;
-      const res = await fetch(url, { next: { revalidate: 3600 } });
+      // Tagged so the Rust `sync-d1` publish step can bust this entry on demand
+      // via /api/revalidate (revalidateTag); the 3600 TTL is the safety fallback.
+      const res = await fetch(url, { next: { revalidate: 3600, tags: [`audio:${slug}`] } });
       if (res.ok) return res.json();
     } catch {
       // Fall through to the in-repo fallback.

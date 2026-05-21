@@ -27,7 +27,6 @@ use serde::Deserialize;
 const DD_MIN_WORD_COUNT: usize = 1500;
 const DD_MIN_CODE_BLOCKS: usize = 2;
 const DD_MIN_CROSS_REFS: usize = 1;
-const DD_MIN_XYFLOW_BLOCKS: usize = 5;
 const DD_MIN_H2_SECTIONS: usize = 3;
 
 const DD_RELATION_MIN_CROSSREFS: usize = 3;
@@ -36,12 +35,9 @@ const DD_RELATION_TOPK_HITS: usize = 2;
 
 const DD_Q_DUP_JACCARD: f32 = 0.50;
 const DD_Q_SHINGLE_K: usize = 8;
-const DD_Q_XYFLOW_DUP_OTHERS: usize = 8;
-const DD_Q_XYFLOW_DUP_MIN_BLOCKS: usize = 3;
 const DD_Q_FK_MIN: f32 = 10.0;
 const DD_Q_FK_MAX: f32 = 22.0;
 const DD_Q_TECH_MIN: f32 = 0.010;
-const DD_Q_PROSE_PER_XYFLOW: usize = 200;
 const DD_Q_SECTION_MIN_PROSE: usize = 120;
 
 // serde default thunks — a partial TOML table inherits the deep-dive value
@@ -49,7 +45,6 @@ const DD_Q_SECTION_MIN_PROSE: usize = 120;
 fn d_min_word_count() -> usize { DD_MIN_WORD_COUNT }
 fn d_min_code_blocks() -> usize { DD_MIN_CODE_BLOCKS }
 fn d_min_cross_refs() -> usize { DD_MIN_CROSS_REFS }
-fn d_min_xyflow_blocks() -> usize { DD_MIN_XYFLOW_BLOCKS }
 fn d_min_h2_sections() -> usize { DD_MIN_H2_SECTIONS }
 fn d_true() -> bool { true }
 fn d_relation_min_crossrefs() -> usize { DD_RELATION_MIN_CROSSREFS }
@@ -57,12 +52,9 @@ fn d_relation_topk() -> usize { DD_RELATION_TOPK }
 fn d_relation_topk_hits() -> usize { DD_RELATION_TOPK_HITS }
 fn d_q_dup_jaccard() -> f32 { DD_Q_DUP_JACCARD }
 fn d_q_shingle_k() -> usize { DD_Q_SHINGLE_K }
-fn d_q_xyflow_dup_others() -> usize { DD_Q_XYFLOW_DUP_OTHERS }
-fn d_q_xyflow_dup_min_blocks() -> usize { DD_Q_XYFLOW_DUP_MIN_BLOCKS }
 fn d_q_fk_min() -> f32 { DD_Q_FK_MIN }
 fn d_q_fk_max() -> f32 { DD_Q_FK_MAX }
 fn d_q_tech_min() -> f32 { DD_Q_TECH_MIN }
-fn d_q_prose_per_xyflow() -> usize { DD_Q_PROSE_PER_XYFLOW }
 fn d_q_section_min_prose() -> usize { DD_Q_SECTION_MIN_PROSE }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -74,8 +66,6 @@ pub struct StructureCfg {
     pub min_code_blocks: usize,
     #[serde(default = "d_min_cross_refs")]
     pub min_cross_refs: usize,
-    #[serde(default = "d_min_xyflow_blocks")]
-    pub min_xyflow_blocks: usize,
     #[serde(default = "d_min_h2_sections")]
     pub min_h2_sections: usize,
     #[serde(default = "d_true")]
@@ -114,18 +104,12 @@ pub struct QualityCfg {
     pub dup_jaccard: f32,
     #[serde(default = "d_q_shingle_k")]
     pub shingle_k: usize,
-    #[serde(default = "d_q_xyflow_dup_others")]
-    pub xyflow_dup_others: usize,
-    #[serde(default = "d_q_xyflow_dup_min_blocks")]
-    pub xyflow_dup_min_blocks: usize,
     #[serde(default = "d_q_fk_min")]
     pub fk_min: f32,
     #[serde(default = "d_q_fk_max")]
     pub fk_max: f32,
     #[serde(default = "d_q_tech_min")]
     pub tech_min: f32,
-    #[serde(default = "d_q_prose_per_xyflow")]
-    pub prose_per_xyflow: usize,
     #[serde(default = "d_q_section_min_prose")]
     pub section_min_prose: usize,
 }
@@ -136,7 +120,6 @@ impl Default for StructureCfg {
             min_word_count: DD_MIN_WORD_COUNT,
             min_code_blocks: DD_MIN_CODE_BLOCKS,
             min_cross_refs: DD_MIN_CROSS_REFS,
-            min_xyflow_blocks: DD_MIN_XYFLOW_BLOCKS,
             min_h2_sections: DD_MIN_H2_SECTIONS,
             require_h1: true,
             require_mental_model: true,
@@ -165,12 +148,9 @@ impl Default for QualityCfg {
             enabled: true,
             dup_jaccard: DD_Q_DUP_JACCARD,
             shingle_k: DD_Q_SHINGLE_K,
-            xyflow_dup_others: DD_Q_XYFLOW_DUP_OTHERS,
-            xyflow_dup_min_blocks: DD_Q_XYFLOW_DUP_MIN_BLOCKS,
             fk_min: DD_Q_FK_MIN,
             fk_max: DD_Q_FK_MAX,
             tech_min: DD_Q_TECH_MIN,
-            prose_per_xyflow: DD_Q_PROSE_PER_XYFLOW,
             section_min_prose: DD_Q_SECTION_MIN_PROSE,
         }
     }
@@ -194,16 +174,13 @@ impl Profile {
     }
 
     /// Relaxed profile for short overview / entry lessons (e.g. `rag`):
-    /// lower word floor, no diagram/MM/RI requirement, quality tier off.
-    /// `min_xyflow_blocks = 0` is deliberate — `rag` ships 0 diagrams and
-    /// the user's intent is that an overview lesson passes without them.
+    /// lower word floor, no MM/RI requirement, quality tier off.
     pub fn overview() -> Self {
         Profile {
             structure: StructureCfg {
                 min_word_count: 500,
                 min_code_blocks: 1,
                 min_cross_refs: 1,
-                min_xyflow_blocks: 0,
                 min_h2_sections: 2,
                 require_h1: true,
                 require_mental_model: false,
@@ -327,7 +304,6 @@ mod tests {
         assert_eq!(p.structure.min_word_count, 1500);
         assert_eq!(p.structure.min_code_blocks, 2);
         assert_eq!(p.structure.min_cross_refs, 1);
-        assert_eq!(p.structure.min_xyflow_blocks, 5);
         assert_eq!(p.structure.min_h2_sections, 3);
         assert!(p.structure.require_h1);
         assert!(p.structure.require_mental_model);
@@ -342,12 +318,9 @@ mod tests {
         assert!(p.quality.enabled);
         assert_eq!(p.quality.dup_jaccard, 0.50);
         assert_eq!(p.quality.shingle_k, 8);
-        assert_eq!(p.quality.xyflow_dup_others, 8);
-        assert_eq!(p.quality.xyflow_dup_min_blocks, 3);
         assert_eq!(p.quality.fk_min, 10.0);
         assert_eq!(p.quality.fk_max, 22.0);
         assert_eq!(p.quality.tech_min, 0.010);
-        assert_eq!(p.quality.prose_per_xyflow, 200);
         assert_eq!(p.quality.section_min_prose, 120);
     }
 
@@ -369,7 +342,6 @@ rag = "overview"
 [profiles.deep-dive]
 [profiles.overview]
 structure.min_word_count = 500
-structure.min_xyflow_blocks = 0
 structure.require_mental_model = false
 structure.require_runtime_internals = false
 quality.enabled = false
@@ -378,7 +350,6 @@ quality.enabled = false
         let (rag_name, rag) = set.resolve("rag");
         assert_eq!(rag_name, "overview");
         assert_eq!(rag.structure.min_word_count, 500);
-        assert_eq!(rag.structure.min_xyflow_blocks, 0);
         assert!(!rag.quality.enabled);
         // unspecified field inherits the deep-dive default
         assert_eq!(rag.relation.min_crossrefs, 3);

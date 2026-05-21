@@ -4,7 +4,6 @@ import { getAllLessons, getLessonBySlug, getCategoryMeta, getRelatedLessons, get
 import { Topbar } from "@/components/topbar";
 import { MarkdownProse } from "@/components/markdown-prose";
 import { TableOfContents } from "@/components/toc";
-import { ReadingProgress } from "@/components/reading-progress";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { ArticleNav } from "@/components/article-nav";
 import { CategoryProgress } from "@/components/category-progress";
@@ -16,6 +15,12 @@ import { LESSON_REFERENCES } from "@/lib/references";
 import { PageAnalytics } from "@/components/page-analytics";
 import { AudioPlayer } from "@/components/audio-player";
 import type { CategoryMeta } from "@/lib/data";
+
+// Render at request time so lesson body + audio guide read fresh from D1
+// (written by the Rust `sync-d1` pipeline) — new/edited content shows on
+// refresh without a redeploy. Known slugs are still pre-listed via
+// generateStaticParams; new slugs render on-demand (dynamicParams defaults on).
+export const revalidate = 0;
 
 export async function generateStaticParams() {
   const lessons = await getAllLessons();
@@ -62,7 +67,6 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div className={`cat-${meta.slug}${audioMeta ? " has-audio-player" : ""}`}>
-      <ReadingProgress />
       <Topbar lessonCount={total} />
 
       {/* Banner */}

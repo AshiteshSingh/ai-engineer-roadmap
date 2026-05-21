@@ -3,13 +3,11 @@
 //! replaced by a per-lesson resolved [`Profile`] field.
 //!
 //! Genericity without regression: the corpus-global structures (link sets,
-//! reciprocity `need_backlink`, the quality `qmap` + xyflow signature
-//! index) are still built across **all** lessons regardless of profile, so
-//! a per-slug override (e.g. `rag → overview`) never perturbs another
-//! lesson's cross-lesson Q1/R3/R4 verdict. Only *issue emission* for a
-//! given lesson is gated by that lesson's profile. With every slug on the
-//! built-in `deep-dive` profile the output is byte-identical to the
-//! pre-refactor gate.
+//! reciprocity `need_backlink`, the quality `qmap`) are still built across
+//! **all** lessons regardless of profile, so a per-slug override
+//! (e.g. `rag → overview`) never perturbs another lesson's cross-lesson
+//! Q1/R3/R4 verdict. Only *issue emission* for a given lesson is gated by
+//! that lesson's profile.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -19,8 +17,8 @@ use crate::content::similarity::SimilarityMatrix;
 use crate::content::{readability, Lesson};
 
 use super::scan::{
-    collect_links, prose_words, section_body, shingle_set, structure_check, xyflow_bodies,
-    xyflow_signature, jaccard, ContentMetrics, LinkSets,
+    collect_links, prose_words, section_body, shingle_set, structure_check, jaccard,
+    ContentMetrics, LinkSets,
 };
 
 /// Categories (from `parser::category_from_slug`) that are NOT
@@ -71,9 +69,6 @@ struct QData {
     ri: Option<HashSet<u64>>,
     mm_prose: usize,
     ri_prose: usize,
-    sigs: Vec<String>,
-    xy_errs: Vec<String>,
-    prose_total: usize,
 }
 
 /// Run the full content gate over an already-loaded corpus.
@@ -135,7 +130,6 @@ pub fn run_content(
     // any per-slug profile, so cross-lesson comparisons are unperturbed.
     let quality_on = !no_quality;
     let mut qmap: HashMap<String, QData> = HashMap::new();
-    let mut sig_lessons: HashMap<String, HashSet<String>> = HashMap::new();
     if quality_on {
         for l in lessons {
             let (_, prof) = profiles.resolve(&l.slug);
@@ -146,20 +140,6 @@ pub fn run_content(
             let ri_prose = ri.as_deref().map(prose_words).unwrap_or(0);
             let mm_sh = mm.as_deref().map(|s| shingle_set(s, k));
             let ri_sh = ri.as_deref().map(|s| shingle_set(s, k));
-            let mut sigs = Vec::new();
-            let mut xy_errs = Vec::new();
-            for (i, body) in xyflow_bodies(&l.content).into_iter().enumerate() {
-                match xyflow_signature(&body) {
-                    Ok(sig) => sigs.push(sig),
-                    Err(why) => xy_errs.push(format!("block {}: {why}", i + 1)),
-                }
-            }
-            for s in sigs.iter().collect::<BTreeSet<_>>() {
-                sig_lessons
-                    .entry(s.clone())
-                    .or_default()
-                    .insert(l.slug.clone());
-            }
             qmap.insert(
                 l.slug.clone(),
                 QData {
@@ -167,9 +147,6 @@ pub fn run_content(
                     ri: ri_sh,
                     mm_prose,
                     ri_prose,
-                    sigs,
-                    xy_errs,
-                    prose_total: prose_words(&l.content),
                 },
             );
         }
@@ -259,10 +236,6 @@ pub fn run_content(
         let mut quality_issues: Vec<String> = Vec::new();
         if quality_on && p.quality.enabled {
             if let Some(q) = qmap.get(&slug) {
-                // Q0 — xyflow JSON / schema validity
-                for e in &q.xy_errs {
-                    quality_issues.push(format!("Q0: xyflow {e}"));
-                }
                 // Q1 — MM / RI cross-lesson near-duplicate (boilerplate)
                 for (label, mine) in [("Mental Model", &q.mm), ("Runtime Internals", &q.ri)] {
                     if let Some(mine) = mine {
@@ -289,23 +262,6 @@ pub fn run_content(
                         }
                     }
                 }
-                // Q1 — reused xyflow skeletons
-                let dup_blocks = q
-                    .sigs
-                    .iter()
-                    .filter(|s| {
-                        sig_lessons
-                            .get(*s)
-                            .map_or(0, |set| set.iter().filter(|x| *x != &slug).count())
-                            >= p.quality.xyflow_dup_others
-                    })
-                    .count();
-                if dup_blocks >= p.quality.xyflow_dup_min_blocks {
-                    quality_issues.push(format!(
-                        "Q1: {dup_blocks} xyflow diagrams reuse a skeleton shared by ≥{} other lessons — make the diagrams lesson-specific",
-                        p.quality.xyflow_dup_others
-                    ));
-                }
                 // Q2 — readability / substance (reuses readability.rs)
                 let rm = readability::analyze_lesson(l).overall;
                 if rm.flesch_kincaid_grade < p.quality.fk_min
@@ -322,16 +278,7 @@ pub fn run_content(
                         rm.technical_term_density, p.quality.tech_min
                     ));
                 }
-                // Q3 — prose / diagram balance
-                if metrics.xyflow_blocks > 0 {
-                    let ratio = q.prose_total / metrics.xyflow_blocks;
-                    if ratio < p.quality.prose_per_xyflow {
-                        quality_issues.push(format!(
-                            "Q3: {ratio} prose words per xyflow (min {}) — add explanation, not just diagrams",
-                            p.quality.prose_per_xyflow
-                        ));
-                    }
-                }
+                // Q3 — section prose floors
                 if q.mm.is_some() && q.mm_prose < p.quality.section_min_prose {
                     quality_issues.push(format!(
                         "Q3: Mental Model section has {} prose words (min {})",

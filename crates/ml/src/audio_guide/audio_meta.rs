@@ -10,6 +10,14 @@ pub struct AudioChapter {
     pub start_secs: u32,
     pub duration_secs: u32,
     pub script: String,
+    /// Per-chapter MP3 URL. Set only by the no-stitch per-chapter TTS path
+    /// (mirrors `lib/audio.ts:AudioChapter.audio_url`). `None` ⇒ legacy
+    /// single-file guide; omitted from JSON when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio_url: Option<String>,
+    /// Size of this chapter's MP3 (bytes); companion to per-chapter `audio_url`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_size_bytes: Option<u64>,
 }
 
 /// Mirrors `apps/knowledge/lib/audio.ts:AudioMeta`. The `full_script` field is

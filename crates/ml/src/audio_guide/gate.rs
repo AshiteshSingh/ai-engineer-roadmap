@@ -375,6 +375,8 @@ mod tests {
                 start_secs: cum,
                 duration_secs: d,
                 script: (*s).to_string(),
+                audio_url: None,
+                file_size_bytes: None,
             });
             cum += d;
         }

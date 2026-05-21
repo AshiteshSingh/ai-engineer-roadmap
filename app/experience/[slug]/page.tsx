@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { auth } from "@/lib/auth";
+import { isOwner } from "@/lib/owner";
 import { getExperienceBySlug, parseSummary } from "@/lib/experience";
 import { getExperienceDetail } from "@/lib/experience-detail";
 import { getAudioMeta } from "@/lib/audio";
@@ -8,9 +11,14 @@ import { MarkdownProse } from "@/components/markdown-prose";
 import { AudioPlayer } from "@/components/audio-player";
 import styles from "../experience.module.css";
 
-// Owner-only (enforced by ../layout.tsx). Rendered per-request so the session
-// guard can run — intentionally NO generateStaticParams (no static prerender).
+// Most /experience entries are owner-only; the Vitrifi case study is public.
+// Gating is per-slug below (the segment layout no longer blocks the route).
+// Rendered per-request so the owner-session check can run on gated slugs —
+// intentionally NO generateStaticParams (no static prerender).
 type Props = { params: Promise<{ slug: string }> };
+
+// Experience slugs anyone may view. Every other slug stays owner-gated.
+const PUBLIC_EXPERIENCE_SLUGS = new Set(["vitrifi"]);
 
 // Brand logo shown in the narration player's cover plate, per experience slug.
 // Entries without a mapping fall back to the player's default emoji/gradient.
@@ -31,6 +39,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ExperienceDetailPage({ params }: Props) {
   const { slug } = await params;
+
+  // Public allow-list; non-public experience pages remain owner-only.
+  if (!PUBLIC_EXPERIENCE_SLUGS.has(slug)) {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!isOwner(session)) redirect("/");
+  }
+
   const entry = getExperienceBySlug(slug);
   if (!entry) notFound();
 

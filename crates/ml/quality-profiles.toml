@@ -35,9 +35,6 @@ rag = "overview"
 structure.min_word_count = 500
 structure.min_code_blocks = 1
 structure.min_cross_refs = 1
-# `rag` ships 0 xyflow diagrams; an overview lesson is not required to have
-# them, so the diagram floor is 0 (it still must not contain mermaid).
-structure.min_xyflow_blocks = 0
 structure.min_h2_sections = 2
 structure.require_h1 = true
 structure.require_mental_model = false

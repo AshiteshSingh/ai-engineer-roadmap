@@ -71,6 +71,8 @@ fn build_audio_meta(md_path: &PathBuf, slug: &str, title: &str) -> anyhow::Resul
             start_secs: cumulative,
             duration_secs: duration,
             script: body.clone(),
+            audio_url: None,
+            file_size_bytes: None,
         });
         cumulative += duration;
         full_script_parts.push(format!("## {raw_title}\n\n{body}"));

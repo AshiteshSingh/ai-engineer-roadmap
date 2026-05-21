@@ -22,12 +22,22 @@ export interface SearchResult {
   lessonTitle: string | null;
 }
 
-// Static lesson content is served from JSON exported by the Rust
-// `export-content` binary (SQLite is the single source of truth; only Rust
-// reads it). The markdown parser in ./articles is the resilience fallback
-// when the JSON export is missing (e.g. before `npm run content:build`).
+// Lesson content resolves D1 first (dynamic, written by the Rust `sync-d1`
+// pipeline → new/edited content shows on refresh, no redeploy), then the
+// build-bundled JSON exported by `export-content`, then the markdown parser in
+// ./articles as the last-resort fallback. Each layer is independent, so an
+// unconfigured/empty D1 silently falls through.
 
 export async function getCategoryMeta(category: string): Promise<CategoryMeta> {
+  try {
+    const { getIndexFromD1 } = await import("./content-d1");
+    const { categoryMetaFromIndex } = await import("./content-json");
+    const idx = await getIndexFromD1();
+    const meta = idx && categoryMetaFromIndex(idx, category);
+    if (meta) return meta;
+  } catch {
+    // D1 unavailable — fall through
+  }
   try {
     const { getCategoryMetaFromJson } = await import("./content-json");
     const meta = getCategoryMetaFromJson(category);
@@ -41,6 +51,14 @@ export async function getCategoryMeta(category: string): Promise<CategoryMeta> {
 
 export async function getCategoryCount(): Promise<number> {
   try {
+    const { getIndexFromD1 } = await import("./content-d1");
+    const { categoryCountFromIndex } = await import("./content-json");
+    const idx = await getIndexFromD1();
+    if (idx) return categoryCountFromIndex(idx);
+  } catch {
+    // D1 unavailable — fall through
+  }
+  try {
     const { getCategoryCountFromJson } = await import("./content-json");
     return getCategoryCountFromJson();
   } catch {
@@ -51,6 +69,14 @@ export async function getCategoryCount(): Promise<number> {
 }
 
 export async function getAllLessons(): Promise<Lesson[]> {
+  try {
+    const { getIndexFromD1 } = await import("./content-d1");
+    const { lessonsFromIndex } = await import("./content-json");
+    const idx = await getIndexFromD1();
+    if (idx) return lessonsFromIndex(idx);
+  } catch {
+    // D1 unavailable — fall through
+  }
   try {
     const { getAllLessonsFromJson } = await import("./content-json");
     return getAllLessonsFromJson();
@@ -65,6 +91,13 @@ export async function getLessonBySlug(
   slug: string,
 ): Promise<LessonWithContent | null> {
   try {
+    const { getLessonBySlugFromD1 } = await import("./content-d1");
+    const fromD1 = await getLessonBySlugFromD1(slug);
+    if (fromD1) return fromD1;
+  } catch {
+    // D1 unavailable — fall through
+  }
+  try {
     const { getLessonBySlugFromJson } = await import("./content-json");
     const lesson = getLessonBySlugFromJson(slug);
     if (lesson) return lesson;
@@ -77,6 +110,15 @@ export async function getLessonBySlug(
 
 export async function getGroupedLessons(): Promise<GroupedLessons[]> {
   try {
+    const { getIndexFromD1 } = await import("./content-d1");
+    const { groupedFromIndex } = await import("./content-json");
+    const idx = await getIndexFromD1();
+    const grouped = idx ? groupedFromIndex(idx) : [];
+    if (grouped.length > 0) return grouped;
+  } catch {
+    // D1 unavailable — fall through
+  }
+  try {
     const { getGroupedLessonsFromJson } = await import("./content-json");
     const grouped = getGroupedLessonsFromJson();
     if (grouped.length > 0) return grouped;
@@ -88,6 +130,14 @@ export async function getGroupedLessons(): Promise<GroupedLessons[]> {
 }
 
 export async function getTotalWordCount(): Promise<number> {
+  try {
+    const { getIndexFromD1 } = await import("./content-d1");
+    const { totalWordCountFromIndex } = await import("./content-json");
+    const idx = await getIndexFromD1();
+    if (idx) return totalWordCountFromIndex(idx);
+  } catch {
+    // D1 unavailable — fall through
+  }
   try {
     const { getTotalWordCountFromJson } = await import("./content-json");
     return getTotalWordCountFromJson();

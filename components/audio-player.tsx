@@ -16,6 +16,10 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
 const SKIP = 30;
 
 const STORAGE_KEY = "knowledge_last_played";
+// Playback rate is a global user preference — stored separately so it
+// survives navigation between lessons (the per-lesson STORAGE_KEY record
+// is slug-gated and gets cleared at end-of-audio).
+const RATE_KEY = "knowledge_playback_rate";
 
 interface LastPlayedState {
   slug: string;
@@ -44,6 +48,23 @@ function clearPlaybackState() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {}
+}
+
+function saveGlobalRate(rate: number) {
+  try {
+    localStorage.setItem(RATE_KEY, String(rate));
+  } catch {}
+}
+
+function loadGlobalRate(): number | null {
+  try {
+    const raw = localStorage.getItem(RATE_KEY);
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
 }
 
 function putRemoteState(state: LastPlayedState) {
@@ -87,12 +108,79 @@ export function AudioPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
+  // Mirrored into a ref so the per-chapter swap effect can re-apply the rate
+  // on `loadedmetadata` without putting `playbackRate` in its deps array
+  // (which would re-fire load() on every rate change and reset the playhead).
+  const playbackRateRef = useRef(1);
   const [showChapters, setShowChapters] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   // Audible-style mobile full-screen "now playing" view.
   const [expanded, setExpanded] = useState(false);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const expandHitRef = useRef<HTMLButtonElement>(null);
+
+  // ── Per-chapter (no-stitch) mode ────────────────────────────────────
+  // Every chapter has its own small MP3; the player streams one piece at a
+  // time and background-prefetches the next. `currentTime`/`duration` stay
+  // GLOBAL seconds so all UI (progress, chapter scan, transcript seek) is
+  // unchanged. When `perChapter` is false (legacy single-file guides) every
+  // path below stays byte-identical to before.
+  const perChapter =
+    meta.chapters.length > 0 && meta.chapters.every((c) => !!c.audio_url);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const pendingLocalRef = useRef<number | null>(null);
+  const resumePlayRef = useRef(false);
+  const didRestoreRef = useRef(false);
+  const prefetchRef = useRef<HTMLAudioElement | null>(null);
+  const chOffset = perChapter
+    ? meta.chapters[activeIdx]?.start_secs ?? 0
+    : 0;
+  const chOffsetRef = useRef(0);
+  chOffsetRef.current = chOffset;
+  const perChapterRef = useRef(false);
+  perChapterRef.current = perChapter;
+  const activeIdxRef = useRef(0);
+  activeIdxRef.current = activeIdx;
+  const isPlayingRef = useRef(false);
+  isPlayingRef.current = isPlaying;
+  const globalTimeRef = useRef(0);
+
+  // Single seek primitive in GLOBAL seconds. Single-file ⇒ identical to the
+  // old `seek`. Per-chapter ⇒ map to (piece, local offset), switching the
+  // <audio> src when the target chapter differs from the loaded one.
+  const applyGlobalSeek = useCallback(
+    (g: number, opts?: { play?: boolean }) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      const total = meta.duration_secs || 0;
+      const gg = Math.max(0, total ? Math.min(total, g) : Math.max(0, g));
+      globalTimeRef.current = gg;
+      if (!perChapterRef.current) {
+        audio.currentTime = gg;
+        setCurrentTime(gg);
+        if (opts?.play) audio.play().catch(() => {});
+        return;
+      }
+      let idx = 0;
+      for (let i = meta.chapters.length - 1; i >= 0; i--) {
+        if (gg >= meta.chapters[i].start_secs) {
+          idx = i;
+          break;
+        }
+      }
+      const local = Math.max(0, gg - meta.chapters[idx].start_secs);
+      setCurrentTime(gg);
+      if (idx === activeIdxRef.current) {
+        audio.currentTime = local;
+        if (opts?.play) audio.play().catch(() => {});
+      } else {
+        pendingLocalRef.current = local;
+        resumePlayRef.current = opts?.play ?? isPlayingRef.current;
+        setActiveIdx(idx);
+      }
+    },
+    [meta.chapters, meta.duration_secs],
+  );
 
   // Find current chapter via reverse scan
   const currentChapterIndex = (() => {
@@ -109,7 +197,13 @@ export function AudioPlayer({
 
   const currentChapter = meta.chapters[currentChapterIndex];
   const totalSecs = duration || meta.duration_secs;
-  const remaining = Math.max(0, totalSecs - currentTime);
+  // Remaining is wall-clock at the user's chosen rate (Spotify/Audible
+  // convention), so a 30-min audio at 2× shows -15:00 rather than -30:00.
+  // Elapsed + progress + chapter labels stay in audio-seconds — see plan.
+  const remaining = Math.max(
+    0,
+    (totalSecs - currentTime) / Math.max(0.1, playbackRate),
+  );
   const hasPrevChapter = currentChapterIndex > 0;
   const hasNextChapter = currentChapterIndex < meta.chapters.length - 1;
 
@@ -121,13 +215,15 @@ export function AudioPlayer({
 
     const makeSaveState = (): LastPlayedState => ({
       slug: meta.slug,
-      currentTime: audio.currentTime,
+      currentTime: chOffsetRef.current + audio.currentTime,
       playbackRate: audio.playbackRate,
       updatedAt: Date.now(),
     });
 
     const onTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
+      const g = chOffsetRef.current + audio.currentTime;
+      globalTimeRef.current = g;
+      setCurrentTime(g);
       const now = Date.now();
       if (now - lastSaveTime >= 5000) {
         lastSaveTime = now;
@@ -135,18 +231,77 @@ export function AudioPlayer({
       }
     };
     const onLoadedMetadata = () => {
+      if (perChapterRef.current) {
+        // Per-chapter: `duration` stays 0 so totalSecs = meta.duration_secs
+        // (the GLOBAL total). audio.duration here is just this piece.
+        setIsLoaded(true);
+        // A queued chapter switch (auto-advance / seek across pieces).
+        if (pendingLocalRef.current != null) {
+          const lp = pendingLocalRef.current;
+          pendingLocalRef.current = null;
+          try {
+            audio.currentTime = lp;
+          } catch {}
+          if (resumePlayRef.current) {
+            resumePlayRef.current = false;
+            audio.play().catch(() => {});
+          }
+          return;
+        }
+        // First load only: restore saved GLOBAL position (mapped to a piece).
+        if (didRestoreRef.current) return;
+        didRestoreRef.current = true;
+        // Rate is a global preference — apply slug-independently.
+        const globalRate = loadGlobalRate();
+        if (globalRate && SPEEDS.includes(globalRate)) {
+          audio.playbackRate = globalRate;
+          setPlaybackRate(globalRate);
+        }
+        const saved = loadPlaybackState();
+        if (saved && saved.slug === meta.slug) {
+          // Legacy migration: per-lesson record carried the rate before the
+          // global key existed; promote it so subsequent lessons inherit it.
+          if (
+            !globalRate &&
+            saved.playbackRate &&
+            SPEEDS.includes(saved.playbackRate)
+          ) {
+            audio.playbackRate = saved.playbackRate;
+            setPlaybackRate(saved.playbackRate);
+            saveGlobalRate(saved.playbackRate);
+          }
+          if (saved.currentTime > 0) {
+            applyGlobalSeek(saved.currentTime, { play: autoPlay });
+            return;
+          }
+        }
+        if (autoPlay) audio.play().catch(() => {});
+        return;
+      }
       setDuration(audio.duration);
       setIsLoaded(true);
       // Restore from localStorage immediately (no network wait)
+      // Rate is a global preference — apply slug-independently.
+      const globalRate = loadGlobalRate();
+      if (globalRate && SPEEDS.includes(globalRate)) {
+        audio.playbackRate = globalRate;
+        setPlaybackRate(globalRate);
+      }
       const saved = loadPlaybackState();
       let localUpdatedAt = 0;
       if (saved && saved.slug === meta.slug) {
         if (saved.currentTime > 0 && saved.currentTime < audio.duration) {
           audio.currentTime = saved.currentTime;
         }
-        if (saved.playbackRate && SPEEDS.includes(saved.playbackRate)) {
+        // Legacy migration: promote per-lesson rate to the global key.
+        if (
+          !globalRate &&
+          saved.playbackRate &&
+          SPEEDS.includes(saved.playbackRate)
+        ) {
           audio.playbackRate = saved.playbackRate;
           setPlaybackRate(saved.playbackRate);
+          saveGlobalRate(saved.playbackRate);
         }
         localUpdatedAt = saved.updatedAt;
       }
@@ -169,6 +324,7 @@ export function AudioPlayer({
           if (remote.playbackRate && SPEEDS.includes(remote.playbackRate)) {
             audio.playbackRate = remote.playbackRate;
             setPlaybackRate(remote.playbackRate);
+            saveGlobalRate(remote.playbackRate);
           }
           savePlaybackState({
             slug: meta.slug,
@@ -187,6 +343,16 @@ export function AudioPlayer({
       }
     };
     const onEnded = () => {
+      if (
+        perChapterRef.current &&
+        activeIdxRef.current < meta.chapters.length - 1
+      ) {
+        // No-stitch: roll straight into the next piece, keep playing.
+        pendingLocalRef.current = 0;
+        resumePlayRef.current = true;
+        setActiveIdx(activeIdxRef.current + 1);
+        return;
+      }
       setIsPlaying(false);
       clearPlaybackState();
       // Reset D1 row so resume from another device starts fresh.
@@ -228,52 +394,46 @@ export function AudioPlayer({
     }
   }, [isPlaying]);
 
-  const seek = useCallback((time: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = time;
-    setCurrentTime(time);
-  }, []);
+  const seek = useCallback(
+    (time: number) => {
+      applyGlobalSeek(time);
+    },
+    [applyGlobalSeek],
+  );
 
   // Bridge: a question heading in the article was clicked.
   useEffect(() => {
     const onSeekRequest = (e: Event) => {
       const seconds = (e as CustomEvent<{ seconds: number }>).detail?.seconds;
       if (typeof seconds !== "number") return;
-      seek(seconds);
-      audioRef.current?.play().catch(() => {});
+      applyGlobalSeek(seconds, { play: true });
     };
     window.addEventListener("knowledge:seek-audio", onSeekRequest);
     return () =>
       window.removeEventListener("knowledge:seek-audio", onSeekRequest);
-  }, [seek]);
+  }, [applyGlobalSeek]);
 
-  const skip = useCallback((delta: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = Math.max(
-      0,
-      Math.min(audio.duration || meta.duration_secs, audio.currentTime + delta),
-    );
-  }, [meta.duration_secs]);
+  const skip = useCallback(
+    (delta: number) => {
+      applyGlobalSeek(globalTimeRef.current + delta);
+    },
+    [applyGlobalSeek],
+  );
 
   const goToChapter = useCallback(
     (dir: -1 | 1) => {
-      const audio = audioRef.current;
-      if (!audio) return;
       let idx = 0;
       for (let i = meta.chapters.length - 1; i >= 0; i--) {
-        if (audio.currentTime >= meta.chapters[i].start_secs) {
+        if (globalTimeRef.current >= meta.chapters[i].start_secs) {
           idx = i;
           break;
         }
       }
       const ch = meta.chapters[idx + dir];
       if (!ch) return;
-      seek(ch.start_secs);
-      if (!isPlaying) audio.play().catch(() => {});
+      applyGlobalSeek(ch.start_secs, { play: true });
     },
-    [meta.chapters, seek, isPlaying],
+    [meta.chapters, applyGlobalSeek],
   );
 
   const setSpeed = useCallback((rate: number) => {
@@ -281,6 +441,7 @@ export function AudioPlayer({
     if (!audio) return;
     audio.playbackRate = rate;
     setPlaybackRate(rate);
+    saveGlobalRate(rate);
     persistState({
       slug: meta.slug,
       currentTime: audio.currentTime,
@@ -291,12 +452,10 @@ export function AudioPlayer({
 
   const seekToChapter = useCallback(
     (chapter: AudioChapter) => {
-      seek(chapter.start_secs);
+      applyGlobalSeek(chapter.start_secs, { play: true });
       setShowChapters(false);
-      const audio = audioRef.current;
-      if (audio && !isPlaying) audio.play();
     },
-    [seek, isPlaying],
+    [applyGlobalSeek],
   );
 
   // Tapping the bar opens the full-screen view — mobile only. Desktop keeps
@@ -340,10 +499,10 @@ export function AudioPlayer({
     } catch {}
 
     const at = () => audioRef.current;
-    const chapterAt = (t: number) => {
+    const chapterAt = () => {
       let idx = 0;
       for (let i = meta.chapters.length - 1; i >= 0; i--) {
-        if (t >= meta.chapters[i].start_secs) {
+        if (globalTimeRef.current >= meta.chapters[i].start_secs) {
           idx = i;
           break;
         }
@@ -353,47 +512,26 @@ export function AudioPlayer({
     const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
       ["play", () => at()?.play().catch(() => {})],
       ["pause", () => at()?.pause()],
-      [
-        "seekbackward",
-        () => {
-          const a = at();
-          if (a) a.currentTime = Math.max(0, a.currentTime - SKIP);
-        },
-      ],
-      [
-        "seekforward",
-        () => {
-          const a = at();
-          if (a)
-            a.currentTime = Math.min(
-              a.duration || meta.duration_secs,
-              a.currentTime + SKIP,
-            );
-        },
-      ],
+      ["seekbackward", () => applyGlobalSeek(globalTimeRef.current - SKIP)],
+      ["seekforward", () => applyGlobalSeek(globalTimeRef.current + SKIP)],
       [
         "seekto",
         (d) => {
-          const a = at();
-          if (a && typeof d.seekTime === "number") a.currentTime = d.seekTime;
+          if (typeof d.seekTime === "number") applyGlobalSeek(d.seekTime);
         },
       ],
       [
         "previoustrack",
         () => {
-          const a = at();
-          if (!a) return;
-          const ch = meta.chapters[chapterAt(a.currentTime) - 1];
-          if (ch) a.currentTime = ch.start_secs;
+          const ch = meta.chapters[chapterAt() - 1];
+          if (ch) applyGlobalSeek(ch.start_secs, { play: true });
         },
       ],
       [
         "nexttrack",
         () => {
-          const a = at();
-          if (!a) return;
-          const ch = meta.chapters[chapterAt(a.currentTime) + 1];
-          if (ch) a.currentTime = ch.start_secs;
+          const ch = meta.chapters[chapterAt() + 1];
+          if (ch) applyGlobalSeek(ch.start_secs, { play: true });
         },
       ],
     ];
@@ -409,12 +547,52 @@ export function AudioPlayer({
         } catch {}
       }
     };
-  }, [meta.slug, meta.title, meta.chapters, meta.duration_secs, category]);
+  }, [meta.slug, meta.title, meta.chapters, meta.duration_secs, category, applyGlobalSeek]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
   }, [isPlaying]);
+
+  // Mirror `playbackRate` into a ref so the chapter-swap effect can read the
+  // latest value without re-running on rate change.
+  useEffect(() => {
+    playbackRateRef.current = playbackRate;
+  }, [playbackRate]);
+
+  // Load the active chapter's piece whenever it changes (no-stitch only).
+  // Browsers reset `<audio>.playbackRate` to 1 when src/load() runs, so we
+  // re-apply the user's chosen rate as soon as the new piece's metadata is
+  // ready — otherwise chapter swaps silently drop the speed setting.
+  useEffect(() => {
+    if (!perChapter) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const restoreRate = () => {
+      audio.playbackRate = playbackRateRef.current;
+    };
+    audio.addEventListener("loadedmetadata", restoreRate, { once: true });
+    audio.load();
+    return () => audio.removeEventListener("loadedmetadata", restoreRate);
+  }, [perChapter, activeIdx]);
+
+  // Background-prefetch the very next chapter so the boundary is gapless.
+  // Bounded to one piece ahead — no 42 MB upfront download.
+  useEffect(() => {
+    if (!perChapter) return;
+    const next = meta.chapters[activeIdx + 1];
+    if (!next?.audio_url) return;
+    const a = new Audio();
+    a.preload = "auto";
+    a.src = next.audio_url;
+    prefetchRef.current = a;
+    return () => {
+      try {
+        a.src = "";
+      } catch {}
+      if (prefetchRef.current === a) prefetchRef.current = null;
+    };
+  }, [perChapter, activeIdx, meta.chapters]);
 
   const progress = totalSecs > 0 ? (currentTime / totalSecs) * 100 : 0;
 
@@ -562,7 +740,15 @@ export function AudioPlayer({
 
   return (
     <>
-      <audio ref={audioRef} src={meta.audio_url} preload="metadata" />
+      <audio
+        ref={audioRef}
+        src={
+          (perChapter
+            ? meta.chapters[activeIdx]?.audio_url
+            : meta.audio_url) || undefined
+        }
+        preload="metadata"
+      />
 
       {/* Chapter list overlay */}
       {showChapters && (

@@ -3,7 +3,7 @@
  * Usage: tsx --env-file=.env.local scripts/upload-audio.ts <slug>
  */
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
 const slug = process.argv[2];
@@ -36,16 +36,43 @@ async function upload(key: string, body: Buffer, contentType: string) {
 }
 
 const dataDir = join(__dirname, "..", "data");
+// Repo root → crates/tts/knowledge-output/<slug>/ holds the per-chapter pieces.
+const piecesDir = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "crates",
+  "tts",
+  "knowledge-output",
+  slug,
+);
 
 const mp3Path = join(dataDir, `${slug}.mp3`);
 const jsonPath = join(dataDir, `${slug}.json`);
 
 async function main() {
-  const mp3 = readFileSync(mp3Path);
   const json = readFileSync(jsonPath);
 
   console.log(`Uploading ${slug} to R2 bucket "${bucket}"...`);
-  await upload(`knowledge/${slug}.mp3`, mp3, "audio/mpeg");
+  // Per-chapter (no-stitch) guides: push every piece from
+  // crates/tts/knowledge-output/<slug>/NN.mp3 → knowledge/<slug>/NN.mp3.
+  // (This is also the recovery path when `knowledge_tts --upload` could not
+  // reach R2 — re-uses these working creds, no re-synthesis.)
+  if (existsSync(piecesDir)) {
+    const pieces = readdirSync(piecesDir)
+      .filter((f) => f.endsWith(".mp3"))
+      .sort();
+    for (const f of pieces) {
+      await upload(`knowledge/${slug}/${f}`, readFileSync(join(piecesDir, f)), "audio/mpeg");
+    }
+    console.log(`  ${pieces.length} per-chapter pieces uploaded`);
+  } else if (existsSync(mp3Path)) {
+    // Legacy stitched guide — single MP3.
+    await upload(`knowledge/${slug}.mp3`, readFileSync(mp3Path), "audio/mpeg");
+  } else {
+    console.log(`  (no pieces dir and no ${slug}.mp3 — JSON only)`);
+  }
   await upload(`knowledge/${slug}.json`, json, "application/json");
   console.log("Done.");
 }

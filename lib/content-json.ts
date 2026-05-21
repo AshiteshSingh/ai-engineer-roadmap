@@ -19,7 +19,7 @@ import type {
 } from "./articles";
 import { getUrlPath } from "./articles";
 
-interface CategoryRecord {
+export interface CategoryRecord {
   name: string;
   slug: string;
   icon: string;
@@ -29,7 +29,7 @@ interface CategoryRecord {
   sortOrder: number;
 }
 
-interface LessonMeta {
+export interface LessonMeta {
   slug: string;
   number: number;
   title: string;
@@ -38,13 +38,13 @@ interface LessonMeta {
   readingTimeMin: number;
 }
 
-interface ContentIndex {
+export interface ContentIndex {
   categories: CategoryRecord[];
   lessons: LessonMeta[];
   totalWordCount: number;
 }
 
-interface LessonFull extends LessonMeta {
+export interface LessonFull extends LessonMeta {
   content: string;
 }
 
@@ -92,8 +92,12 @@ function loadLessonFile(slug: string): LessonFull | null {
   return lesson;
 }
 
+// ── Pure shapers over a ContentIndex / LessonFull ──────────────────────────
+// Source-agnostic: reused by the local-JSON readers below and by the D1 path
+// (lib/content-d1.ts), so both render identical shapes from the same logic.
+
 /** Shape a raw record into the public `Lesson` (mirrors the old DB queries). */
-function toLesson(m: LessonMeta): Lesson {
+export function toLesson(m: LessonMeta): Lesson {
   return {
     slug: m.slug,
     fileSlug: m.slug,
@@ -108,25 +112,22 @@ function toLesson(m: LessonMeta): Lesson {
   };
 }
 
-export function getAllLessonsFromJson(): Lesson[] {
-  return loadIndex().lessons.map(toLesson);
-}
-
-export function getLessonBySlugFromJson(slug: string): LessonWithContent | null {
-  const l = loadLessonFile(slug);
-  if (!l) return null;
+export function lessonWithContentFromFull(l: LessonFull): LessonWithContent {
   return { ...toLesson(l), content: l.content };
 }
 
-export function getGroupedLessonsFromJson(): GroupedLessons[] {
-  const { categories, lessons } = loadIndex();
+export function lessonsFromIndex(idx: ContentIndex): Lesson[] {
+  return idx.lessons.map(toLesson);
+}
+
+export function groupedFromIndex(idx: ContentIndex): GroupedLessons[] {
   const byCategory = new Map<string, Lesson[]>();
-  for (const m of lessons) {
+  for (const m of idx.lessons) {
     const arr = byCategory.get(m.category);
     if (arr) arr.push(toLesson(m));
     else byCategory.set(m.category, [toLesson(m)]);
   }
-  return categories
+  return idx.categories
     .map((c) => ({
       category: c.name,
       meta: {
@@ -142,14 +143,11 @@ export function getGroupedLessonsFromJson(): GroupedLessons[] {
     .filter((g) => g.articles.length > 0);
 }
 
-export function getTotalWordCountFromJson(): number {
-  return loadIndex().totalWordCount;
-}
-
-export function getCategoryMetaFromJson(
+export function categoryMetaFromIndex(
+  idx: ContentIndex,
   categoryName: string,
 ): CategoryMeta | null {
-  const c = loadIndex().categories.find((x) => x.name === categoryName);
+  const c = idx.categories.find((x) => x.name === categoryName);
   if (!c) return null;
   return {
     slug: c.slug,
@@ -159,6 +157,40 @@ export function getCategoryMetaFromJson(
   };
 }
 
+export function categoryCountFromIndex(idx: ContentIndex): number {
+  return idx.categories.length;
+}
+
+export function totalWordCountFromIndex(idx: ContentIndex): number {
+  return idx.totalWordCount;
+}
+
+// ── Local-JSON readers (build-bundled fallback) ────────────────────────────
+
+export function getAllLessonsFromJson(): Lesson[] {
+  return lessonsFromIndex(loadIndex());
+}
+
+export function getLessonBySlugFromJson(slug: string): LessonWithContent | null {
+  const l = loadLessonFile(slug);
+  if (!l) return null;
+  return lessonWithContentFromFull(l);
+}
+
+export function getGroupedLessonsFromJson(): GroupedLessons[] {
+  return groupedFromIndex(loadIndex());
+}
+
+export function getTotalWordCountFromJson(): number {
+  return totalWordCountFromIndex(loadIndex());
+}
+
+export function getCategoryMetaFromJson(
+  categoryName: string,
+): CategoryMeta | null {
+  return categoryMetaFromIndex(loadIndex(), categoryName);
+}
+
 export function getCategoryCountFromJson(): number {
-  return loadIndex().categories.length;
+  return categoryCountFromIndex(loadIndex());
 }

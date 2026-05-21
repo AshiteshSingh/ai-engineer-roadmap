@@ -78,8 +78,6 @@ struct Metrics {
     code_blocks: usize,
     #[serde(rename = "crossRefs")]
     cross_refs: usize,
-    #[serde(rename = "xyflowBlocks")]
-    xyflow_blocks: usize,
 }
 
 #[derive(Serialize)]
@@ -102,8 +100,6 @@ struct Thresholds {
     min_words: usize,
     #[serde(rename = "minCode")]
     min_code: usize,
-    #[serde(rename = "minXyflow")]
-    min_xyflow: usize,
     #[serde(rename = "relationMinCrossrefs")]
     relation_min_crossrefs: usize,
     #[serde(rename = "relationTopK")]
@@ -116,8 +112,6 @@ struct Thresholds {
     q_fk_range: [f32; 2],
     #[serde(rename = "qTechMin")]
     q_tech_min: f32,
-    #[serde(rename = "qProsePerXyflow")]
-    q_prose_per_xyflow: usize,
     #[serde(rename = "qualityEnabled")]
     quality_enabled: bool,
 }
@@ -164,7 +158,6 @@ fn project(engine: EngineReport, profiles: &ProfileSet) -> Report {
                 word_count: o.metrics.word_count,
                 code_blocks: o.metrics.code_blocks,
                 cross_refs: o.metrics.cross_refs,
-                xyflow_blocks: o.metrics.xyflow_blocks,
             },
         })
         .collect();
@@ -173,14 +166,12 @@ fn project(engine: EngineReport, profiles: &ProfileSet) -> Report {
         thresholds: Thresholds {
             min_words: dp.structure.min_word_count,
             min_code: dp.structure.min_code_blocks,
-            min_xyflow: dp.structure.min_xyflow_blocks,
             relation_min_crossrefs: dp.relation.min_crossrefs,
             relation_topk: dp.relation.topk,
             relation_topk_hits: dp.relation.topk_hits,
             q_dup_jaccard: dp.quality.dup_jaccard,
             q_fk_range: [dp.quality.fk_min, dp.quality.fk_max],
             q_tech_min: dp.quality.tech_min,
-            q_prose_per_xyflow: dp.quality.prose_per_xyflow,
             quality_enabled: engine.quality_enabled,
         },
         warnings: engine.warnings,

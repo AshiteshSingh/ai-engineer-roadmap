@@ -553,6 +553,8 @@ fn build_meta(script_raw: &str, slug: &str, title: &str) -> anyhow::Result<Audio
             start_secs: cumulative,
             duration_secs: duration,
             script: polished,
+            audio_url: None,
+            file_size_bytes: None,
         });
         cumulative += duration;
     }

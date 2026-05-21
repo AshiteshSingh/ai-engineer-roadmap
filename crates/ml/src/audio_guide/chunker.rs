@@ -208,6 +208,8 @@ pub fn chunk_into_chapters(
             start_secs: cursor_secs,
             duration_secs: duration,
             script,
+            audio_url: None,
+            file_size_bytes: None,
         });
         cursor_secs += duration;
     }
