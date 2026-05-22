@@ -25,10 +25,9 @@ use clap::Parser;
 use deepseek::agent::builtin_tools::{ReadTool, WriteTool};
 use deepseek::types::EffortLevel;
 use deepseek::{run, PermissionMode, ReqwestClient, RunOptions, SdkMessage, Tool};
+use aer_ml::d1::D1Client;
 use futures::StreamExt;
-use serde_json::Value;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::Row;
+use serde_json::{json, Value};
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
@@ -51,10 +50,7 @@ struct Args {
     /// Directory holding `<slug>.json` (relative to CWD or absolute).
     #[arg(long, default_value = "../../data/app-prep")]
     art_dir: PathBuf,
-    /// Neon connection string (defaults to `$DATABASE_URL`).
-    #[arg(long)]
-    database_url: Option<String>,
-    /// Regenerate + validate only; skip the Neon write.
+    /// Regenerate + validate only; skip the D1 write.
     #[arg(long)]
     no_db: bool,
 }
@@ -140,14 +136,9 @@ fn validate(path: &Path) -> anyhow::Result<(String, String, String)> {
     Ok((jd, iq.to_string(), ts_raw.to_string()))
 }
 
-/// sqlx-postgres rejects libpq-only query params (e.g. `channel_binding`).
-/// Neon needs TLS but channel binding is optional, so keep the base URL +
-/// `sslmode=require`.
-fn sanitize_pg_url(url: &str) -> String {
-    match url.split_once('?') {
-        Some((base, _)) => format!("{base}?sslmode=require"),
-        None => url.to_string(),
-    }
+/// Read a string column from a D1 JSON result row.
+fn col(row: &Value, k: &str) -> Option<String> {
+    row.get(k).and_then(Value::as_str).map(String::from)
 }
 
 #[tokio::main]
@@ -218,29 +209,21 @@ async fn main() -> anyhow::Result<()> {
     );
 
     if args.no_db {
-        println!("--no-db: skipping Neon write.");
+        println!("--no-db: skipping D1 write.");
         return Ok(());
     }
 
-    let db_url = args
-        .database_url
-        .clone()
-        .or_else(|| std::env::var("DATABASE_URL").ok())
-        .context("DATABASE_URL not set and --database-url not given")?;
-    let pool = PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&sanitize_pg_url(&db_url))
-        .await
-        .context("connecting to Neon Postgres")?;
+    let d1 = D1Client::from_env()?
+        .context("D1 env vars (CLOUDFLARE_ACCOUNT_ID/_AUDIO_D1_ID/_D1_API_TOKEN) not set")?;
 
-    let rows = sqlx::query(
-        "SELECT id::text AS id, user_id, job_description, \
-         length(coalesce(interview_questions,'')) AS iq_len \
-         FROM applications WHERE slug = $1",
-    )
-    .bind(&args.slug)
-    .fetch_all(&pool)
-    .await?;
+    let rows = d1
+        .query_rows(
+            "SELECT id, user_id, job_description, \
+             length(coalesce(interview_questions,'')) AS iq_len \
+             FROM applications WHERE slug = ?",
+            vec![json!(args.slug)],
+        )
+        .await?;
     anyhow::ensure!(!rows.is_empty(), "no applications row for slug {:?}", args.slug);
 
     let row = if rows.len() > 1 {
@@ -248,22 +231,22 @@ async fn main() -> anyhow::Result<()> {
             for r in &rows {
                 eprintln!(
                     "  user-id={} id={}",
-                    r.get::<String, _>("user_id"),
-                    r.get::<String, _>("id"),
+                    col(r, "user_id").unwrap_or_default(),
+                    col(r, "id").unwrap_or_default(),
                 );
             }
             anyhow::anyhow!("{} rows match slug {:?}; pass --user-id", rows.len(), args.slug)
         })?;
         rows.into_iter()
-            .find(|r| r.get::<String, _>("user_id") == uid)
+            .find(|r| col(r, "user_id").as_deref() == Some(uid.as_str()))
             .ok_or_else(|| anyhow::anyhow!("no row for slug {:?} user-id {:?}", args.slug, uid))?
     } else {
         rows.into_iter().next().unwrap()
     };
 
-    let id: String = row.get("id");
-    let existing_jd: Option<String> = row.get("job_description");
-    let before_len: i32 = row.get("iq_len");
+    let id: String = col(&row, "id").context("row missing id")?;
+    let existing_jd: Option<String> = col(&row, "job_description");
+    let before_len: i64 = row.get("iq_len").and_then(Value::as_i64).unwrap_or(0);
     let backfill_jd = existing_jd
         .as_deref()
         .map_or(true, |s| s.trim().is_empty())

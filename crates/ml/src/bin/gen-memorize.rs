@@ -12,13 +12,13 @@
 //!
 //! Mirrors the sqlx/`sanitize_pg_url` pattern from `gen-app-prep-loop.rs`.
 
+use aer_ml::d1::D1Client;
 use aer_ml::server::{graphs::memorize, llm};
 use anyhow::Context;
 use clap::Parser;
 use serde_json::{json, Value};
-use sqlx::postgres::PgPoolOptions;
-use sqlx::Row;
 use tracing_subscriber::EnvFilter;
+use uuid::Uuid;
 
 #[derive(Parser)]
 #[command(name = "gen-memorize")]
@@ -32,21 +32,14 @@ struct Args {
     /// Regenerate even if `memorize_categories` is already set.
     #[arg(long)]
     force: bool,
-    /// Neon connection string (defaults to `$DATABASE_URL`).
-    #[arg(long)]
-    database_url: Option<String>,
-    /// Generate + print only; skip the Neon writes.
+    /// Generate + print only; skip the D1 writes.
     #[arg(long)]
     no_db: bool,
 }
 
-/// sqlx-postgres rejects libpq-only query params (`channel_binding`); Neon
-/// needs TLS but channel binding is optional. (Same as gen-app-prep-loop.)
-fn sanitize_pg_url(url: &str) -> String {
-    match url.split_once('?') {
-        Some((base, _)) => format!("{base}?sslmode=require"),
-        None => url.to_string(),
-    }
+/// Read a string column from a D1 JSON result row.
+fn col(row: &Value, k: &str) -> Option<String> {
+    row.get(k).and_then(Value::as_str).map(String::from)
 }
 
 fn parse_tech_stack(s: Option<&str>) -> Vec<Value> {
@@ -82,25 +75,17 @@ async fn main() -> anyhow::Result<()> {
         .init();
     let args = Args::parse();
 
-    let db_url = args
-        .database_url
-        .clone()
-        .or_else(|| std::env::var("DATABASE_URL").ok())
-        .context("DATABASE_URL not set and --database-url not given")?;
-    let pool = PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&sanitize_pg_url(&db_url))
-        .await
-        .context("connecting to Neon Postgres")?;
+    let d1 = D1Client::from_env()?
+        .context("D1 env vars (CLOUDFLARE_ACCOUNT_ID/_AUDIO_D1_ID/_D1_API_TOKEN) not set")?;
 
-    let rows = sqlx::query(
-        "SELECT id::text AS id, user_id, company, position, tech_stack, \
-         tech_dismissed_tags, memorize_categories \
-         FROM applications WHERE slug = $1",
-    )
-    .bind(&args.slug)
-    .fetch_all(&pool)
-    .await?;
+    let rows = d1
+        .query_rows(
+            "SELECT id, user_id, company, position, tech_stack, \
+             tech_dismissed_tags, memorize_categories \
+             FROM applications WHERE slug = ?",
+            vec![json!(args.slug)],
+        )
+        .await?;
     anyhow::ensure!(!rows.is_empty(), "no applications row for slug {:?}", args.slug);
 
     let row = if rows.len() > 1 {
@@ -108,25 +93,25 @@ async fn main() -> anyhow::Result<()> {
             for r in &rows {
                 eprintln!(
                     "  user-id={} id={}",
-                    r.get::<String, _>("user_id"),
-                    r.get::<String, _>("id"),
+                    col(r, "user_id").unwrap_or_default(),
+                    col(r, "id").unwrap_or_default(),
                 );
             }
             anyhow::anyhow!("{} rows match slug {:?}; pass --user-id", rows.len(), args.slug)
         })?;
         rows.into_iter()
-            .find(|r| r.get::<String, _>("user_id") == uid)
+            .find(|r| col(r, "user_id").as_deref() == Some(uid.as_str()))
             .ok_or_else(|| anyhow::anyhow!("no row for slug {:?} user-id {:?}", args.slug, uid))?
     } else {
         rows.into_iter().next().unwrap()
     };
 
-    let id: String = row.get("id");
-    let company: String = row.get("company");
-    let position: String = row.get("position");
-    let tech_stack: Option<String> = row.get("tech_stack");
-    let dismissed: Option<String> = row.get("tech_dismissed_tags");
-    let existing: Option<String> = row.get("memorize_categories");
+    let id: String = col(&row, "id").context("row missing id")?;
+    let company: String = col(&row, "company").unwrap_or_default();
+    let position: String = col(&row, "position").unwrap_or_default();
+    let tech_stack: Option<String> = col(&row, "tech_stack");
+    let dismissed: Option<String> = col(&row, "tech_dismissed_tags");
+    let existing: Option<String> = col(&row, "memorize_categories");
 
     if existing.as_deref().map_or(false, |s| !s.trim().is_empty()) && !args.force {
         println!("memorize_categories already set for {} — use --force to regenerate.", args.slug);
@@ -173,7 +158,7 @@ async fn main() -> anyhow::Result<()> {
 
     if args.no_db {
         println!("{}", serde_json::to_string_pretty(&Value::Array(categories))?);
-        println!("--no-db: skipping Neon writes.");
+        println!("--no-db: skipping D1 writes.");
         return Ok(());
     }
 
@@ -197,34 +182,37 @@ async fn main() -> anyhow::Result<()> {
                 "mnemonicHint": item.get("mnemonicHint").cloned().unwrap_or(Value::Null),
             })
             .to_string();
-            sqlx::query(
-                "INSERT INTO concepts (name, description, concept_type, metadata) \
-                 VALUES ($1, $2, 'skill', $3::jsonb) \
+            d1.exec(
+                "INSERT INTO concepts (id, name, description, concept_type, metadata, created_at) \
+                 VALUES (?, ?, ?, 'skill', ?, unixepoch()) \
                  ON CONFLICT (name) DO UPDATE SET \
-                   description = EXCLUDED.description, metadata = EXCLUDED.metadata",
+                   description = excluded.description, metadata = excluded.metadata",
+                vec![
+                    json!(Uuid::new_v4().to_string()),
+                    json!(name),
+                    json!(description),
+                    json!(metadata),
+                ],
             )
-            .bind(&name)
-            .bind(description)
-            .bind(&metadata)
-            .execute(&pool)
             .await
             .with_context(|| format!("upsert concept {name}"))?;
             upserts += 1;
         }
     }
 
-    sqlx::query(
-        "UPDATE applications SET memorize_categories = $1, updated_at = now() \
-         WHERE id = $2::uuid",
+    d1.exec(
+        "UPDATE applications SET memorize_categories = ?, updated_at = unixepoch() \
+         WHERE id = ?",
+        vec![
+            json!(serde_json::to_string(&Value::Array(categories.clone()))?),
+            json!(id),
+        ],
     )
-    .bind(serde_json::to_string(&Value::Array(categories.clone()))?)
-    .bind(&id)
-    .execute(&pool)
     .await
     .context("UPDATE applications.memorize_categories")?;
 
     println!(
-        "✓ Neon updated: id={id} slug={} — {} concepts upserted, memorize_categories set ({} categories)",
+        "✓ D1 updated: id={id} slug={} — {} concepts upserted, memorize_categories set ({} categories)",
         args.slug, upserts, categories.len()
     );
     Ok(())

@@ -82,7 +82,43 @@ impl D1Client {
             .map(|_| ())
     }
 
-    async fn exec(&self, sql: &str, params: Vec<serde_json::Value>) -> Result<usize> {
+    /// Run an arbitrary parameterized statement and return the rows as JSON
+    /// objects (`result[0].results`). Use for SELECTs; pairs with `exec` for
+    /// writes. Params are bound (never interpolated).
+    pub async fn query_rows(
+        &self,
+        sql: &str,
+        params: Vec<serde_json::Value>,
+    ) -> Result<Vec<serde_json::Value>> {
+        let parsed = self.request(sql, params).await?;
+        let rows = parsed
+            .get("result")
+            .and_then(|r| r.as_array())
+            .and_then(|a| a.first())
+            .and_then(|r| r.get("results"))
+            .and_then(|r| r.as_array())
+            .cloned()
+            .unwrap_or_default();
+        Ok(rows)
+    }
+
+    /// Run a statement and return the number of rows changed (`meta.changes`).
+    pub async fn exec(&self, sql: &str, params: Vec<serde_json::Value>) -> Result<usize> {
+        let parsed = self.request(sql, params).await?;
+        let written = parsed
+            .get("result")
+            .and_then(|r| r.as_array())
+            .and_then(|a| a.first())
+            .and_then(|r| r.get("meta"))
+            .and_then(|m| m.get("changes"))
+            .and_then(|c| c.as_u64())
+            .unwrap_or(0) as usize;
+        Ok(written)
+    }
+
+    /// POST one statement to the D1 query endpoint and return the parsed,
+    /// success-checked response body.
+    async fn request(&self, sql: &str, params: Vec<serde_json::Value>) -> Result<serde_json::Value> {
         let body = json!({ "sql": sql, "params": params });
         let resp = self
             .http
@@ -103,15 +139,7 @@ impl D1Client {
         if !parsed.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
             anyhow::bail!("d1 query api error: {text}");
         }
-        let written = parsed
-            .get("result")
-            .and_then(|r| r.as_array())
-            .and_then(|a| a.first())
-            .and_then(|r| r.get("meta"))
-            .and_then(|m| m.get("changes"))
-            .and_then(|c| c.as_u64())
-            .unwrap_or(0) as usize;
-        Ok(written)
+        Ok(parsed)
     }
 }
 
