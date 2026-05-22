@@ -108,7 +108,16 @@ export function AudioPlayer({
    *  is unchanged — bottom bar + tap-to-expand sheet. Opt-in per page. */
   desktopRail?: boolean;
 }) {
-  const audioRef = useRef<HTMLAudioElement>(null);
+  // Two <audio> elements (A/B double-buffer) for gapless per-chapter playback:
+  // the active element plays chapter N while the idle element stays fully
+  // buffered with chapter N+1, so the boundary swap needs no load() and there
+  // is no audible pause. `audioRef` always points at the ACTIVE element, so the
+  // rest of the component is unchanged. Single-file guides use element A only.
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const idleRef = useRef<HTMLAudioElement | null>(null);
+  const elsRef = useRef<(HTMLAudioElement | null)[]>([null, null]);
+  const activeABRef = useRef(0);
+  const didUnlockRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -136,7 +145,6 @@ export function AudioPlayer({
   const pendingLocalRef = useRef<number | null>(null);
   const resumePlayRef = useRef(false);
   const didRestoreRef = useRef(false);
-  const prefetchRef = useRef<HTMLAudioElement | null>(null);
   const chOffset = perChapter
     ? meta.chapters[activeIdx]?.start_secs ?? 0
     : 0;
@@ -149,6 +157,26 @@ export function AudioPlayer({
   const isPlayingRef = useRef(false);
   isPlayingRef.current = isPlaying;
   const globalTimeRef = useRef(0);
+
+  // Keep audioRef/idleRef pointing at the active/idle elements as A/B flip.
+  const syncActive = useCallback(() => {
+    audioRef.current = elsRef.current[activeABRef.current] ?? null;
+    idleRef.current = elsRef.current[1 - activeABRef.current] ?? null;
+  }, []);
+  const setElA = useCallback(
+    (el: HTMLAudioElement | null) => {
+      elsRef.current[0] = el;
+      syncActive();
+    },
+    [syncActive],
+  );
+  const setElB = useCallback(
+    (el: HTMLAudioElement | null) => {
+      elsRef.current[1] = el;
+      syncActive();
+    },
+    [syncActive],
+  );
 
   // Single seek primitive in GLOBAL seconds. Single-file ⇒ identical to the
   // old `seek`. Per-chapter ⇒ map to (piece, local offset), switching the
@@ -352,10 +380,33 @@ export function AudioPlayer({
         perChapterRef.current &&
         activeIdxRef.current < meta.chapters.length - 1
       ) {
-        // No-stitch: roll straight into the next piece, keep playing.
+        const nextIdx = activeIdxRef.current + 1;
+        const nextUrl = meta.chapters[nextIdx]?.audio_url;
+        const idle = idleRef.current;
+        // Gapless: the idle element is already buffered with the next chapter,
+        // so start it immediately and flip A/B — no load() on the hot path.
+        if (
+          idle &&
+          nextUrl &&
+          idle.dataset.url === nextUrl &&
+          idle.readyState >= 3 /* HAVE_FUTURE_DATA */
+        ) {
+          idle.currentTime = 0;
+          idle.playbackRate = playbackRateRef.current;
+          // Update GLOBAL refs synchronously so the one frame before the
+          // setActiveIdx re-render doesn't show a backward progress jump.
+          chOffsetRef.current = meta.chapters[nextIdx].start_secs;
+          globalTimeRef.current = meta.chapters[nextIdx].start_secs;
+          idle.play().catch(() => {});
+          activeABRef.current = 1 - activeABRef.current;
+          syncActive();
+          setActiveIdx(nextIdx);
+          return;
+        }
+        // Fallback (idle not ready / stall): load on the active element.
         pendingLocalRef.current = 0;
         resumePlayRef.current = true;
-        setActiveIdx(activeIdxRef.current + 1);
+        setActiveIdx(nextIdx);
         return;
       }
       setIsPlaying(false);
@@ -387,7 +438,7 @@ export function AudioPlayer({
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
     };
-  }, [meta.slug, autoPlay]);
+  }, [meta.slug, autoPlay, activeIdx]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -395,6 +446,26 @@ export function AudioPlayer({
     if (isPlaying) {
       audio.pause();
     } else {
+      // iOS Safari only lets a media element start from a user gesture. The
+      // gapless handoff starts the IDLE element programmatically (no gesture),
+      // so prime it once here (muted play->pause) to unlock later boundary plays.
+      if (perChapterRef.current && !didUnlockRef.current) {
+        didUnlockRef.current = true;
+        const idle = idleRef.current;
+        if (idle) {
+          const wasMuted = idle.muted;
+          idle.muted = true;
+          idle
+            .play()
+            .then(() => {
+              idle.pause();
+              idle.muted = wasMuted;
+            })
+            .catch(() => {
+              idle.muted = wasMuted;
+            });
+        }
+      }
       audio.play();
     }
   }, [isPlaying]);
@@ -565,38 +636,37 @@ export function AudioPlayer({
     playbackRateRef.current = playbackRate;
   }, [playbackRate]);
 
-  // Load the active chapter's piece whenever it changes (no-stitch only).
-  // Browsers reset `<audio>.playbackRate` to 1 when src/load() runs, so we
-  // re-apply the user's chosen rate as soon as the new piece's metadata is
-  // ready — otherwise chapter swaps silently drop the speed setting.
+  // Dual-buffer manager (no-stitch only). Keeps the ACTIVE element loaded with
+  // the current chapter and the IDLE element fully buffered with the NEXT one,
+  // so the boundary swap in `onEnded` is gapless. `dataset.url` tracks what each
+  // element holds so an already-buffered piece is never reloaded (which is what
+  // would reintroduce the pause). Browsers reset playbackRate on load(), so the
+  // active element re-applies the chosen rate once its metadata is ready.
   useEffect(() => {
     if (!perChapter) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-    const restoreRate = () => {
-      audio.playbackRate = playbackRateRef.current;
-    };
-    audio.addEventListener("loadedmetadata", restoreRate, { once: true });
-    audio.load();
-    return () => audio.removeEventListener("loadedmetadata", restoreRate);
-  }, [perChapter, activeIdx]);
-
-  // Background-prefetch the very next chapter so the boundary is gapless.
-  // Bounded to one piece ahead — no 42 MB upfront download.
-  useEffect(() => {
-    if (!perChapter) return;
-    const next = meta.chapters[activeIdx + 1];
-    if (!next?.audio_url) return;
-    const a = new Audio();
-    a.preload = "auto";
-    a.src = next.audio_url;
-    prefetchRef.current = a;
-    return () => {
-      try {
-        a.src = "";
-      } catch {}
-      if (prefetchRef.current === a) prefetchRef.current = null;
-    };
+    const active = audioRef.current;
+    const idle = idleRef.current;
+    if (active) {
+      const wantActive = meta.chapters[activeIdx]?.audio_url;
+      if (wantActive && active.dataset.url !== wantActive) {
+        active.dataset.url = wantActive;
+        const restoreRate = () => {
+          active.playbackRate = playbackRateRef.current;
+        };
+        active.addEventListener("loadedmetadata", restoreRate, { once: true });
+        active.src = wantActive;
+        active.load();
+      }
+    }
+    if (idle) {
+      const wantIdle = meta.chapters[activeIdx + 1]?.audio_url;
+      if (wantIdle && idle.dataset.url !== wantIdle) {
+        idle.dataset.url = wantIdle;
+        idle.preload = "auto";
+        idle.src = wantIdle;
+        idle.load();
+      }
+    }
   }, [perChapter, activeIdx, meta.chapters]);
 
   const progress = totalSecs > 0 ? (currentTime / totalSecs) * 100 : 0;
@@ -746,14 +816,11 @@ export function AudioPlayer({
   return (
     <>
       <audio
-        ref={audioRef}
-        src={
-          (perChapter
-            ? meta.chapters[activeIdx]?.audio_url
-            : meta.audio_url) || undefined
-        }
-        preload="metadata"
+        ref={setElA}
+        src={perChapter ? undefined : meta.audio_url || undefined}
+        preload={perChapter ? "auto" : "metadata"}
       />
+      {perChapter && <audio ref={setElB} preload="auto" />}
 
       {/* Chapter list overlay */}
       {showChapters && (
