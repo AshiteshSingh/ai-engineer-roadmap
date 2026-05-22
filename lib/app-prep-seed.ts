@@ -122,3 +122,26 @@ export function getOwnerPrepSeed(
   _ownerCache.set(idOrSlug, result);
   return result;
 }
+
+const _taskCache = new Map<string, string | null>();
+
+/**
+ * Resolve a PUBLIC committed coding-task spec for a slug from
+ * data/app-prep/<slug>.task.md (raw markdown). Same kebab-case path-traversal
+ * guard and dir resolution as getAppPrepSeed. Unlike the owner prep this is
+ * public content — the API attaches it to every response. Returns the trimmed
+ * markdown, or null when no file exists.
+ */
+export function getTaskSeed(idOrSlug: string): string | null {
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(idOrSlug)) return null;
+  if (_taskCache.has(idOrSlug)) return _taskCache.get(idOrSlug)!;
+
+  const file = path.join(resolveSeedDir(), `${idOrSlug}.task.md`);
+  let result: string | null = null;
+  if (fs.existsSync(/*turbopackIgnore: true*/ file)) {
+    const md = fs.readFileSync(/*turbopackIgnore: true*/ file, "utf-8").trim();
+    if (md) result = md;
+  }
+  _taskCache.set(idOrSlug, result);
+  return result;
+}

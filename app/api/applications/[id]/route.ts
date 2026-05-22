@@ -5,7 +5,7 @@ import { isOwner, stripOwnerOnlyMarkdownLines } from "@/lib/owner";
 import { db } from "@/src/db";
 import { applications } from "@/src/db/schema";
 import { eq, and, or } from "drizzle-orm";
-import { getAppPrepSeed, getOwnerPrepSeed } from "@/lib/app-prep-seed";
+import { getAppPrepSeed, getOwnerPrepSeed, getTaskSeed } from "@/lib/app-prep-seed";
 import { fetchWorkerPrep } from "@/lib/prep-worker";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,9 +28,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // non-owner response so the field never leaks. Same server-side gate as
   // conceal()/stripOwnerOnlyMarkdownLines — no new auth surface.
   const ownerPrep = owner ? getOwnerPrepSeed(id)?.ownerPrep ?? null : null;
-  const attach = <T extends object>(o: T): T & { ownerPrep: string | null } => ({
+  // Public committed coding-task spec (data/app-prep/<slug>.task.md). Unlike
+  // ownerPrep this is NOT gated — attached to every response so it overlays
+  // the (DB-row-backed) public application page.
+  const codingTask = getTaskSeed(id);
+  const attach = <T extends object>(
+    o: T,
+  ): T & { ownerPrep: string | null; codingTask: string | null } => ({
     ...o,
     ownerPrep,
+    codingTask,
   });
 
   // Committed Rust prep artifact (gen-app-prep → data/app-prep/<slug>.json) is

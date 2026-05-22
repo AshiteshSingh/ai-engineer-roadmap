@@ -19,6 +19,9 @@ export interface AppData {
   // requester is the owner (data/app-prep/<slug>.owner.json); null for the
   // public seed and every non-owner response. Never overwritten by gen-app-prep.
   ownerPrep: string | null;
+  // Public, committed coding-task spec (data/app-prep/<slug>.task.md), attached
+  // by the API for every requester. Optional so the seed builder needs no change.
+  codingTask?: string | null;
   techStack: string | null;
   interviewers: string | null;
   techDismissedTags: string | null;

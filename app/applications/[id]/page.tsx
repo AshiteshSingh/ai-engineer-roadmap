@@ -11,11 +11,12 @@ import { JobDescriptionTab } from "@/components/app-detail/JobDescriptionTab";
 import { TechStackTab } from "@/components/app-detail/TechStackTab";
 import { CompanyTab } from "@/components/app-detail/CompanyTab";
 import { InterviewPrepTab } from "@/components/app-detail/InterviewPrepTab";
+import { CodingTaskTab } from "@/components/app-detail/CodingTaskTab";
 import type { AppData } from "@/components/app-detail/types";
 import { Section } from "@/components/ui";
 import styles from "./page.module.css";
 
-const TAB_VALUES = ["description", "tech", "company", "prep", "interviewers", "notes", "debrief"] as const;
+const TAB_VALUES = ["description", "task", "tech", "company", "prep", "interviewers", "notes", "debrief"] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 function ApplicationDetailInner() {
@@ -149,6 +150,13 @@ function ApplicationDetailInner() {
               <span className="tab-shortcut-hint">1</span>
             </Flex>
           </Tabs.Trigger>
+          {app.codingTask && (
+            <Tabs.Trigger value="task">
+              <Flex direction="column" align="center" gap="0">
+                <Text>Coding task</Text>
+              </Flex>
+            </Tabs.Trigger>
+          )}
           <Tabs.Trigger value="tech">
             <Flex direction="column" align="center" gap="0">
               <Text>Tech Stack</Text>
