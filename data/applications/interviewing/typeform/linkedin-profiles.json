@@ -1,0 +1,222 @@
+{
+  "meta": {
+    "source": "linkedin_page_paste",
+    "scraped_at": "2026-05-20",
+    "scraped_by": "Vadim Nicolai (manual paste)",
+    "profile_count": 2,
+    "viewer": {
+      "name": "Vadim Nicolai",
+      "status": "online"
+    }
+  },
+  "company": {
+    "name": "Typeform",
+    "linkedin_url": "https://www.linkedin.com/company/typeform/",
+    "website": "https://www.typeform.com",
+    "industry": "Software Development",
+    "category": "PRODUCT",
+    "headquarters": "Barcelona, Catalonia, Spain",
+    "followers_linkedin": 91724,
+    "tags": ["saas", "form-builder", "survey", "b2b"]
+  },
+  "profiles": [
+    {
+      "first_name": "George",
+      "last_name": "Gillams",
+      "linkedin_url": "https://www.linkedin.com/in/george-gillams-37537077/",
+      "headline": "Expert frontend software engineer at Typeform, accessibility champion, design system enthusiast, obstacle course athlete and dog/cat dad who loves travel and photography",
+      "position": "Expert Frontend Software Engineer",
+      "current_company": "Typeform",
+      "location": "Southampton, England, United Kingdom",
+      "personal_website": "https://www.georgegillams.co.uk",
+      "about": "You can reach me at https://www.georgegillams.co.uk/?utm_source=LinkedIn",
+      "connection_degree": "3rd",
+      "connections": 311,
+      "followers": 306,
+      "education": [
+        { "school": "University of Southampton" }
+      ],
+      "activity": {
+        "followers": 306,
+        "recent_posts": "George has no recent posts"
+      },
+      "tags": ["typeform", "engineer", "frontend", "accessibility", "design-systems"],
+      "interests_personal": [
+        "accessibility",
+        "design systems",
+        "obstacle course racing",
+        "dogs",
+        "cats",
+        "travel",
+        "photography"
+      ],
+      "notes": "Accessibility champion, design system enthusiast, obstacle course athlete, dog/cat dad, travel + photography. Personal website: georgegillams.co.uk."
+    },
+    {
+      "first_name": "Ethan",
+      "last_name": "Carlsson",
+      "linkedin_url": "https://www.linkedin.com/in/ethan-m-carlsson-/",
+      "headline": "Full Stack Engineer",
+      "position": "Full Stack Engineer",
+      "current_company": "Typeform",
+      "location": "Barcelona, Catalonia, Spain",
+      "connection_degree": "3rd",
+      "connections": 161,
+      "followers": 168,
+      "about": "I’m a highly skilled full-stack software developer with a strong focus on building scalable, performant, and well-tested APIs. With experience across JavaScript/TypeScript, PHP, SQL, and modern front-end frameworks, I specialize in designing and optimizing systems that handle high traffic, reduce latency, and improve developer experience.\n\nBeyond work, I contribute to open-source projects that improve developer workflows and work on a range of personal projects, including:\n- openapi-to-hurl — A Rust tool for converting OpenAPI specs to Hurl files (https://github.com/ethancarlsson/openapi-to-hurl)\n- nvim-hurl.nvim — A Lua plugin for running Hurl files in Neovim (https://github.com/ethancarlsson/nvim-hurl.nvim)\n- assert_it.ua — An assertion library for the Functional/Array language Uiua (https://github.com/ethancarlsson/assert_it.ua)\n\nI have a very strong foundation of skills in PHP, TypeScript and SQL especially as it relates to the development of APIs, but also a breadth of skills gained through personal and open-source projects.",
+      "top_skills": [
+        "SQL",
+        "TypeScript",
+        "PHP",
+        "Go",
+        "Web development",
+        "Event Driven Programming"
+      ],
+      "experience": [
+        {
+          "company": "Typeform",
+          "title": "Full Stack Engineer",
+          "employment": "Full-time",
+          "start": "2025-04",
+          "end": null,
+          "duration": "1 yr 2 mos",
+          "location": "Barcelona, Catalonia, Spain · Remote",
+          "skills": ["Go", "Event Driven Programming"]
+        },
+        {
+          "company": "Printful",
+          "title": "Software Developer",
+          "employment": "Full-time",
+          "start": "2022-12",
+          "end": "2025-04",
+          "duration": "2 yrs 5 mos",
+          "location": "Barcelona, Catalonia, Spain",
+          "skills": ["Back-End Web Development", "Front-end Development"]
+        },
+        {
+          "company": "Printful",
+          "title": "Junior Software Developer",
+          "employment": "Full-time",
+          "start": "2021-09",
+          "end": "2022-12",
+          "duration": "1 yr 4 mos",
+          "location": "Barcelona, Catalonia, Spain",
+          "skills": ["JavaScript", "Node.js"]
+        }
+      ],
+      "education": [
+        {
+          "school": "Macquarie University",
+          "degree": "Bachelor of Arts with the Degree of Bachelor of Laws",
+          "field": "International Relations and Laws",
+          "start": 2015,
+          "end": 2019
+        },
+        {
+          "school": "Uppsala University",
+          "field": "International Relations",
+          "start": 2017,
+          "end": 2017,
+          "note": "Exchange University; member of Södermanlands-Nerikes nation"
+        }
+      ],
+      "volunteering": [
+        {
+          "org": "MigraCode Barcelona",
+          "role": "JavaScript Teacher",
+          "cause": "Science and Technology",
+          "start": "2021-10",
+          "end": "2022-02",
+          "duration": "5 mos",
+          "summary": "Assist with technical interview prep; teach introductory JavaScript"
+        },
+        {
+          "org": "EuroPython",
+          "role": "Python Web Developer",
+          "cause": "Science and Technology",
+          "start": "2021-03",
+          "end": "2021-08",
+          "duration": "6 mos",
+          "summary": "Worked in the Web working group; https://ep2021.europython.eu/europython/team/"
+        }
+      ],
+      "certifications": [
+        {
+          "name": "Learn to install & configure an NGINX web server from scratch",
+          "issuer": "Udemy",
+          "issued": "2023-02",
+          "expires": "2033-02",
+          "credential_id": "UC-d0ccf0af-a975-4dde-84de-c90585e4d5a2",
+          "skills": ["Nginx", "Web development"]
+        },
+        {
+          "name": "Node.js: Real-Time Web with Socket.IO",
+          "issuer": "LinkedIn",
+          "issued": "2021-05",
+          "skills": ["Web development"]
+        }
+      ],
+      "awards": [
+        {
+          "title": "Faculty of Arts Highest Achiever in a Unit of Study Award",
+          "issuer": "Macquarie University",
+          "issued": "2019-12",
+          "note": "Granted for achievements in the subject of International Relations of the Middle East"
+        },
+        {
+          "title": "Merit List",
+          "issuer": "Macquarie University",
+          "issued": "2019-12",
+          "note": "Placed on the 2020 merit list"
+        }
+      ],
+      "open_source": [
+        {
+          "name": "openapi-to-hurl",
+          "lang": "Rust",
+          "url": "https://github.com/ethancarlsson/openapi-to-hurl",
+          "description": "Convert OpenAPI specs to Hurl files"
+        },
+        {
+          "name": "nvim-hurl.nvim",
+          "lang": "Lua",
+          "url": "https://github.com/ethancarlsson/nvim-hurl.nvim",
+          "description": "Neovim plugin for running Hurl files"
+        },
+        {
+          "name": "assert_it.ua",
+          "lang": "Uiua",
+          "url": "https://github.com/ethancarlsson/assert_it.ua",
+          "description": "Assertion library for the functional/array language Uiua"
+        }
+      ],
+      "interests": {
+        "companies": [
+          { "name": "Typeform", "followers": 91724 }
+        ]
+      },
+      "activity": {
+        "followers": 168,
+        "recent_posts": "Ethan has no recent posts"
+      },
+      "github_handle": "ethancarlsson",
+      "tags": ["typeform", "engineer", "fullstack", "go", "event-driven", "oss"]
+    }
+  ],
+  "related_profiles_seen_on_page": {
+    "george_page": [
+      { "name": "Miquel Arranz Santa-Olalla", "degree": "2nd", "headline": "Expert Frontend Engineer at Typeform | Lecturer at La Salle" },
+      { "name": "Charlie Jewell", "degree": "3rd", "headline": "Assistant Manager" },
+      { "name": "Nick Stock", "degree": "2nd", "headline": "seeking new design opportunities" },
+      { "name": "Renan Muniz", "degree": "2nd", "headline": "Senior Frontend Engineer at Typeform" },
+      { "name": "Natalie T.", "degree": "3rd", "headline": "Event Assistant/Stand In Event Manager" }
+    ],
+    "ethan_page": [
+      { "name": "Tomás Fontenla", "degree": "2nd", "headline": "Senior Software Engineer @ Typeform" },
+      { "name": "Ruben Peñafiel", "degree": "2nd", "headline": "Senior Backend Engineer at Typeform" },
+      { "name": "Sebastien C.", "degree": "2nd", "headline": "Senior Software Engineer" },
+      { "name": "Arda Oğulcan Pektaş", "degree": "2nd", "headline": "Expert Frontend Engineer at Typeform" },
+      { "name": "María Estefanía Rengifo Bedoya", "degree": "2nd", "headline": "Senior Backend Engineer at Typeform" }
+    ]
+  }
+}
