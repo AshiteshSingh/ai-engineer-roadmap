@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   Card,
@@ -11,6 +11,7 @@ import {
   TextField,
 } from "@radix-ui/themes";
 import { signUp } from "@/lib/auth-client";
+import { safeInternalPath } from "@/lib/safe-redirect";
 import styles from "./page.module.css";
 
 export default function SignUpPage() {
@@ -19,6 +20,10 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Captured after mount so the "Sign in" link carries any ?callbackURL forward.
+  const [search, setSearch] = useState("");
+
+  useEffect(() => setSearch(window.location.search), []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +38,10 @@ export default function SignUpPage() {
           setLoading(false);
         },
         onSuccess: () => {
-          window.location.href = "/";
+          const raw = new URLSearchParams(window.location.search).get(
+            "callbackURL"
+          );
+          window.location.href = safeInternalPath(raw);
         },
       }
     );
@@ -102,7 +110,7 @@ export default function SignUpPage() {
 
             <Text size="2" align="center">
               Already have an account?{" "}
-              <Link href="/login">Sign in</Link>
+              <Link href={`/login${search}`}>Sign in</Link>
             </Text>
           </Flex>
         </form>

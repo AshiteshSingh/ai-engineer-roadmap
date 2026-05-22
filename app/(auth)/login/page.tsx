@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   Callout,
@@ -13,6 +13,7 @@ import {
 } from "@radix-ui/themes";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { signIn } from "@/lib/auth-client";
+import { safeInternalPath } from "@/lib/safe-redirect";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
@@ -20,6 +21,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Captured after mount so the "Sign up" link carries any ?callbackURL forward.
+  const [search, setSearch] = useState("");
+
+  useEffect(() => setSearch(window.location.search), []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +42,10 @@ export default function LoginPage() {
             setLoading(false);
           },
           onSuccess: () => {
-            window.location.href = "/";
+            const raw = new URLSearchParams(window.location.search).get(
+              "callbackURL"
+            );
+            window.location.href = safeInternalPath(raw);
           },
         }
       );
@@ -100,7 +108,7 @@ export default function LoginPage() {
 
             <Text size="2" align="center">
               Don&apos;t have an account?{" "}
-              <Link href="/signup">Sign up</Link>
+              <Link href={`/signup${search}`}>Sign up</Link>
             </Text>
           </Flex>
         </form>
