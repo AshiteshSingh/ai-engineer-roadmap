@@ -5,12 +5,12 @@
 //! Resolves an `applications` row by slug, runs `memorize::run` in-process
 //! (plain DeepSeek orchestration — no server), then writes the same two
 //! places the old route did: upserts each item into `concepts` and stores
-//! the categories JSON in `applications.memorize_categories` (Neon, sqlx).
+//! the categories JSON in `applications.memorize_categories` (Cloudflare D1
+//! over the HTTP API — see `aer_ml::d1::D1Client`).
 //!
-//!   DEEPSEEK_API_KEY=… DATABASE_URL=… \
+//!   DEEPSEEK_API_KEY=… CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_AUDIO_D1_ID=… \
+//!   CLOUDFLARE_D1_API_TOKEN=… \
 //!     cargo run -p aer-ml --release --bin gen-memorize -- --slug <slug>
-//!
-//! Mirrors the sqlx/`sanitize_pg_url` pattern from `gen-app-prep-loop.rs`.
 
 use aer_ml::d1::D1Client;
 use aer_ml::server::{graphs::memorize, llm};

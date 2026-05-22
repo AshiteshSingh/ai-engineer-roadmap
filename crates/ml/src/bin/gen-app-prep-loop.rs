@@ -5,15 +5,17 @@
 //!    for the job description and rewrites the artifact's prep fields.
 //! 2. Validates the regenerated artifact in Rust (4 `##` sections, tech-stack
 //!    categories ∈ `app_prep::CATEGORIES`, relevance, JSON-string shape).
-//! 3. Persists it into the Neon `applications` row over Postgres (sqlx).
+//! 3. Persists it into the `applications` row in Cloudflare D1 (HTTP API —
+//!    see `aer_ml::d1::D1Client`).
 //!
 //! Replaces the old bash (`prep-loop.sh`) + tsx (`gen-app-prep-db.ts`) glue.
 //!
-//!   DEEPSEEK_API_KEY=… DATABASE_URL=… \
+//!   DEEPSEEK_API_KEY=… CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_AUDIO_D1_ID=… \
+//!   CLOUDFLARE_D1_API_TOKEN=… \
 //!     cargo run -p aer-ml --release --bin gen-app-prep-loop -- \
 //!       --slug european-central-bank-ssm-cockpit-developer
 //!
-//! Exits non-zero (and leaves Neon untouched) on agent failure or a bad
+//! Exits non-zero (and leaves D1 untouched) on agent failure or a bad
 //! artifact.
 
 use std::path::{Path, PathBuf};
@@ -260,32 +262,39 @@ async fn main() -> anyhow::Result<()> {
         }
     );
 
-    sqlx::query(
+    d1.exec(
         "UPDATE applications \
-         SET interview_questions = $1, \
-             tech_stack = $2, \
-             job_description = CASE WHEN $3 THEN $4 ELSE job_description END, \
-             updated_at = now() \
-         WHERE id = $5::uuid",
+         SET interview_questions = ?, \
+             tech_stack = ?, \
+             job_description = CASE WHEN ? THEN ? ELSE job_description END, \
+             updated_at = unixepoch() \
+         WHERE id = ?",
+        vec![
+            json!(iq),
+            json!(ts),
+            json!(if backfill_jd { 1 } else { 0 }),
+            json!(jd),
+            json!(id),
+        ],
     )
-    .bind(&iq)
-    .bind(&ts)
-    .bind(backfill_jd)
-    .bind(&jd)
-    .bind(&id)
-    .execute(&pool)
     .await
     .context("UPDATE applications")?;
 
-    let after: i32 = sqlx::query_scalar(
-        "SELECT length(coalesce(interview_questions,'')) FROM applications WHERE id = $1::uuid",
-    )
-    .bind(&id)
-    .fetch_one(&pool)
-    .await?;
+    let after_rows = d1
+        .query_rows(
+            "SELECT length(coalesce(interview_questions,'')) AS len \
+             FROM applications WHERE id = ?",
+            vec![json!(id)],
+        )
+        .await?;
+    let after: i64 = after_rows
+        .first()
+        .and_then(|r| r.get("len"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
 
     println!(
-        "✓ Neon updated: id={id} slug={} — interviewQuestions now {after} chars, \
+        "✓ D1 updated: id={id} slug={} — interviewQuestions now {after} chars, \
          techStack {badges} badges. The owner's live /applications/{}/prep now \
          renders this generated prep.",
         args.slug, args.slug

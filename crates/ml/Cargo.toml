@@ -133,10 +133,6 @@ hf-hub              = "0.4"
 tokenizers          = "0.21"
 deepseek = { package = "deepseek-loop", path = "../../../../crates/deepseek-loop", default-features = false, features = ["reqwest-client", "agent", "builtin-tools"] }
 
-# Postgres (Neon) — gen-app-prep-loop persists the prep into the applications
-# row. Runtime query API only (no compile-time macros → no build-time DB).
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls-ring", "postgres"] }
-
 # Runtime / async
 tokio   = { version = "1", features = ["full"] }
 futures = "0.3"
