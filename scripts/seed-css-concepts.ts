@@ -5,20 +5,10 @@
  *   DATABASE_URL="..." npx tsx scripts/seed-css-concepts.ts
  */
 
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
 import { eq, sql } from "drizzle-orm";
 import * as schema from "../src/db/schema";
 import { ALL_CSS_PROPERTIES } from "../lib/css-properties";
-
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error("Missing DATABASE_URL");
-  process.exit(1);
-}
-
-const client = neon(databaseUrl);
-const db = drizzle(client, { schema });
+import { db } from "../src/db";
 
 async function main() {
   console.log(`Seeding ${ALL_CSS_PROPERTIES.length} CSS property concepts...`);

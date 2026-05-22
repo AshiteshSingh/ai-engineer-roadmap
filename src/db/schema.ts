@@ -1,87 +1,37 @@
 import {
-  pgTable,
-  pgEnum,
-  uuid,
+  sqliteTable,
   text,
-  serial,
   integer,
   real,
-  timestamp,
-  boolean,
-  jsonb,
   primaryKey,
   uniqueIndex,
   index,
-  customType,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
-import { user as authUser } from "@ai-apps/auth/schema";
 
 // ── Better Auth tables ──────────────────────────────────────────────
+// SQLite/D1 variant (kept dialect-aligned with the rest of this schema).
+// Postgres consumers (bricks, lead-gen) keep importing @ai-apps/auth/schema.
 
-export { user, session, account, verification } from "@ai-apps/auth/schema";
+export { user, session, account, verification } from "@ai-apps/auth/schema-sqlite";
 
-// ── Custom type: pgvector ──────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────
+// uuid() in Postgres → text PK with an app-generated UUID on SQLite.
+const uuidPk = () =>
+  text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID());
 
-const vector = customType<{ data: number[]; driverData: string }>({
-  dataType() {
-    return "vector(1024)";
-  },
-  toDriver(value: number[]): string {
-    return `[${value.join(",")}]`;
-  },
-  fromDriver(value: string): number[] {
-    return value
-      .slice(1, -1)
-      .split(",")
-      .map(Number);
-  },
-});
-
-// ── Enums ──────────────────────────────────────────────────────────
-
-export const conceptTypeEnum = pgEnum("concept_type", [
-  "topic",
-  "skill",
-  "competency",
-  "technique",
-  "theory",
-  "tool",
-]);
-
-export const edgeTypeEnum = pgEnum("edge_type", [
-  "prerequisite",
-  "related",
-  "part_of",
-  "builds_on",
-  "contrasts_with",
-  "applies_to",
-]);
-
-export const interactionTypeEnum = pgEnum("interaction_type", [
-  "view",
-  "read_start",
-  "read_complete",
-  "bookmark",
-  "highlight",
-  "search",
-  "concept_click",
-  "nav_next",
-  "nav_prev",
-]);
-
-export const masteryLevelEnum = pgEnum("mastery_level", [
-  "novice",
-  "beginner",
-  "intermediate",
-  "proficient",
-  "expert",
-]);
+// timestamptz DEFAULT now() → integer epoch (mode:"timestamp") set at insert.
+const nowTs = (col: string) =>
+  integer(col, { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date());
 
 // ── Core Content ───────────────────────────────────────────────────
 
-export const categories = pgTable("categories", {
-  id: serial("id").primaryKey(),
+export const categories = sqliteTable("categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").unique().notNull(),
   slug: text("slug").unique().notNull(),
   icon: text("icon").notNull(),
@@ -93,10 +43,10 @@ export const categories = pgTable("categories", {
   lessonRangeHi: integer("lesson_range_hi").notNull(),
 });
 
-export const lessons = pgTable(
+export const lessons = sqliteTable(
   "lessons",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: uuidPk(),
     slug: text("slug").unique().notNull(),
     number: integer("number").unique().notNull(),
     title: text("title").notNull(),
@@ -107,12 +57,8 @@ export const lessons = pgTable(
     readingTimeMin: integer("reading_time_min").notNull().default(1),
     content: text("content").notNull(),
     summary: text("summary"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
   },
   (table) => [
     index("lessons_category_idx").on(table.categoryId),
@@ -120,11 +66,11 @@ export const lessons = pgTable(
   ],
 );
 
-export const lessonSections = pgTable(
+export const lessonSections = sqliteTable(
   "lesson_sections",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    lessonId: uuid("lesson_id")
+    id: uuidPk(),
+    lessonId: text("lesson_id")
       .references(() => lessons.id, { onDelete: "cascade" })
       .notNull(),
     heading: text("heading").notNull(),
@@ -138,37 +84,52 @@ export const lessonSections = pgTable(
 
 // ── Knowledge Graph ────────────────────────────────────────────────
 
-export const concepts = pgTable(
+export const concepts = sqliteTable(
   "concepts",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: uuidPk(),
     name: text("name").unique().notNull(),
     description: text("description"),
-    conceptType: conceptTypeEnum("concept_type").notNull().default("topic"),
-    metadata: jsonb("metadata").notNull().default({}),
-    createdAt: timestamp("created_at", { withTimezone: true })
+    conceptType: text("concept_type", {
+      enum: ["topic", "skill", "competency", "technique", "theory", "tool"],
+    })
       .notNull()
-      .defaultNow(),
+      .default("topic"),
+    metadata: text("metadata", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .$defaultFn(() => ({})),
+    createdAt: nowTs("created_at"),
   },
   (table) => [index("concepts_type_idx").on(table.conceptType)],
 );
 
-export const conceptEdges = pgTable(
+export const conceptEdges = sqliteTable(
   "concept_edges",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    sourceId: uuid("source_id")
+    id: uuidPk(),
+    sourceId: text("source_id")
       .references(() => concepts.id, { onDelete: "cascade" })
       .notNull(),
-    targetId: uuid("target_id")
+    targetId: text("target_id")
       .references(() => concepts.id, { onDelete: "cascade" })
       .notNull(),
-    edgeType: edgeTypeEnum("edge_type").notNull(),
+    edgeType: text("edge_type", {
+      enum: [
+        "prerequisite",
+        "related",
+        "part_of",
+        "builds_on",
+        "contrasts_with",
+        "applies_to",
+      ],
+    }).notNull(),
     weight: real("weight").notNull().default(1.0),
-    metadata: jsonb("metadata").notNull().default({}),
-    createdAt: timestamp("created_at", { withTimezone: true })
+    metadata: text("metadata", { mode: "json" })
+      .$type<Record<string, unknown>>()
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => ({})),
+    createdAt: nowTs("created_at"),
   },
   (table) => [
     uniqueIndex("concept_edges_source_target_type_idx").on(
@@ -182,13 +143,13 @@ export const conceptEdges = pgTable(
   ],
 );
 
-export const lessonConcepts = pgTable(
+export const lessonConcepts = sqliteTable(
   "lesson_concepts",
   {
-    lessonId: uuid("lesson_id")
+    lessonId: text("lesson_id")
       .references(() => lessons.id, { onDelete: "cascade" })
       .notNull(),
-    conceptId: uuid("concept_id")
+    conceptId: text("concept_id")
       .references(() => concepts.id, { onDelete: "cascade" })
       .notNull(),
     relevance: real("relevance").notNull().default(1.0),
@@ -198,25 +159,21 @@ export const lessonConcepts = pgTable(
 
 // ── Knowledge Tracing ──────────────────────────────────────────────
 
-export const userProfiles = pgTable("user_profiles", {
-  id: uuid("id").primaryKey().defaultRandom(),
+export const userProfiles = sqliteTable("user_profiles", {
+  id: uuidPk(),
   displayName: text("display_name"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  createdAt: nowTs("created_at"),
+  updatedAt: nowTs("updated_at"),
 });
 
-export const knowledgeStates = pgTable(
+export const knowledgeStates = sqliteTable(
   "knowledge_states",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
+    id: uuidPk(),
+    userId: text("user_id")
       .references(() => userProfiles.id, { onDelete: "cascade" })
       .notNull(),
-    conceptId: uuid("concept_id")
+    conceptId: text("concept_id")
       .references(() => concepts.id, { onDelete: "cascade" })
       .notNull(),
     pMastery: real("p_mastery").notNull().default(0.0),
@@ -225,15 +182,13 @@ export const knowledgeStates = pgTable(
     pGuess: real("p_guess").notNull().default(0.2),
     totalInteractions: integer("total_interactions").notNull().default(0),
     correctInteractions: integer("correct_interactions").notNull().default(0),
-    masteryLevel: masteryLevelEnum("mastery_level")
+    masteryLevel: text("mastery_level", {
+      enum: ["novice", "beginner", "intermediate", "proficient", "expert"],
+    })
       .notNull()
       .default("novice"),
-    lastInteractionAt: timestamp("last_interaction_at", {
-      withTimezone: true,
-    }),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    lastInteractionAt: integer("last_interaction_at", { mode: "timestamp" }),
+    updatedAt: nowTs("updated_at"),
   },
   (table) => [
     uniqueIndex("knowledge_states_user_concept_idx").on(
@@ -246,29 +201,42 @@ export const knowledgeStates = pgTable(
   ],
 );
 
-export const interactionEvents = pgTable(
+export const interactionEvents = sqliteTable(
   "interaction_events",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
+    id: uuidPk(),
+    userId: text("user_id")
       .references(() => userProfiles.id, { onDelete: "cascade" })
       .notNull(),
-    conceptId: uuid("concept_id").references(() => concepts.id, {
+    conceptId: text("concept_id").references(() => concepts.id, {
       onDelete: "set null",
     }),
-    lessonId: uuid("lesson_id").references(() => lessons.id, {
+    lessonId: text("lesson_id").references(() => lessons.id, {
       onDelete: "set null",
     }),
-    sectionId: uuid("section_id").references(() => lessonSections.id, {
+    sectionId: text("section_id").references(() => lessonSections.id, {
       onDelete: "set null",
     }),
-    interactionType: interactionTypeEnum("interaction_type").notNull(),
-    isCorrect: boolean("is_correct"),
+    interactionType: text("interaction_type", {
+      enum: [
+        "view",
+        "read_start",
+        "read_complete",
+        "bookmark",
+        "highlight",
+        "search",
+        "concept_click",
+        "nav_next",
+        "nav_prev",
+      ],
+    }).notNull(),
+    isCorrect: integer("is_correct", { mode: "boolean" }),
     responseTimeMs: integer("response_time_ms"),
-    metadata: jsonb("metadata").notNull().default({}),
-    createdAt: timestamp("created_at", { withTimezone: true })
+    metadata: text("metadata", { mode: "json" })
+      .$type<Record<string, unknown>>()
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => ({})),
+    createdAt: nowTs("created_at"),
   },
   (table) => [
     index("interaction_events_user_time_idx").on(table.userId, table.createdAt),
@@ -283,73 +251,67 @@ export const interactionEvents = pgTable(
 );
 
 // ── Embeddings ─────────────────────────────────────────────────────
+// pgvector(1024) → JSON array stored as text. Populated by the offline Rust
+// pipeline; not read by the TS app at runtime.
 
-export const lessonEmbeddings = pgTable("lesson_embeddings", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  lessonId: uuid("lesson_id")
+export const lessonEmbeddings = sqliteTable("lesson_embeddings", {
+  id: uuidPk(),
+  lessonId: text("lesson_id")
     .references(() => lessons.id, { onDelete: "cascade" })
     .notNull()
     .unique(),
   content: text("content").notNull(),
-  embedding: vector("embedding").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  embedding: text("embedding").notNull(),
+  createdAt: nowTs("created_at"),
 });
 
-export const sectionEmbeddings = pgTable(
+export const sectionEmbeddings = sqliteTable(
   "section_embeddings",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    sectionId: uuid("section_id")
+    id: uuidPk(),
+    sectionId: text("section_id")
       .references(() => lessonSections.id, { onDelete: "cascade" })
       .notNull()
       .unique(),
-    lessonId: uuid("lesson_id")
+    lessonId: text("lesson_id")
       .references(() => lessons.id, { onDelete: "cascade" })
       .notNull(),
     content: text("content").notNull(),
-    embedding: vector("embedding").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    embedding: text("embedding").notNull(),
+    createdAt: nowTs("created_at"),
   },
   (table) => [index("section_embeddings_lesson_idx").on(table.lessonId)],
 );
 
-export const conceptEmbeddings = pgTable("concept_embeddings", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  conceptId: uuid("concept_id")
+export const conceptEmbeddings = sqliteTable("concept_embeddings", {
+  id: uuidPk(),
+  conceptId: text("concept_id")
     .references(() => concepts.id, { onDelete: "cascade" })
     .notNull()
     .unique(),
   content: text("content").notNull(),
-  embedding: vector("embedding").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  embedding: text("embedding").notNull(),
+  createdAt: nowTs("created_at"),
 });
 
-export const userLessonInteractions = pgTable(
+export const userLessonInteractions = sqliteTable(
   "user_lesson_interactions",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
+    id: uuidPk(),
+    userId: text("user_id")
       .references(() => userProfiles.id, { onDelete: "cascade" })
       .notNull(),
-    lessonId: uuid("lesson_id")
+    lessonId: text("lesson_id")
       .references(() => lessons.id, { onDelete: "cascade" })
       .notNull(),
     readProgress: real("read_progress").notNull().default(0),
     rating: integer("rating"),
-    bookmarked: boolean("bookmarked").notNull().default(false),
+    bookmarked: integer("bookmarked", { mode: "boolean" })
+      .notNull()
+      .default(false),
     timeSpentSec: integer("time_spent_sec").notNull().default(0),
-    firstViewedAt: timestamp("first_viewed_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    lastViewedAt: timestamp("last_viewed_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    firstViewedAt: nowTs("first_viewed_at"),
+    lastViewedAt: nowTs("last_viewed_at"),
   },
   (table) => [
     uniqueIndex("user_lesson_interactions_user_lesson_idx").on(
@@ -363,16 +325,14 @@ export const userLessonInteractions = pgTable(
 
 // ── Chat Messages ─────────────────────────────────────────────────
 
-export const chatMessages = pgTable(
+export const chatMessages = sqliteTable(
   "chat_messages",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: uuidPk(),
     threadId: text("thread_id").notNull(),
     role: text("role").notNull(), // "user" | "assistant"
     content: text("content").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: nowTs("created_at"),
   },
   (table) => [
     index("chat_messages_thread_time_idx").on(table.threadId, table.createdAt),
@@ -381,22 +341,23 @@ export const chatMessages = pgTable(
 
 // ── Analytics ──────────────────────────────────────────────────────
 
-export const analyticsEvents = pgTable(
+export const analyticsEvents = sqliteTable(
   "analytics_events",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id"),
+    id: uuidPk(),
+    userId: text("user_id"),
     sessionId: text("session_id"),
     eventName: text("event_name").notNull(),
     eventCategory: text("event_category").notNull(),
-    lessonId: uuid("lesson_id").references(() => lessons.id, {
+    lessonId: text("lesson_id").references(() => lessons.id, {
       onDelete: "set null",
     }),
-    properties: jsonb("properties").notNull().default({}),
-    durationMs: integer("duration_ms"),
-    createdAt: timestamp("created_at", { withTimezone: true })
+    properties: text("properties", { mode: "json" })
+      .$type<Record<string, unknown>>()
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => ({})),
+    durationMs: integer("duration_ms"),
+    createdAt: nowTs("created_at"),
   },
   (table) => [
     index("analytics_events_user_time_idx").on(table.userId, table.createdAt),
@@ -411,24 +372,20 @@ export const analyticsEvents = pgTable(
 
 // ── Job Applications ───────────────────────────────────────────────
 
-export const applicationStatusEnum = pgEnum("application_status", [
-  "saved",
-  "applied",
-  "interviewing",
-  "offer",
-  "rejected",
-]);
-
-export const applications = pgTable(
+export const applications = sqliteTable(
   "applications",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: uuidPk(),
     userId: text("user_id").notNull(),
     slug: text("slug").notNull(),
     company: text("company").notNull(),
     position: text("position").notNull(),
     url: text("url"),
-    status: applicationStatusEnum("status").notNull().default("saved"),
+    status: text("status", {
+      enum: ["saved", "applied", "interviewing", "offer", "rejected"],
+    })
+      .notNull()
+      .default("saved"),
     notes: text("notes"),
     jobDescription: text("job_description"),
     interviewQuestions: text("interview_questions"),
@@ -440,14 +397,10 @@ export const applications = pgTable(
     // Populated by resolveCompanyKey() on create/update; null when no match.
     leadgenCompanyKey: text("leadgen_company_key"),
     audioUrl: text("audio_url"),
-    public: boolean("public").notNull().default(false),
-    appliedAt: timestamp("applied_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    public: integer("public", { mode: "boolean" }).notNull().default(false),
+    appliedAt: integer("applied_at", { mode: "timestamp" }),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
   },
   (table) => [
     index("applications_user_idx").on(table.userId),
@@ -458,19 +411,23 @@ export const applications = pgTable(
 
 // ── Resumes ──────────────────────────────────────────────────────
 
-export const resumes = pgTable("resumes", {
-  id: text("id").primaryKey(), // UUID
-  userId: text("user_id").notNull(),
-  filename: text("filename"),
-  rawText: text("raw_text"),
-  extractedSkills: text("extracted_skills"), // JSON
-  taxonomyVersion: text("taxonomy_version"),
-  createdAt: text("created_at"),
-  updatedAt: text("updated_at"),
-}, (table) => [
-  uniqueIndex("resumes_user_id_unique").on(table.userId),
-  index("resumes_user_id_idx").on(table.userId),
-]);
+export const resumes = sqliteTable(
+  "resumes",
+  {
+    id: text("id").primaryKey(), // UUID
+    userId: text("user_id").notNull(),
+    filename: text("filename"),
+    rawText: text("raw_text"),
+    extractedSkills: text("extracted_skills"), // JSON
+    taxonomyVersion: text("taxonomy_version"),
+    createdAt: text("created_at"),
+    updatedAt: text("updated_at"),
+  },
+  (table) => [
+    uniqueIndex("resumes_user_id_unique").on(table.userId),
+    index("resumes_user_id_idx").on(table.userId),
+  ],
+);
 
 export type Resume = typeof resumes.$inferSelect;
 export type NewResume = typeof resumes.$inferInsert;
@@ -479,28 +436,22 @@ export type NewResume = typeof resumes.$inferInsert;
 // Moved off Neon Postgres into a dedicated SQLite store. The write side is
 // src/db/courses-sqlite.ts (data/courses.db); the read side is the
 // Rust-exported courses.json / course-reviews.json via lib/db/queries.ts.
-// The retired Python seed_topic_courses.py is now the Rust
-// `seed-topic-courses` bin.
 
 // ── Application Notes ─────────────────────────────────────────────
 
-export const applicationNotes = pgTable(
+export const applicationNotes = sqliteTable(
   "application_notes",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    applicationId: uuid("application_id")
+    id: uuidPk(),
+    applicationId: text("application_id")
       .references(() => applications.id, { onDelete: "cascade" })
       .notNull(),
     title: text("title").notNull(),
     content: text("content").notNull(),
     // "note" = general application note, "debrief" = post-interview feedback.
     kind: text("kind").notNull().default("note"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
   },
   (table) => [
     index("application_notes_app_idx").on(table.applicationId),
@@ -513,16 +464,14 @@ export type NewApplicationNote = typeof applicationNotes.$inferInsert;
 
 // ── Coursework ───────────────────────────────────────────────────
 
-export const learners = pgTable(
+export const learners = sqliteTable(
   "learners",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: uuidPk(),
     userId: text("user_id").notNull(),
     name: text("name").notNull(),
     age: integer("age").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: nowTs("created_at"),
   },
   (table) => [index("learners_user_idx").on(table.userId)],
 );
@@ -530,11 +479,11 @@ export const learners = pgTable(
 export type Learner = typeof learners.$inferSelect;
 export type NewLearner = typeof learners.$inferInsert;
 
-export const coursework = pgTable(
+export const coursework = sqliteTable(
   "coursework",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    learnerId: uuid("learner_id")
+    id: uuidPk(),
+    learnerId: text("learner_id")
       .references(() => learners.id, { onDelete: "cascade" })
       .notNull(),
     userId: text("user_id").notNull(),
@@ -544,12 +493,8 @@ export const coursework = pgTable(
     fileSize: integer("file_size").notNull(),
     mimeType: text("mime_type").notNull(),
     subject: text("subject"),
-    submittedAt: timestamp("submitted_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    submittedAt: nowTs("submitted_at"),
+    createdAt: nowTs("created_at"),
   },
   (table) => [
     index("coursework_learner_idx").on(table.learnerId),
@@ -612,9 +557,6 @@ export const lessonConceptsRelations = relations(lessonConcepts, ({ one }) => ({
   }),
 }));
 
-// External courses now live in the dedicated SQLite store
-// (src/db/courses-sqlite.ts → data/courses.db), not Neon Postgres.
-
 export const applicationsRelations = relations(applications, ({ many }) => ({
   applicationNotes: many(applicationNotes),
 }));
@@ -639,41 +581,32 @@ export const courseworkRelations = relations(coursework, ({ one }) => ({
 
 // ── Coding Problems (LeetCode-style) ───────────────────────────────
 
-export const problemDifficultyEnum = pgEnum("problem_difficulty", [
-  "easy",
-  "medium",
-  "hard",
-]);
-
-export const submissionStatusEnum = pgEnum("submission_status", [
-  "passed",
-  "failed",
-  "error",
-  "timeout",
-]);
-
-export const problems = pgTable(
+export const problems = sqliteTable(
   "problems",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: uuidPk(),
     slug: text("slug").unique().notNull(),
     title: text("title").notNull(),
-    difficulty: problemDifficultyEnum("difficulty").notNull().default("easy"),
+    difficulty: text("difficulty", { enum: ["easy", "medium", "hard"] })
+      .notNull()
+      .default("easy"),
     prompt: text("prompt").notNull(), // markdown
     starterJs: text("starter_js").notNull(),
     starterTs: text("starter_ts").notNull(),
     // Each test: { name, args: any[], expected: any }
-    testCases: jsonb("test_cases").notNull().default([]),
+    testCases: text("test_cases", { mode: "json" })
+      .$type<unknown[]>()
+      .notNull()
+      .$defaultFn(() => []),
     // Function name the runner should invoke (e.g. "twoSum")
     entrypoint: text("entrypoint").notNull(),
-    tags: jsonb("tags").notNull().default([]),
+    tags: text("tags", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .$defaultFn(() => []),
     sortOrder: integer("sort_order").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
   },
   (table) => [
     index("problems_difficulty_idx").on(table.difficulty),
@@ -681,24 +614,24 @@ export const problems = pgTable(
   ],
 );
 
-export const problemSubmissions = pgTable(
+export const problemSubmissions = sqliteTable(
   "problem_submissions",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    problemId: uuid("problem_id")
+    id: uuidPk(),
+    problemId: text("problem_id")
       .references(() => problems.id, { onDelete: "cascade" })
       .notNull(),
     userId: text("user_id").notNull(),
     language: text("language").notNull(), // "js" | "ts"
     code: text("code").notNull(),
-    status: submissionStatusEnum("status").notNull(),
+    status: text("status", {
+      enum: ["passed", "failed", "error", "timeout"],
+    }).notNull(),
     passedCount: integer("passed_count").notNull().default(0),
     totalCount: integer("total_count").notNull().default(0),
     runtimeMs: real("runtime_ms"),
     errorMessage: text("error_message"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: nowTs("created_at"),
   },
   (table) => [
     index("problem_submissions_user_idx").on(table.userId, table.createdAt),

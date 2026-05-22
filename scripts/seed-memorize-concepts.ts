@@ -6,22 +6,12 @@
  *   DATABASE_URL="..." npx tsx scripts/seed-memorize-concepts.ts
  */
 
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
 import { eq, sql } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 import { CATEGORIES, CATEGORY_META } from "../lib/articles";
 import * as schema from "../src/db/schema";
-
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error("Missing DATABASE_URL");
-  process.exit(1);
-}
-
-const client = neon(databaseUrl);
-const db = drizzle(client, { schema });
+import { db } from "../src/db";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
 

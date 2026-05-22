@@ -3,6 +3,8 @@ import { db } from "@/src/db";
 import { sendEmail } from "@/lib/email/cloudflare";
 
 export const auth = createAuth(db, undefined, {
+  // Relational data (incl. the Better Auth tables) is on Cloudflare D1/SQLite.
+  provider: "sqlite",
   emailVerify: {
     subject: "Confirm your email to activate your AI Engineer Roadmap account",
     send: async ({ to, subject, html, text }) => {

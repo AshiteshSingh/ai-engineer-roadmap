@@ -2,14 +2,11 @@
  * Generate memorize flashcards for the Ampcus Full Stack Engineer – AI application.
  * Usage: pnpm tsx --env-file=.env.local scripts/generate-ampcus-cards.ts
  */
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
 import * as schema from "../src/db/schema";
+import { db } from "../src/db";
 
 const APP_ID = "73eea627-35b8-4f71-a209-a250df2fe591";
-
-const db = drizzle(neon(process.env.DATABASE_URL!), { schema });
 
 interface Item {
   id: string;
