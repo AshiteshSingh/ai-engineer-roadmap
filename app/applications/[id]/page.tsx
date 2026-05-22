@@ -199,6 +199,11 @@ function ApplicationDetailInner() {
           <Tabs.Content value="description">
             <JobDescriptionTab app={app} isAdmin={isAdmin} onUpdate={setApp} />
           </Tabs.Content>
+          {app.codingTask && (
+            <Tabs.Content value="task">
+              <CodingTaskTab app={app} isAdmin={isAdmin} />
+            </Tabs.Content>
+          )}
           <Tabs.Content value="tech">
             <TechStackTab app={app} isAdmin={isAdmin} />
           </Tabs.Content>
