@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runBackup, verifyCronSecret } from "@ai-apps/db-backup";
+import { runD1Backup, verifyCronSecret } from "@ai-apps/db-backup";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -8,9 +8,12 @@ export async function GET(request: Request) {
   const authError = verifyCronSecret(request);
   if (authError) return authError;
 
-  const result = await runBackup({
+  // The app's data lives in Cloudflare D1 now; back it up as a .sql dump → R2.
+  const result = await runD1Backup({
     appName: "knowledge",
-    databaseUrl: process.env.DATABASE_URL!,
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+    databaseId: process.env.CLOUDFLARE_AUDIO_D1_ID!,
+    apiToken: process.env.CLOUDFLARE_D1_API_TOKEN!,
     r2: {
       accountId: process.env.R2_ACCOUNT_ID!,
       accessKeyId: process.env.R2_ACCESS_KEY_ID!,
