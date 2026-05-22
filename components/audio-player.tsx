@@ -398,6 +398,9 @@ export function AudioPlayer({
           chOffsetRef.current = meta.chapters[nextIdx].start_secs;
           globalTimeRef.current = meta.chapters[nextIdx].start_secs;
           idle.play().catch(() => {});
+          // The new active element's `play` event is bound late (listeners
+          // rebind after the re-render), so set the state explicitly here.
+          setIsPlaying(true);
           activeABRef.current = 1 - activeABRef.current;
           syncActive();
           setActiveIdx(nextIdx);
@@ -419,8 +422,16 @@ export function AudioPlayer({
         updatedAt: Date.now(),
       });
     };
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => {
+    // Only the ACTIVE element drives the play/pause UI. During a gapless
+    // chapter handoff the just-ended element briefly fires a `pause` while it is
+    // still bound; ignoring non-active targets stops that stray event from
+    // knocking `isPlaying` to false (button would show the play icon mid-play).
+    const onPlay = (e: Event) => {
+      if (e.currentTarget !== audioRef.current) return;
+      setIsPlaying(true);
+    };
+    const onPause = (e: Event) => {
+      if (e.currentTarget !== audioRef.current) return;
       setIsPlaying(false);
       persistState(makeSaveState());
     };
