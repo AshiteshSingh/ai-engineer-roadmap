@@ -6,7 +6,7 @@ import { usePipeline } from "./context";
 import { ApplicationRow } from "./ApplicationRow";
 import styles from "./pipeline.module.css";
 
-export function StatusList({ status }: { status: ApplicationStatus }) {
+export function StatusList({ status }: { status: ApplicationStatus | "all" }) {
   const { apps, loading, handleMove, handleReject } = usePipeline();
 
   if (loading) {
@@ -19,7 +19,7 @@ export function StatusList({ status }: { status: ApplicationStatus }) {
     );
   }
 
-  const list = apps.filter((a) => a.status === status);
+  const list = status === "all" ? apps : apps.filter((a) => a.status === status);
 
   if (list.length === 0) {
     return (

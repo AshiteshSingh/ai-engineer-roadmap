@@ -49,7 +49,7 @@ export default function PipelineLayout({
   const activeCount = apps.filter((a) => a.status !== "rejected").length;
 
   // Active tab is the path segment after /applications.
-  const current = pathname.split("/")[2] ?? "saved";
+  const current = pathname.split("/")[2] ?? "all";
 
   const counts = Object.fromEntries(
     COLUMNS.map((c) => [
@@ -102,6 +102,7 @@ export default function PipelineLayout({
             onValueChange={(v) => router.push(`/applications/${v}`)}
           >
             <Tabs.List>
+              <Tabs.Trigger value="all">All ({total})</Tabs.Trigger>
               {COLUMNS.map((col) => (
                 <Tabs.Trigger key={col.status} value={col.status}>
                   {col.label} ({counts[col.status] ?? 0})
