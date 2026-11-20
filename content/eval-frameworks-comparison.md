@@ -16,6 +16,7 @@ A practitioner-oriented comparison of the major LLM evaluation frameworks as of 
 | End-to-end agent simulation at scale | **Maxim** |
 | Lightweight readymade evaluators (library) | **OpenEvals / AgentEvals** |
 | Open-source tracing + eval with rich UI | **Opik (Comet)** |
+| Verify the agent's claims actually happened (done-check, no LLM judge) | **FailLoud** |
 
 ---
 
@@ -327,6 +328,25 @@ def test_answer_is_grounded():
 **Pricing:** Framework is open-source. API usage billed through OpenAI.
 
 **Best for:** Teams evaluating OpenAI models specifically, or needing benchmark reference implementations.
+
+### 13. FailLoud
+
+**What it is:** Open-source (MIT) Python verification harness for LLM agent outputs. Six deterministic checks — placeholder payloads shipped as final, claimed actions with no evidence (id/URL/receipt), stale or version-skewed state, reported counts that contradict the itemized record, present-but-empty components, and RAG answers whose citations/numbers aren't in the retrieved sources. No LLM in the verdict path.
+
+**Key strengths:**
+- Verifies claimed actions against evidence — no other framework in this comparison does
+- CI-native exit-code contract (0 pass / 1 failed output / 2 tool error) + official GitHub Action
+- MCP server (11 tools) so an orchestrator verifies a sub-agent's output inside the loop
+- Second-pass recheck against a system-of-record snapshot; hash-chained verification receipts
+- Zero-dependency core; 162 tests
+
+**Limitations:**
+- No scoring metrics, no tracing, no dashboard, no red teaming — it complements DeepEval/Promptfoo rather than replacing them
+- Young project (first release Nov 2026)
+
+**Pricing:** Fully open-source.
+
+**Best for:** Teams whose agents take real actions (send, post, publish, update) and need the output's claims checked before anything acts on them.
 
 ---
 
